@@ -17,7 +17,7 @@
   --primary-hover: #455143;
   --primary-soft: #b6c3b1;
   --primary-faint: #d9e6d3;
-  --gold: #8c6f2c;
+  --gold: #7a5a1f;
   --gold-hover: #5a4319;
   --gold-soft: #b88a3a;
   --gold-faint: #f0e3c4;
@@ -61,8 +61,8 @@
   --ink: #2a1d10;
   --ink-muted: #5a4a35;
   --ink-soft: #6e5a3f;
-  --primary: #b06820;
-  --primary-hover: #8e511a;
+  --primary: #8b4d12;
+  --primary-hover: #6b3a0c;
   --primary-soft: #f0c891;
   --primary-faint: #f9e0bd;
   --gold: #8b5a1a;
@@ -449,7 +449,11 @@ section {
   -webkit-background-clip: text;
   background-clip: text;
   -webkit-text-fill-color: transparent;
-  color: transparent;
+  /* Real fallback color so accessibility auditors compute contrast against
+     a meaningful value, not transparent (Lighthouse contrast check). The
+     -webkit-text-fill-color above still wins visually, revealing the
+     gradient via background-clip. */
+  color: var(--ink);
 }
 
 .hero-sub {
