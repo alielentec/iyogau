@@ -1,0 +1,96 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+<meta name="theme-color" content="#566253" media="(prefers-color-scheme: light)" />
+<meta name="theme-color" content="#0f1413" media="(prefers-color-scheme: dark)" />
+
+<title>Accessibility | iYogaU</title>
+<meta name="description" content="iYogaU's accessibility statement, conformance with WCAG 2.1 Level AA, known limitations, and how to report accessibility issues." />
+<meta name="robots" content="index, follow" />
+
+<link rel="canonical" href="https://iyogau.com/accessibility/" />
+
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700&family=Noto+Serif:ital,wght@0,400;0,500;1,400&display=swap" />
+
+<link rel="stylesheet" href="/assets/css/styles.css" />
+</head>
+
+<body>
+
+<header class="site-header">
+  <div class="container">
+    <nav class="nav" aria-label="Primary">
+      <a href="/" class="brand"><span class="brand-i">i</span>Yoga<span class="brand-u">U</span></a>
+      <a href="/" class="btn btn-ghost" style="padding:.5rem 1rem;font-size:.8125rem;">← iyogau.com</a>
+    </nav>
+  </div>
+</header>
+
+<main class="legal-page">
+  <div class="container">
+
+    <h1>Accessibility Statement</h1>
+    <div class="legal-meta">
+      <span><strong>Effective:</strong> April 30, 2026</span>
+      <span><strong>Last reviewed:</strong> April 30, 2026</span>
+    </div>
+
+    <p>iYogaU is committed to ensuring digital accessibility for people with disabilities. We continually improve the user experience for everyone and apply the relevant accessibility standards.</p>
+
+    <h2 id="conformance">Conformance status</h2>
+    <p>The Web Content Accessibility Guidelines (WCAG) define requirements for designers and developers to improve accessibility for people with disabilities. They define three levels of conformance: Level A, Level AA, and Level AAA.</p>
+    <p><strong>iyogau.com is partially conformant with WCAG 2.1 Level AA.</strong> "Partially conformant" means that some parts of the content do not yet fully conform to the accessibility standard.</p>
+
+    <h2 id="how">How we approach accessibility</h2>
+    <ul>
+      <li><strong>Semantic HTML.</strong> The site uses standard HTML landmarks (<code>&lt;header&gt;</code>, <code>&lt;nav&gt;</code>, <code>&lt;main&gt;</code>, <code>&lt;footer&gt;</code>) and proper heading order so screen readers can navigate efficiently.</li>
+      <li><strong>Color contrast.</strong> Text and UI elements meet at least 4.5:1 contrast for normal text and 3:1 for large text and non-text UI, across all four color themes.</li>
+      <li><strong>Keyboard navigation.</strong> All interactive elements (links, buttons, form fields, language and theme pickers, FAQ accordions) are reachable and operable with a keyboard.</li>
+      <li><strong>Reduced motion.</strong> The site respects the <code>prefers-reduced-motion</code> system preference and disables animations for visitors who request it.</li>
+      <li><strong>Resizable text.</strong> Text can be enlarged up to 200% without loss of content or functionality.</li>
+      <li><strong>Language.</strong> The site declares its language and offers translated content in English, Korean, and Chinese at separate URLs (<code>/</code>, <code>/ko/</code>, <code>/zh/</code>) so screen readers and search engines can use the correct language.</li>
+      <li><strong>Forms.</strong> Form inputs have associated labels (visible or programmatic). Errors are described in text rather than only with color.</li>
+    </ul>
+
+    <h2 id="limitations">Known limitations</h2>
+    <p>We're transparent about what isn't fully accessible yet:</p>
+    <ul>
+      <li>Some testimonials and blog imagery are decorative gradients rather than photographs; alternative text is therefore minimal. Once real photography is added, descriptive alternative text will accompany it.</li>
+      <li>Video content is not yet present on the site. When we add video, we will provide captions and transcripts.</li>
+      <li>Country flag emojis are presented as decorative; the location names appear as text alongside them.</li>
+      <li>Translated content is currently human-reviewed for the marketing pages but not for legal pages. Legal pages are available in English; please email us if you need a translated reading.</li>
+    </ul>
+
+    <h2 id="assessment">Assessment approach</h2>
+    <p>We assess accessibility through a combination of:</p>
+    <ul>
+      <li>Automated audits using Lighthouse and axe-core during development.</li>
+      <li>Manual keyboard-only navigation checks.</li>
+      <li>Screen-reader spot checks (VoiceOver on macOS).</li>
+      <li>Color-contrast verification against published theme tokens.</li>
+    </ul>
+    <p>We do not yet engage a third-party accessibility consultant for a formal audit. As iYogaU grows, we plan to commission independent expert review.</p>
+
+    <h2 id="feedback">Feedback and how to report a problem</h2>
+    <p>If you encounter an accessibility barrier on iyogau.com, please tell us. We aim to respond within 5 business days.</p>
+    <ul>
+      <li>Email: <a href="mailto:hello@iyogau.com?subject=Accessibility%20feedback">hello@iyogau.com</a> with the subject "Accessibility feedback."</li>
+      <li>Please include the page URL, what you were trying to do, what happened (or didn't), and the assistive technology you were using if any.</li>
+    </ul>
+
+    <h2 id="formats">Alternative formats</h2>
+    <p>If you need any iYogaU content in an alternative format — large print, plain-text email, audio recording — email <a href="mailto:hello@iyogau.com">hello@iyogau.com</a> and we will provide it at no cost.</p>
+
+    <h2 id="legal">Legal context</h2>
+    <p>This statement is made in good faith with reference to the Americans with Disabilities Act (ADA) Title III, California's Unruh Civil Rights Act, the EU Web Accessibility Directive (where applicable), and Korea's accessibility guidelines. It does not constitute a guarantee of conformance, and it does not waive or limit any rights you may have under those laws.</p>
+
+    <a href="/" class="legal-back">← Back to iyogau.com</a>
+  </div>
+</main>
+
+</body>
+</html>

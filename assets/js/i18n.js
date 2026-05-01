@@ -178,9 +178,16 @@ window.I18N = {
     "footer.email_placeholder": "your@email.com",
     "footer.subscribe": "Subscribe",
     "footer.copyright": "© 2026 iYogaU · Ancient Wisdom · Modern Precision",
-    "footer.privacy": "Privacy",
-    "footer.terms": "Terms",
-    "footer.seo": "iYogaU offers yoga, meditation, and inner transformation programs in Seoul (Korea), Shanghai (China), and California Bay Area (USA). Founded by Ali Karimi, certified 200-hour Raja Yoga instructor."
+    "footer.privacy": "Privacy Policy",
+    "footer.terms": "Terms of Service",
+    "footer.health": "Health Disclaimer",
+    "footer.accessibility": "Accessibility",
+    "footer.do_not_sell": "Do Not Sell or Share My Personal Information",
+    "footer.legal_heading": "Legal",
+    "footer.seo": "iYogaU offers yoga, meditation, and inner transformation programs in Seoul (Korea), Shanghai (China), and California Bay Area (USA). Founded by Ali Karimi, certified 200-hour Raja Yoga instructor.",
+
+    "course.health_notice": "Yoga is a physical practice. Consult a qualified physician before beginning, especially if you have any medical condition, are pregnant, or are recovering from injury. iYogaU programs are educational and not a substitute for medical care. Read our",
+    "course.health_notice_link": "Health Disclaimer & Liability Waiver"
   },
 
   ko: {
@@ -360,9 +367,16 @@ window.I18N = {
     "footer.email_placeholder": "your@email.com",
     "footer.subscribe": "구독",
     "footer.copyright": "© 2026 iYogaU · 고대의 지혜 · 현대의 정밀함",
-    "footer.privacy": "개인정보",
+    "footer.privacy": "개인정보 처리방침",
     "footer.terms": "이용약관",
-    "footer.seo": "iYogaU는 서울(한국), 상하이(중국), 캘리포니아 베이 에어리어(미국)에서 요가, 명상, 내면 변화 프로그램을 제공합니다. 공인 200시간 라자 요가 강사 알리 카리미가 설립했습니다."
+    "footer.health": "건강 면책 조항",
+    "footer.accessibility": "접근성",
+    "footer.do_not_sell": "개인정보 판매·공유 금지",
+    "footer.legal_heading": "법적 고지",
+    "footer.seo": "iYogaU는 서울(한국), 상하이(중국), 캘리포니아 베이 에어리어(미국)에서 요가, 명상, 내면 변화 프로그램을 제공합니다. 공인 200시간 라자 요가 강사 알리 카리미가 설립했습니다.",
+
+    "course.health_notice": "요가는 신체 활동입니다. 시작 전에 반드시 자격 있는 의료 전문가와 상담하세요. 특히 질환이 있거나, 임신 중이거나, 부상 회복 중인 경우 더욱 그렇습니다. iYogaU 프로그램은 교육 목적이며 의료를 대체하지 않습니다. 자세한 내용은",
+    "course.health_notice_link": "건강 면책 조항 및 책임 면제 동의서"
   },
 
   zh: {
@@ -542,8 +556,15 @@ window.I18N = {
     "footer.email_placeholder": "your@email.com",
     "footer.subscribe": "订阅",
     "footer.copyright": "© 2026 iYogaU · 古老智慧 · 现代精度",
-    "footer.privacy": "隐私",
-    "footer.terms": "条款",
-    "footer.seo": "iYogaU 在首尔（韩国）、上海（中国）和加州湾区（美国）提供瑜伽、冥想与内在转化项目。由认证 200 小时 Raja 瑜伽导师 Ali Karimi 创立。"
+    "footer.privacy": "隐私政策",
+    "footer.terms": "服务条款",
+    "footer.health": "健康免责声明",
+    "footer.accessibility": "无障碍访问",
+    "footer.do_not_sell": "请勿出售或分享我的个人信息",
+    "footer.legal_heading": "法律声明",
+    "footer.seo": "iYogaU 在首尔（韩国）、上海（中国）和加州湾区（美国）提供瑜伽、冥想与内在转化项目。由认证 200 小时 Raja 瑜伽导师 Ali Karimi 创立。",
+
+    "course.health_notice": "瑜伽是一项身体练习。开始前请咨询合格的医生，尤其是如果您有任何健康状况、正在怀孕或正在伤后恢复期。iYogaU 课程为教育性质，并非医疗服务的替代品。请阅读我们的",
+    "course.health_notice_link": "健康免责声明与责任豁免书"
   }
 };
