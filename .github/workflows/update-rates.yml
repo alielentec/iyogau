@@ -1,0 +1,66 @@
+name: Update FX rates
+
+on:
+  schedule:
+    - cron: "5 * * * *"  # hourly at :05
+  workflow_dispatch:     # allow manual run
+
+permissions:
+  contents: write
+
+concurrency:
+  group: update-rates
+  cancel-in-progress: false
+
+jobs:
+  refresh:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Fetch rates and write rates.json
+        env:
+          UPSTREAM: https://open.er-api.com/v6/latest/USD
+        run: |
+          set -euo pipefail
+          curl -fsSL --retry 3 --retry-delay 5 "$UPSTREAM" -o /tmp/upstream.json
+
+          # Validate response and extract KRW + CNY
+          KRW=$(jq -r '.rates.KRW' /tmp/upstream.json)
+          CNY=$(jq -r '.rates.CNY' /tmp/upstream.json)
+          RESULT=$(jq -r '.result // ""' /tmp/upstream.json)
+
+          if [ "$RESULT" != "success" ] || [ "$KRW" = "null" ] || [ "$CNY" = "null" ]; then
+            echo "Upstream returned invalid data; aborting."
+            cat /tmp/upstream.json
+            exit 1
+          fi
+
+          NOW=$(date -u +"%Y-%m-%dT%H:%M:%SZ")
+
+          jq -n \
+            --arg updated "$NOW" \
+            --argjson krw "$KRW" \
+            --argjson cny "$CNY" \
+            '{
+              base: "USD",
+              updated: $updated,
+              source: "open.er-api.com",
+              rates: { USD: 1, KRW: $krw, CNY: $cny }
+            }' > rates.json
+
+          cat rates.json
+
+      - name: Commit if changed
+        run: |
+          set -euo pipefail
+          if git diff --quiet -- rates.json; then
+            echo "rates.json unchanged; nothing to commit."
+            exit 0
+          fi
+          git config user.name  "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add rates.json
+          git commit -m "chore(rates): refresh FX rates"
+          git push

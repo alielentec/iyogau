@@ -1,6 +1,13 @@
-// iYogaU live currency converter
+// iYogaU currency converter
 // Source price stored in USD on element via data-price-usd="..."
-// Display currency is chosen from current language. Rates fetched live, cached 1h, with fallback.
+// Display currency picked from current language.
+//
+// Rates come from /rates.json — a static file in this repo that is refreshed
+// hourly by a GitHub Action (.github/workflows/update-rates.yml) which calls
+// open.er-api.com server-side. Visitors never hit the external API directly,
+// so the page loads instantly from same-origin and we make at most 24 upstream
+// calls per day regardless of traffic. If /rates.json fails for any reason,
+// hard-coded fallback rates keep the price tag readable.
 
 (function () {
   'use strict';
@@ -8,50 +15,48 @@
   const CURRENCY_BY_LANG = { en: 'USD', ko: 'KRW', zh: 'CNY' };
   const LOCALE_BY_LANG = { en: 'en-US', ko: 'ko-KR', zh: 'zh-CN' };
   const FALLBACK_RATES = { USD: 1, KRW: 1390, CNY: 7.25 };
-  const CACHE_KEY = 'iyogau_fx';
-  const CACHE_TTL = 60 * 60 * 1000; // 1 hour
-
-  // Free, CORS-friendly FX API. Falls back if it fails.
-  const FX_URL = 'https://open.er-api.com/v6/latest/USD';
+  const RATES_URL = '/rates.json';
+  const SESSION_CACHE_KEY = 'iyogau_fx_session';
 
   let ratesPromise = null;
 
-  function getCachedRates() {
+  function readSession() {
     try {
-      const raw = localStorage.getItem(CACHE_KEY);
+      const raw = sessionStorage.getItem(SESSION_CACHE_KEY);
       if (!raw) return null;
-      const { rates, timestamp, source } = JSON.parse(raw);
-      if (Date.now() - timestamp < CACHE_TTL && rates) return { rates, source };
+      const parsed = JSON.parse(raw);
+      if (parsed && parsed.rates) return parsed;
     } catch (e) { /* ignore */ }
     return null;
   }
 
-  function saveRates(rates, source) {
-    try {
-      localStorage.setItem(CACHE_KEY, JSON.stringify({ rates, source, timestamp: Date.now() }));
-    } catch (e) { /* ignore */ }
+  function writeSession(payload) {
+    try { sessionStorage.setItem(SESSION_CACHE_KEY, JSON.stringify(payload)); }
+    catch (e) { /* ignore */ }
   }
 
   async function fetchRates() {
-    const cached = getCachedRates();
+    const cached = readSession();
     if (cached) return cached;
 
     try {
-      const res = await fetch(FX_URL, { cache: 'no-cache' });
-      const data = await res.json();
-      if (data && data.result === 'success' && data.rates) {
-        const rates = {
-          USD: 1,
-          KRW: data.rates.KRW || FALLBACK_RATES.KRW,
-          CNY: data.rates.CNY || FALLBACK_RATES.CNY
-        };
-        saveRates(rates, 'live');
-        return { rates, source: 'live' };
+      const res = await fetch(RATES_URL, { cache: 'default' });
+      if (res.ok) {
+        const data = await res.json();
+        if (data && data.rates && typeof data.rates.KRW === 'number' && typeof data.rates.CNY === 'number') {
+          const payload = {
+            rates: { USD: 1, KRW: data.rates.KRW, CNY: data.rates.CNY },
+            updated: data.updated || null,
+            source: data.source || 'rates.json'
+          };
+          writeSession(payload);
+          return payload;
+        }
       }
     } catch (e) {
-      // network or CORS failure
+      // network failure or invalid JSON - fall through to fallback
     }
-    return { rates: FALLBACK_RATES, source: 'fallback' };
+    return { rates: FALLBACK_RATES, updated: null, source: 'fallback' };
   }
 
   function getRates() {
@@ -75,14 +80,13 @@
 
   async function updatePrices(lang) {
     const currency = CURRENCY_BY_LANG[lang] || 'USD';
-    const { rates, source } = await getRates();
+    const { rates, updated, source } = await getRates();
     const rate = rates[currency] || 1;
 
     document.querySelectorAll('[data-price-usd]').forEach(el => {
       const usd = parseFloat(el.getAttribute('data-price-usd'));
       if (isNaN(usd)) return;
-      const local = usd * rate;
-      el.textContent = formatPrice(local, currency, lang);
+      el.textContent = formatPrice(usd * rate, currency, lang);
     });
 
     document.querySelectorAll('[data-fx-note]').forEach(el => {
@@ -94,11 +98,16 @@
       el.style.display = '';
       const dict = (window.I18N && window.I18N[lang]) || {};
       const noteLabel = dict['course.fx_note'] || 'live rate';
-      const ts = source === 'live' ? new Date().toLocaleDateString(LOCALE_BY_LANG[lang] || 'en-US') : '';
+      let ts = '';
+      if (updated && source !== 'fallback') {
+        const d = new Date(updated);
+        if (!isNaN(d.getTime())) {
+          ts = d.toLocaleDateString(LOCALE_BY_LANG[lang] || 'en-US');
+        }
+      }
       el.textContent = '· ' + noteLabel + (ts ? ' · ' + ts : '');
     });
   }
 
-  // Expose to app.js
   window.IYOGAU_CURRENCY = { updatePrices };
 })();
