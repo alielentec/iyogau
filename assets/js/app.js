@@ -9,6 +9,19 @@
   const SUPPORTED_LANGS = ['en', 'ko', 'zh'];
   const SUPPORTED_THEMES = ['sanctuary', 'glacier', 'saffron', 'amethyst'];
 
+  // Anchor for any "years teaching" claims. Ali's 200-hour Raja Yoga
+  // certification was issued 2021-03-01; computing from that date keeps
+  // the about section truthful as time passes (Cal. Bus. & Prof. §17500).
+  // Used by applyTranslations() to substitute {years} in i18n strings.
+  const TEACHING_START_ISO = '2021-03-01T00:00:00Z';
+
+  function yearsTeaching() {
+    const start = new Date(TEACHING_START_ISO).getTime();
+    const ms = Date.now() - start;
+    const years = Math.floor(ms / (365.2425 * 24 * 60 * 60 * 1000));
+    return Math.max(years, 1);
+  }
+
   /* ---------- THEME ---------- */
   function getTheme() {
     const saved = localStorage.getItem(STORAGE_THEME);
@@ -52,10 +65,13 @@
     const dict = (window.I18N && window.I18N[lang]) || window.I18N.en;
     document.documentElement.lang = lang;
 
+    const years = String(yearsTeaching());
+    const fill = (s) => s.replace(/\{years\}/g, years);
+
     document.querySelectorAll('[data-i18n]').forEach(el => {
       const key = el.getAttribute('data-i18n');
       const value = dict[key];
-      if (typeof value === 'string') el.textContent = value;
+      if (typeof value === 'string') el.textContent = fill(value);
     });
 
     document.querySelectorAll('[data-i18n-attr]').forEach(el => {
@@ -64,18 +80,18 @@
       pairs.forEach(pair => {
         const [attr, key] = pair.split(':').map(s => s.trim());
         const value = dict[key];
-        if (attr && typeof value === 'string') el.setAttribute(attr, value);
+        if (attr && typeof value === 'string') el.setAttribute(attr, fill(value));
       });
     });
 
     // Title + meta
-    if (dict['meta.title']) document.title = dict['meta.title'];
+    if (dict['meta.title']) document.title = fill(dict['meta.title']);
     const metaDesc = document.querySelector('meta[name="description"]');
-    if (metaDesc && dict['meta.description']) metaDesc.setAttribute('content', dict['meta.description']);
+    if (metaDesc && dict['meta.description']) metaDesc.setAttribute('content', fill(dict['meta.description']));
     const ogDesc = document.querySelector('meta[property="og:description"]');
-    if (ogDesc && dict['meta.description']) ogDesc.setAttribute('content', dict['meta.description']);
+    if (ogDesc && dict['meta.description']) ogDesc.setAttribute('content', fill(dict['meta.description']));
     const ogTitle = document.querySelector('meta[property="og:title"]');
-    if (ogTitle && dict['meta.title']) ogTitle.setAttribute('content', dict['meta.title']);
+    if (ogTitle && dict['meta.title']) ogTitle.setAttribute('content', fill(dict['meta.title']));
   }
 
   function setLang(lang) {

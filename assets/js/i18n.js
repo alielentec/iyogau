@@ -32,10 +32,10 @@ window.I18N = {
 
     "about.eyebrow": "Your Guide",
     "about.title": "Ali Karimi, Mentor of Inner Transformation",
-    "about.p1": "Certified 200-hour Raja Yoga instructor and the founder of iYogaU. For more than a decade, Ali has guided practitioners across Seoul, Shanghai, and the California Bay Area through deep, structured journeys of self-discovery. Not group fitness, but personal mentorship rooted in ancient wisdom and modern science.",
+    "about.p1": "Certified 200-hour Raja Yoga instructor and the founder of iYogaU. For {years}+ years, Ali has guided practitioners across Seoul, Shanghai, and the California Bay Area through deep, structured journeys of self-discovery. Not group fitness, but personal mentorship rooted in ancient wisdom and modern science.",
     "about.p2": "His approach blends Raja Yoga, meditation, Vedic astrology, and journaling-based reflection. Every student receives a personalized roadmap shaped by their natal chart and unique balance of energy, mind, and body.",
     "about.tag1": "Certified Raja Yoga · 200hrs",
-    "about.tag2": "10+ years teaching",
+    "about.tag2": "{years}+ years teaching",
     "about.tag3": "3 countries",
     "about.tag4": "Personalized mentorship",
 
@@ -221,10 +221,10 @@ window.I18N = {
 
     "about.eyebrow": "당신의 안내자",
     "about.title": "알리 카리미, 내면 변화의 멘토",
-    "about.p1": "공인 200시간 라자 요가 강사이자 iYogaU의 설립자. 10년 이상 서울, 상하이, 캘리포니아 베이 에어리어에서 깊고 체계적인 자기 발견의 여정을 안내해 왔습니다. 단체 피트니스가 아닌, 고대의 지혜와 현대 과학에 뿌리를 둔 개인 멘토십입니다.",
+    "about.p1": "공인 200시간 라자 요가 강사이자 iYogaU의 설립자. {years}년 이상 서울, 상하이, 캘리포니아 베이 에어리어에서 깊고 체계적인 자기 발견의 여정을 안내해 왔습니다. 단체 피트니스가 아닌, 고대의 지혜와 현대 과학에 뿌리를 둔 개인 멘토십입니다.",
     "about.p2": "라자 요가, 명상, 베다 점성학, 저널링 기반 성찰을 결합한 접근. 모든 수강생은 출생 차트와 에너지·마음·신체의 균형에 따라 맞춤 로드맵을 받습니다.",
     "about.tag1": "공인 라자 요가 · 200시간",
-    "about.tag2": "10년 이상 지도",
+    "about.tag2": "{years}년+ 지도",
     "about.tag3": "3개국 활동",
     "about.tag4": "맞춤 멘토십",
 
@@ -410,10 +410,10 @@ window.I18N = {
 
     "about.eyebrow": "你的引导者",
     "about.title": "Ali Karimi，内在转化的导师",
-    "about.p1": "认证 200 小时 Raja 瑜伽导师，iYogaU 创始人。十多年来，Ali 在首尔、上海与加州湾区引导修习者完成深度而结构化的自我发现旅程。不是团体健身，而是植根于古老智慧与现代科学的个人导师指导。",
+    "about.p1": "认证 200 小时 Raja 瑜伽导师，iYogaU 创始人。{years} 年多以来，Ali 在首尔、上海与加州湾区引导修习者完成深度而结构化的自我发现旅程。不是团体健身，而是植根于古老智慧与现代科学的个人导师指导。",
     "about.p2": "他的方法融合 Raja 瑜伽、冥想、吠陀占星与基于日记的反思。每位学员都会根据其本命盘以及能量、心智与身体的独特平衡，获得个性化路线图。",
     "about.tag1": "认证 Raja 瑜伽 · 200 小时",
-    "about.tag2": "授课 10+ 年",
+    "about.tag2": "授课 {years}+ 年",
     "about.tag3": "3 个国家",
     "about.tag4": "个性化导师指导",
 
