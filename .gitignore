@@ -2,6 +2,9 @@
 stich/
 stitch/
 
+# Local Claude Code dev config
+.claude/
+
 # OS
 .DS_Store
 Thumbs.db
