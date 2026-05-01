@@ -6,6 +6,15 @@
 <meta name="theme-color" content="#7c4ea8" media="(prefers-color-scheme: light)" />
 <meta name="theme-color" content="#0f1413" media="(prefers-color-scheme: dark)" />
 
+<!-- Security defense-in-depth via meta tags. GitHub Pages doesn't expose
+     real HTTP headers, so we use the meta-equivalent. The 'unsafe-inline'
+     in script-src/style-src is required by the FOUC-safe theme-init below
+     and a few inline styles in markup; harden later by replacing with
+     sha256 hashes if/when we audit them. -->
+<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com; img-src 'self' data:; connect-src 'self' https://open.er-api.com; base-uri 'self'; form-action 'self'; frame-ancestors 'none';" />
+<meta http-equiv="X-Content-Type-Options" content="nosniff" />
+<meta name="referrer" content="strict-origin-when-cross-origin" />
+
 <!-- Theme init (FOUC-safe). Reads localStorage and sets data-theme BEFORE
      stylesheets evaluate so visitors never see an unstyled flash. Must
      stay inline and synchronous; do not move to an external file. -->
@@ -22,6 +31,11 @@
 })();
 </script>
 
+<link rel="icon" type="image/x-icon" href="/favicon.ico" />
+<link rel="icon" type="image/png" sizes="32x32" href="/assets/img/favicon-32.png" />
+<link rel="icon" type="image/png" sizes="16x16" href="/assets/img/favicon-16.png" />
+<link rel="apple-touch-icon" sizes="180x180" href="/assets/img/apple-touch-icon.png" />
+
 <title>iYogaU | Inner Transformation Yoga with Ali Karimi</title>
 <meta name="description" content="Transform your inner world through yoga, meditation, and personalized guidance with Ali Karimi. Programs available in Korea, China, and the USA." />
 
@@ -37,7 +51,12 @@
 <meta property="og:description" content="Transform your inner world through yoga, meditation, and personalized guidance. Korea · China · USA." />
 <meta property="og:url" content="https://iyogau.com/zh/" />
 <meta property="og:site_name" content="iYogaU" />
+<meta property="og:image" content="https://iyogau.com/assets/img/og.png" />
+<meta property="og:image:width" content="1200" />
+<meta property="og:image:height" content="630" />
+<meta property="og:image:alt" content="iYogaU — Inner Transformation Yoga. Seoul · Shanghai · California Bay Area." />
 <meta name="twitter:card" content="summary_large_image" />
+<meta name="twitter:image" content="https://iyogau.com/assets/img/og.png" />
 
 <!-- Fonts: preload critical, swap on load -->
 <link rel="preconnect" href="https://fonts.googleapis.com" />
@@ -45,6 +64,7 @@
 <link rel="preload" as="style" href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700&family=Noto+Serif:ital,wght@0,400;0,500;1,400&display=swap" />
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700&family=Noto+Serif:ital,wght@0,400;0,500;1,400&display=swap" />
 
+<link rel="preload" as="style" href="/assets/css/styles.css" />
 <link rel="stylesheet" href="/assets/css/styles.css" />
 
 <!-- Schema.org -->
