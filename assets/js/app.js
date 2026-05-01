@@ -23,14 +23,29 @@
   }
 
   /* ---------- LANG ---------- */
+  function pathLang() {
+    const seg = location.pathname.split('/').filter(Boolean)[0];
+    return SUPPORTED_LANGS.includes(seg) ? seg : null;
+  }
+
+  function langToPath(lang) {
+    return lang === 'en' ? '/' : '/' + lang + '/';
+  }
+
   function detectLang() {
-    const saved = localStorage.getItem(STORAGE_LANG);
-    if (SUPPORTED_LANGS.includes(saved)) return saved;
-    const params = new URLSearchParams(location.search);
-    const fromUrl = params.get('lang');
-    if (SUPPORTED_LANGS.includes(fromUrl)) return fromUrl;
-    const browser = (navigator.language || 'en').slice(0, 2).toLowerCase();
-    return SUPPORTED_LANGS.includes(browser) ? browser : 'en';
+    // The URL path is the single source of truth for language.
+    // Each canonical URL (/, /ko/, /zh/) maps 1:1 to the language served,
+    // so localStorage / browser-language hints don't override it — that
+    // would desync the page from its canonical declaration and confuse
+    // search engines. Picker clicks navigate to switch language.
+    const fromPath = pathLang();
+    if (fromPath) return fromPath;
+    // Backwards-compat for old ?lang=ko URLs: redirect to the path version.
+    const fromQuery = new URLSearchParams(location.search).get('lang');
+    if (SUPPORTED_LANGS.includes(fromQuery) && fromQuery !== 'en') {
+      window.location.replace(langToPath(fromQuery) + location.hash);
+    }
+    return 'en';
   }
 
   function applyTranslations(lang) {
@@ -66,6 +81,14 @@
   function setLang(lang) {
     if (!SUPPORTED_LANGS.includes(lang)) return;
     localStorage.setItem(STORAGE_LANG, lang);
+    // If we're on a path that doesn't match the chosen lang, navigate.
+    // Picker click navigates so canonical URL stays correct for SEO.
+    const onPath = pathLang() || 'en';
+    if (onPath !== lang) {
+      const target = langToPath(lang) + location.hash;
+      window.location.assign(target);
+      return;
+    }
     applyTranslations(lang);
     syncPickerStates('lang', lang);
     if (window.IYOGAU_CURRENCY) window.IYOGAU_CURRENCY.updatePrices(lang);

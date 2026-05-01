@@ -12,14 +12,15 @@
   --surface-4: #eae8e5;
   --ink: #1b1c1a;
   --ink-muted: #444842;
-  --ink-soft: #747871;
+  --ink-soft: #5e6259;
   --primary: #566253;
   --primary-hover: #455143;
   --primary-soft: #b6c3b1;
   --primary-faint: #d9e6d3;
-  --gold: #c5a059;
-  --gold-soft: #e1ba70;
-  --gold-faint: #f5e6c4;
+  --gold: #8c6f2c;
+  --gold-hover: #5a4319;
+  --gold-soft: #b88a3a;
+  --gold-faint: #f0e3c4;
   --outline: rgba(28, 28, 26, 0.08);
   --outline-strong: rgba(28, 28, 26, 0.16);
   --shadow-sm: 0 1px 2px rgba(28, 28, 26, 0.04);
@@ -35,12 +36,13 @@
   --surface-4: #252c2b;
   --ink: #f3f0ee;
   --ink-muted: #c4c8c0;
-  --ink-soft: #8a8f87;
+  --ink-soft: #a4a89e;
   --primary: #8fa48a;
   --primary-hover: #b6c3b1;
   --primary-soft: #2d3a30;
   --primary-faint: #1a221c;
   --gold: #e1ba70;
+  --gold-hover: #f0d099;
   --gold-soft: #c5a059;
   --gold-faint: #4a3a1a;
   --outline: rgba(255, 255, 255, 0.08);
@@ -58,12 +60,13 @@
   --surface-4: #ecd6a8;
   --ink: #2a1d10;
   --ink-muted: #5a4a35;
-  --ink-soft: #8a7558;
-  --primary: #c4762a;
-  --primary-hover: #a55f1d;
+  --ink-soft: #6e5a3f;
+  --primary: #b06820;
+  --primary-hover: #8e511a;
   --primary-soft: #f0c891;
   --primary-faint: #f9e0bd;
   --gold: #8b5a1a;
+  --gold-hover: #5e3d10;
   --gold-soft: #d4a55b;
   --gold-faint: #f0d99a;
   --outline: rgba(140, 90, 30, 0.12);
@@ -81,13 +84,14 @@
   --surface-4: #ddcde7;
   --ink: #2a1d34;
   --ink-muted: #5a4a68;
-  --ink-soft: #8a7e98;
-  --primary: #8b5fb5;
-  --primary-hover: #6e489a;
+  --ink-soft: #6b5e7a;
+  --primary: #7c4ea8;
+  --primary-hover: #5e3982;
   --primary-soft: #c8a8e0;
   --primary-faint: #e8dcf2;
-  --gold: #b8893f;
-  --gold-soft: #d4a55b;
+  --gold: #85622b;
+  --gold-hover: #563f17;
+  --gold-soft: #b88a3a;
   --gold-faint: #f0e3c4;
   --outline: rgba(80, 50, 130, 0.12);
   --outline-strong: rgba(80, 50, 130, 0.24);
@@ -579,7 +583,7 @@ section {
   color: var(--primary);
 }
 
-.pillar h4 { margin-bottom: 0.5rem; }
+.pillar h3 { font-size: 1.125rem; line-height: 1.4; margin-bottom: 0.5rem; }
 .pillar p { font-size: 0.9375rem; margin: 0; }
 
 /* ============ Differentiators (5 features) ============ */
@@ -623,7 +627,7 @@ section {
   font-family: 'Noto Serif', serif;
   font-size: 2.5rem;
   color: var(--gold);
-  opacity: 0.4;
+  opacity: 0.85;
   line-height: 1;
   margin-bottom: 1rem;
 }
@@ -750,7 +754,7 @@ section {
   letter-spacing: 0.05em;
 }
 
-.mode-pill.online { background: var(--gold-faint); color: var(--gold); }
+.mode-pill.online { background: var(--gold-faint); color: var(--gold-hover); }
 
 /* ============ Benefits ============ */
 .benefits-list {
@@ -1013,12 +1017,13 @@ section {
   .footer-grid { grid-template-columns: 1.5fr repeat(3, 1fr); }
 }
 
-.footer-grid h4 {
+.footer-grid h3 {
   font-family: 'Manrope', sans-serif;
   font-size: 0.75rem;
+  line-height: 1.4;
   letter-spacing: 0.12em;
   text-transform: uppercase;
-  color: var(--ink-soft);
+  color: var(--ink-muted);
   margin-bottom: 1rem;
   font-weight: 600;
 }

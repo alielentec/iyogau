@@ -1,0 +1,45 @@
+name: Build localized pages
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - "index.html"
+      - "scripts/build-locales.js"
+      - ".github/workflows/build-locales.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+concurrency:
+  group: build-locales
+  cancel-in-progress: false
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+
+      - name: Regenerate /ko/ and /zh/
+        run: node scripts/build-locales.js
+
+      - name: Commit if changed
+        run: |
+          set -euo pipefail
+          if git diff --quiet -- ko/index.html zh/index.html; then
+            echo "Localized pages unchanged."
+            exit 0
+          fi
+          git config user.name  "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add ko/index.html zh/index.html
+          git commit -m "chore(i18n): rebuild localized pages from index.html"
+          git push
