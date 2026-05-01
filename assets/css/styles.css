@@ -253,7 +253,8 @@ section {
   color: var(--ink);
 }
 
-.brand-i { color: var(--gold); font-style: italic; }
+.brand-i { color: var(--gold); font-style: italic; font-weight: 500; }
+.brand-u { color: var(--primary); font-style: italic; font-weight: 500; }
 
 .nav-links {
   display: none;
