@@ -25,7 +25,7 @@
   /* ---------- THEME ---------- */
   function getTheme() {
     const saved = localStorage.getItem(STORAGE_THEME);
-    return SUPPORTED_THEMES.includes(saved) ? saved : 'sanctuary';
+    return SUPPORTED_THEMES.includes(saved) ? saved : 'amethyst';
   }
 
   function setTheme(theme) {

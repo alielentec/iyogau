@@ -304,6 +304,10 @@ section {
   position: relative;
 }
 
+/* Theme picker is hidden by user request. Re-enable later by removing
+   this single rule — markup, JS, and translations stay wired up. */
+.nav-actions .picker[data-picker="theme"] { display: none; }
+
 .picker-btn {
   display: inline-flex;
   align-items: center;
@@ -1220,6 +1224,65 @@ section {
   text-decoration: none;
 }
 .legal-back:hover { color: var(--primary); }
+
+/* Regional privacy notice cards */
+.region-grid {
+  display: grid;
+  gap: 1rem;
+  margin: 2rem 0 3rem;
+}
+
+@media (min-width: 768px) {
+  .region-grid { grid-template-columns: repeat(3, 1fr); }
+}
+
+.region-card {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  padding: 1.5rem;
+  border-radius: 1rem;
+  background: var(--surface-2);
+  border: 1px solid var(--outline);
+  text-decoration: none;
+  color: var(--ink);
+  transition: border-color 0.15s ease, transform 0.15s ease, box-shadow 0.15s ease;
+}
+
+.region-card:hover {
+  border-color: var(--primary);
+  transform: translateY(-2px);
+  box-shadow: var(--shadow-md);
+  color: var(--ink);
+}
+
+.region-card-flag {
+  font-size: 1.75rem;
+  line-height: 1;
+}
+
+.region-card-title {
+  font-family: 'Noto Serif', serif;
+  font-size: 1.25rem;
+  margin: 0.25rem 0 0;
+  color: var(--ink);
+  text-decoration: none;
+}
+
+.region-card-law {
+  font-size: 0.8125rem;
+  color: var(--ink-soft);
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  font-weight: 600;
+}
+
+.region-card-desc {
+  font-size: 0.875rem;
+  color: var(--ink-muted);
+  line-height: 1.5;
+  margin: 0.25rem 0 0;
+}
 
 /* Health disclaimer banner on homepage course section */
 .health-notice {

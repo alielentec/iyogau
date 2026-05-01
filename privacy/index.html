@@ -3,11 +3,24 @@
 <head>
 <meta charset="utf-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
-<meta name="theme-color" content="#566253" media="(prefers-color-scheme: light)" />
+<meta name="theme-color" content="#7c4ea8" media="(prefers-color-scheme: light)" />
 <meta name="theme-color" content="#0f1413" media="(prefers-color-scheme: dark)" />
 
+<script>
+(function () {
+  try {
+    var allowed = ['sanctuary', 'glacier', 'saffron', 'amethyst'];
+    var t = localStorage.getItem('iyogau_theme');
+    if (allowed.indexOf(t) === -1) t = 'amethyst';
+    document.documentElement.setAttribute('data-theme', t);
+  } catch (e) {
+    document.documentElement.setAttribute('data-theme', 'amethyst');
+  }
+})();
+</script>
+
 <title>Privacy Policy | iYogaU</title>
-<meta name="description" content="iYogaU privacy policy: what personal information we collect, why, how we use it, and your rights under CCPA/CPRA, GDPR, and PIPA (Korea)." />
+<meta name="description" content="iYogaU privacy policy: global baseline plus jurisdiction-specific notices for California (CCPA/CPRA), Mainland China (PIPL), and South Korea (PIPA)." />
 <meta name="robots" content="index, follow" />
 
 <link rel="canonical" href="https://iyogau.com/privacy/" />
@@ -39,11 +52,37 @@
       <span><strong>Last updated:</strong> April 30, 2026</span>
     </div>
 
-    <p>This Privacy Policy describes how iYogaU ("we," "us," or "our") collects, uses, and shares personal information when you visit <a href="https://iyogau.com">iyogau.com</a> or apply for one of our programs. iYogaU is operated by Ali Karimi as a sole proprietorship serving practitioners in Seoul (South Korea), Shanghai (China), and the California Bay Area (United States).</p>
+    <p>This page describes how iYogaU ("we," "us," or "our") collects, uses, and shares personal information when you visit <a href="https://iyogau.com">iyogau.com</a> or apply for one of our programs. iYogaU is operated by Ali Karimi as a sole proprietorship serving practitioners in Seoul (South Korea), Shanghai (China), and the California Bay Area (United States).</p>
 
     <div class="legal-callout">
       <strong>Plain-English summary.</strong> We collect the minimum information needed to deliver the program you sign up for: your name, email, payment confirmation, and (only if you choose) your birth details for the Vedic astrology component. We never sell or rent your data. We never use it to advertise or train AI. You can request a copy or deletion at any time by emailing <a href="mailto:privacy@iyogau.com">privacy@iyogau.com</a>.
     </div>
+
+    <h2 id="regional">Regional notices</h2>
+    <p>Privacy law varies significantly by jurisdiction. The cards below link to the notice that applies in your region, with the specific rights and processes you can invoke. The general policy below covers practices that apply globally.</p>
+
+    <div class="region-grid">
+      <a class="region-card" href="/privacy/california/" hreflang="en">
+        <span class="region-card-flag" aria-hidden="true">🇺🇸</span>
+        <span class="region-card-law">CCPA / CPRA</span>
+        <span class="region-card-title">California</span>
+        <span class="region-card-desc">Right to know, delete, correct, opt out of sale &amp; sharing, limit sensitive use. English.</span>
+      </a>
+      <a class="region-card" href="/privacy/china/" hreflang="zh">
+        <span class="region-card-flag" aria-hidden="true">🇨🇳</span>
+        <span class="region-card-law">个人信息保护法 · PIPL</span>
+        <span class="region-card-title">中国大陆</span>
+        <span class="region-card-desc">个人信息处理告知、跨境传输规则、数据主体权利与个人信息保护负责人联系方式。</span>
+      </a>
+      <a class="region-card" href="/privacy/korea/" hreflang="ko">
+        <span class="region-card-flag" aria-hidden="true">🇰🇷</span>
+        <span class="region-card-law">개인정보보호법 · PIPA</span>
+        <span class="region-card-title">대한민국</span>
+        <span class="region-card-desc">처리목적, 처리항목, 보유기간, 정보주체 권리 및 개인정보 보호책임자 안내.</span>
+      </a>
+    </div>
+
+    <p style="font-size:.875rem;color:var(--ink-soft);">If you are in the European Economic Area, the United Kingdom, or another jurisdiction not covered above, the GDPR / general rights section below describes the rights and processes available to you. If you are unsure which notice applies, contact <a href="mailto:privacy@iyogau.com">privacy@iyogau.com</a>.</p>
 
     <nav class="legal-toc" aria-label="Privacy policy contents">
       <ol>
@@ -53,10 +92,8 @@
         <li><a href="#cookies">Cookies, fonts, and third-party requests</a></li>
         <li><a href="#retention">How long we keep information</a></li>
         <li><a href="#security">How we protect information</a></li>
-        <li><a href="#rights-ccpa">California rights (CCPA/CPRA)</a></li>
-        <li><a href="#do-not-sell">Do Not Sell or Share My Personal Information</a></li>
         <li><a href="#rights-gdpr">EEA / UK rights (GDPR)</a></li>
-        <li><a href="#rights-korea">Korea (PIPA) and China (PIPL) rights</a></li>
+        <li><a href="#international">International transfers</a></li>
         <li><a href="#children">Children's privacy</a></li>
         <li><a href="#changes">Changes to this policy</a></li>
         <li><a href="#contact">Contact us</a></li>
@@ -69,8 +106,8 @@
     <ul>
       <li><strong>Contact details:</strong> name, email address, phone number (optional), country of residence.</li>
       <li><strong>Application information:</strong> short answers about your background, goals, and yoga experience submitted through the application form.</li>
-      <li><strong>Astrology information (optional):</strong> birth date, birth time, and birth location, only if you choose to enroll in the natal chart component.</li>
-      <li><strong>Health self-disclosure (during enrollment):</strong> any medical conditions or pregnancy status you choose to disclose so we can adapt the practice for safety.</li>
+      <li><strong>Astrology information (optional):</strong> birth date, birth time, and birth location, only if you choose to enroll in the natal chart component. This is treated as sensitive information.</li>
+      <li><strong>Health self-disclosure (during enrollment):</strong> any medical conditions or pregnancy status you choose to disclose so we can adapt the practice for safety. This is treated as sensitive information.</li>
       <li><strong>Payment confirmation:</strong> we receive a transaction reference from our payment processor. We do <strong>not</strong> store your full card number, bank details, or other payment credentials.</li>
       <li><strong>Course interaction:</strong> journal entries you submit through the iYogaU platform during your program.</li>
       <li><strong>Communications:</strong> the content of emails or messages you send us.</li>
@@ -78,7 +115,7 @@
 
     <h3>Information collected automatically</h3>
     <ul>
-      <li><strong>Server access logs:</strong> our hosting provider (GitHub Pages) logs IP addresses and request metadata for fraud and abuse prevention. We do not run our own analytics.</li>
+      <li><strong>Server access logs:</strong> our hosting provider logs IP addresses and request metadata for fraud and abuse prevention. We do not run our own analytics.</li>
       <li><strong>Browser-level information:</strong> your browser sends standard HTTP headers (browser type, language preference, referring page) to load the site.</li>
     </ul>
 
@@ -128,51 +165,26 @@
     <h2 id="security">6. How we protect information</h2>
     <p>We use TLS (HTTPS) for all transmissions of personal information. The journaling platform is access-controlled and protected with reasonable administrative, technical, and physical safeguards. No method of transmission or storage is perfectly secure, and we cannot guarantee absolute security. If we become aware of a security incident affecting your personal information, we will notify you in accordance with applicable law.</p>
 
-    <h2 id="rights-ccpa">7. California rights (CCPA/CPRA)</h2>
-    <p>If you are a California resident, the California Consumer Privacy Act, as amended by the California Privacy Rights Act, gives you the following rights:</p>
-    <ul>
-      <li><strong>Right to know</strong> what personal information we have collected, used, disclosed, or sold about you in the past 12 months.</li>
-      <li><strong>Right to delete</strong> personal information we have collected, subject to certain exceptions.</li>
-      <li><strong>Right to correct</strong> inaccurate personal information.</li>
-      <li><strong>Right to opt out of "sale" or "sharing"</strong> of your personal information. <em>iYogaU does not sell or share personal information for cross-context behavioral advertising.</em></li>
-      <li><strong>Right to limit use of sensitive personal information.</strong></li>
-      <li><strong>Right to non-discrimination</strong> for exercising any of these rights.</li>
-    </ul>
-    <p>To exercise any of these rights, email <a href="mailto:privacy@iyogau.com">privacy@iyogau.com</a> from the email address associated with your account. We will respond within 45 days as required by law. You may designate an authorized agent to make a request on your behalf; we will require written authorization.</p>
-
-    <p>Categories of personal information we collected in the past 12 months: identifiers (name, email), customer records (application content), commercial information (enrollment), internet activity (server logs), inferences (program suitability, derived from your application), and — only if you opted in — sensitive astrological birth details.</p>
-    <p>Categories of sources: directly from you, and indirectly from your device when you visit our site.</p>
-    <p>Categories of recipients: payment processor, email provider, hosting provider, and legal authorities when required.</p>
-    <p>We do not knowingly sell or share personal information about consumers under 16 years of age.</p>
-
-    <h2 id="do-not-sell">8. Do Not Sell or Share My Personal Information</h2>
-    <p><strong>iYogaU does not sell your personal information for money. iYogaU does not share your personal information for cross-context behavioral advertising.</strong></p>
-    <p>If California law's definition of "sale" or "sharing" ever applies to any future feature, you can opt out by:</p>
-    <ul>
-      <li>Emailing <a href="mailto:privacy@iyogau.com?subject=Do%20Not%20Sell%20or%20Share">privacy@iyogau.com</a> with the subject "Do Not Sell or Share."</li>
-      <li>Sending a Global Privacy Control (GPC) signal from your browser. We honor GPC as a valid opt-out request.</li>
-    </ul>
-
-    <h2 id="rights-gdpr">9. EEA / UK rights (GDPR)</h2>
-    <p>If you are located in the European Economic Area or the United Kingdom, you have the following rights under the GDPR (and UK GDPR):</p>
+    <h2 id="rights-gdpr">7. EEA / UK rights (GDPR)</h2>
+    <p>If you are located in the European Economic Area, the United Kingdom, or Switzerland, the GDPR (and UK GDPR) provides the following rights:</p>
     <ul>
       <li>Right of access, rectification, erasure, restriction of processing, data portability, and objection.</li>
       <li>Right to withdraw consent at any time, where processing is based on consent.</li>
       <li>Right to lodge a complaint with your local supervisory authority.</li>
     </ul>
     <p>Our legal bases for processing: (a) performance of a contract (program delivery), (b) legitimate interests (responding to inquiries, preventing fraud), (c) consent (newsletter, optional astrology data), and (d) legal obligation (tax records).</p>
-    <p>When personal information is transferred outside the EEA/UK, we rely on appropriate safeguards such as Standard Contractual Clauses where required.</p>
+    <p>To exercise any of these rights, email <a href="mailto:privacy@iyogau.com">privacy@iyogau.com</a> from the address associated with your account. We will respond within 30 days.</p>
 
-    <h2 id="rights-korea">10. Korea (PIPA) and China (PIPL) rights</h2>
-    <p>If you are in South Korea, the Personal Information Protection Act (PIPA) gives you the right to access, correct, delete, and request suspension of processing of your personal information held by us. If you are in mainland China, the Personal Information Protection Law (PIPL) provides similar rights along with the right to refuse automated decision-making. Contact <a href="mailto:privacy@iyogau.com">privacy@iyogau.com</a> to exercise any of these rights. We will respond as required by applicable law.</p>
+    <h2 id="international">8. International transfers</h2>
+    <p>iYogaU operates across multiple jurisdictions. When personal information is transferred internationally, we rely on appropriate safeguards. EEA/UK transfers use Standard Contractual Clauses where required. Mainland China transfers follow PIPL Article 38 routes (separate consent and a security assessment, certification, or standard contract as applicable). South Korea transfers are disclosed in advance under PIPA Article 28-8 and rely on documented user consent or other lawful grounds.</p>
 
-    <h2 id="children">11. Children's privacy</h2>
+    <h2 id="children">9. Children's privacy</h2>
     <p>iYogaU programs are not directed to children under 16. We do not knowingly collect personal information from anyone under 16. If you believe a child has provided us with personal information, please contact us and we will delete it.</p>
 
-    <h2 id="changes">12. Changes to this policy</h2>
+    <h2 id="changes">10. Changes to this policy</h2>
     <p>We may update this policy from time to time. The "Last updated" date at the top of this page reflects the most recent revision. For material changes, we will provide reasonable notice (e.g., a banner on the website or an email to active practitioners) before the changes take effect.</p>
 
-    <h2 id="contact">13. Contact us</h2>
+    <h2 id="contact">11. Contact us</h2>
     <p>For privacy questions or to exercise any rights described above:</p>
     <ul>
       <li>Email: <a href="mailto:privacy@iyogau.com">privacy@iyogau.com</a></li>

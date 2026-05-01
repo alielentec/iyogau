@@ -3,8 +3,24 @@
 <head>
 <meta charset="utf-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
-<meta name="theme-color" content="#566253" media="(prefers-color-scheme: light)" />
+<meta name="theme-color" content="#7c4ea8" media="(prefers-color-scheme: light)" />
 <meta name="theme-color" content="#0f1413" media="(prefers-color-scheme: dark)" />
+
+<!-- Theme init (FOUC-safe). Reads localStorage and sets data-theme BEFORE
+     stylesheets evaluate so visitors never see an unstyled flash. Must
+     stay inline and synchronous; do not move to an external file. -->
+<script>
+(function () {
+  try {
+    var allowed = ['sanctuary', 'glacier', 'saffron', 'amethyst'];
+    var t = localStorage.getItem('iyogau_theme');
+    if (allowed.indexOf(t) === -1) t = 'amethyst';
+    document.documentElement.setAttribute('data-theme', t);
+  } catch (e) {
+    document.documentElement.setAttribute('data-theme', 'amethyst');
+  }
+})();
+</script>
 
 <title>iYogaU | Inner Transformation Yoga with Ali Karimi</title>
 <meta name="description" content="Transform your inner world through yoga, meditation, and personalized guidance with Ali Karimi. Programs available in Korea, China, and the USA." />
@@ -618,7 +634,7 @@
         <a href="/terms/" data-i18n="footer.terms">Terms of Service</a> ·
         <a href="/health-disclaimer/" data-i18n="footer.health">Health Disclaimer</a> ·
         <a href="/accessibility/" data-i18n="footer.accessibility">Accessibility</a> ·
-        <a href="/privacy/#do-not-sell" data-i18n="footer.do_not_sell">Do Not Sell or Share My Personal Information</a>
+        <a href="/privacy/california/#do-not-sell" data-i18n="footer.do_not_sell">Do Not Sell or Share My Personal Information</a>
       </nav>
     </div>
 
