@@ -1,0 +1,15 @@
+# Stitch design reference (local-only)
+stich/
+stitch/
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Editor
+.vscode/
+.idea/
+*.swp
+
+# Logs
+*.log
