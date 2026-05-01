@@ -1067,6 +1067,27 @@ section {
   max-width: 720px;
 }
 
+/* ============ Justified card body text ============ */
+.pillar p,
+.feature p,
+.location-card p,
+.benefits-list span,
+.about p,
+.faq-body,
+.course-hero > p,
+.level ul li,
+.quote blockquote {
+  text-align: justify;
+  text-justify: inter-word;
+  hyphens: auto;
+  -webkit-hyphens: auto;
+}
+
+/* Section heads and short text remain centered/left */
+.section-head p,
+.hero-sub,
+.post-card p { text-align: inherit; hyphens: manual; }
+
 /* ============ Utilities ============ */
 .sr-only {
   position: absolute;
