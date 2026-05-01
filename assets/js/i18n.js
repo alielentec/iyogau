@@ -19,6 +19,7 @@ window.I18N = {
     "theme.sanctuary": "Sanctuary",
     "theme.glacier": "Glacier",
     "theme.saffron": "Saffron",
+    "theme.amethyst": "Amethyst",
 
     "hero.eyebrow": "Ancient Wisdom · Modern Precision",
     "hero.title": "Discover Your Higher Consciousness",
@@ -69,7 +70,8 @@ window.I18N = {
     "course.sub": "A 63-day immersive journey of self-discovery and inner connection — direct experience over philosophy.",
     "course.duration": "63 days",
     "course.participants": "177+ Participants",
-    "course.price": "₩1,340,000",
+    "course.price_label": "Investment",
+    "course.fx_note": "live rate",
     "course.cta": "Apply for Inner Transformation",
     "course.intro": "Yoga, derived from the Sanskrit yuj — to join, to unite — is about uniting with your inner universe. This course is designed to help you reach higher levels of consciousness and bring meaningful change. Are you ready to embark on a disciplined and transformative journey, free from external distractions?",
 
@@ -199,6 +201,7 @@ window.I18N = {
     "theme.sanctuary": "생추어리",
     "theme.glacier": "글레이셔",
     "theme.saffron": "사프란",
+    "theme.amethyst": "애머시스트",
 
     "hero.eyebrow": "고대의 지혜 · 현대의 정밀함",
     "hero.title": "더 높은 의식을 만나다",
@@ -249,7 +252,8 @@ window.I18N = {
     "course.sub": "63일간 자기 발견과 내면 연결의 몰입 여정 — 철학보다 직접 경험.",
     "course.duration": "63일",
     "course.participants": "177명+ 참여",
-    "course.price": "₩1,340,000",
+    "course.price_label": "수강료",
+    "course.fx_note": "실시간 환율",
     "course.cta": "내면 변화 신청하기",
     "course.intro": "산스크리트 'yuj'에서 유래한 요가 — '연결하다, 합일하다' — 는 내면 우주와의 합일을 의미합니다. 이 코스는 더 높은 의식 수준에 도달하고 의미 있는 변화를 가져오도록 설계되었습니다. 외부의 방해 없이 규율 있는 변혁의 여정에 오를 준비가 되셨나요?",
 
@@ -379,6 +383,7 @@ window.I18N = {
     "theme.sanctuary": "庇护",
     "theme.glacier": "冰川",
     "theme.saffron": "藏红",
+    "theme.amethyst": "紫晶",
 
     "hero.eyebrow": "古老智慧 · 现代精度",
     "hero.title": "发现你更高的意识",
@@ -429,7 +434,8 @@ window.I18N = {
     "course.sub": "63 天的自我发现与内在连接的沉浸之旅 — 直接体验胜于哲学。",
     "course.duration": "63 天",
     "course.participants": "177+ 学员",
-    "course.price": "₩1,340,000",
+    "course.price_label": "课程费用",
+    "course.fx_note": "实时汇率",
     "course.cta": "申请内在转化",
     "course.intro": "瑜伽，源自梵文 yuj — '连接、合一' — 意为与内在宇宙合一。本课程旨在助你抵达更高意识层级，带来有意义的改变。你是否准备好踏上一段有纪律、远离外界干扰的转化之旅？",
 

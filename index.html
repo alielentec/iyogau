@@ -63,8 +63,8 @@
       "timeRequired": "P63D",
       "offers": {
         "@type": "Offer",
-        "price": "1340000",
-        "priceCurrency": "KRW"
+        "price": "5000",
+        "priceCurrency": "USD"
       }
     },
     {
@@ -118,6 +118,10 @@
             <button type="button" data-value="saffron" role="menuitemradio">
               <span class="theme-swatch" style="background:linear-gradient(135deg,#fdf8f1 0%,#c4762a 100%)"></span>
               <span data-i18n="theme.saffron">Saffron</span>
+            </button>
+            <button type="button" data-value="amethyst" role="menuitemradio">
+              <span class="theme-swatch" style="background:linear-gradient(135deg,#faf6fb 0%,#8b5fb5 100%)"></span>
+              <span data-i18n="theme.amethyst">Amethyst</span>
             </button>
           </div>
         </div>
@@ -288,7 +292,9 @@
 
     <div class="course-hero">
       <div class="price-tag">
-        <span data-i18n="course.price">₩1,340,000</span>
+        <small data-i18n="course.price_label">Investment</small>
+        <span data-price-usd="5000">$5,000</span>
+        <small class="fx-note" data-fx-note></small>
       </div>
       <p style="max-width:680px;margin:0 auto 1rem;color:var(--ink-muted);" data-i18n="course.intro">Yoga, derived from the Sanskrit yuj — to join, to unite — is about uniting with your inner universe.</p>
       <div class="course-stats">
@@ -613,6 +619,7 @@
 </footer>
 
 <script src="/assets/js/i18n.js" defer></script>
+<script src="/assets/js/currency.js" defer></script>
 <script src="/assets/js/app.js" defer></script>
 </body>
 </html>

@@ -7,7 +7,7 @@
   const STORAGE_THEME = 'iyogau_theme';
   const STORAGE_LANG = 'iyogau_lang';
   const SUPPORTED_LANGS = ['en', 'ko', 'zh'];
-  const SUPPORTED_THEMES = ['sanctuary', 'glacier', 'saffron'];
+  const SUPPORTED_THEMES = ['sanctuary', 'glacier', 'saffron', 'amethyst'];
 
   /* ---------- THEME ---------- */
   function getTheme() {
@@ -68,6 +68,7 @@
     localStorage.setItem(STORAGE_LANG, lang);
     applyTranslations(lang);
     syncPickerStates('lang', lang);
+    if (window.IYOGAU_CURRENCY) window.IYOGAU_CURRENCY.updatePrices(lang);
   }
 
   /* ---------- PICKERS ---------- */
