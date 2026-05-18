@@ -1,10 +1,10 @@
 {
   "base": "USD",
-  "updated": "2026-05-18T00:04:22Z",
+  "updated": "2026-05-18T04:38:33Z",
   "source": "open.er-api.com",
   "rates": {
     "USD": 1,
-    "KRW": 1497.840406,
-    "CNY": 6.8263
+    "KRW": 1497.530574,
+    "CNY": 6.81799
   }
 }
