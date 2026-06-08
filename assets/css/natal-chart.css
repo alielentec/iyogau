@@ -1,0 +1,366 @@
+
+/* ===================================================================== *
+ *  Natal chart
+ *  (appended; preserves all existing rules above)
+ * ===================================================================== */
+
+/* --- Interior-page header variant ---------------------------------- */
+.site-header--interior .site-header__inner {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  padding-block: 0.75rem;
+}
+.site-header--interior .btn-back {
+  font-size: 0.9rem;
+  white-space: nowrap;
+}
+
+/* --- Page container ------------------------------------------------ */
+.natal-page {
+  padding-block: clamp(2rem, 5vw, 4rem);
+  background: var(--surface);
+  color: var(--ink);
+}
+.natal-page__inner {
+  display: flex;
+  flex-direction: column;
+  gap: clamp(2rem, 4vw, 3rem);
+}
+
+/* --- Hero ---------------------------------------------------------- */
+.natal-hero {
+  max-width: 56ch;
+}
+.natal-hero h1 {
+  font-family: "Noto Serif", serif;
+  font-size: clamp(1.875rem, 1rem + 3vw, 2.75rem);
+  line-height: 1.15;
+  margin: 0 0 0.75rem;
+  color: var(--ink);
+}
+.natal-hero .lead {
+  font-size: 1.125rem;
+  line-height: 1.55;
+  color: var(--ink-muted);
+  margin: 0 0 0.75rem;
+}
+.natal-hero .natal-intro {
+  font-size: 1rem;
+  line-height: 1.6;
+  color: var(--ink-muted);
+  margin: 0;
+}
+
+/* --- Form ---------------------------------------------------------- */
+.natal-form-section {
+  background: var(--surface-2);
+  border: 1px solid var(--outline);
+  border-radius: 14px;
+  padding: clamp(1.25rem, 2.5vw, 2rem);
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.04);
+}
+
+.natal-form {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 1.25rem;
+}
+@media (min-width: 640px) {
+  .natal-form {
+    grid-template-columns: 1fr 1fr;
+    gap: 1.25rem 1.5rem;
+  }
+  .natal-field--combo,
+  .natal-field.consent,
+  .natal-field--submit {
+    grid-column: 1 / -1;
+  }
+}
+
+.natal-field {
+  display: flex;
+  flex-direction: column;
+  gap: 0.375rem;
+}
+.natal-field > label,
+.natal-field > .label-text {
+  font-weight: 600;
+  font-size: 0.9rem;
+  color: var(--ink);
+  letter-spacing: 0.01em;
+}
+.natal-field input[type="text"],
+.natal-field input[type="date"],
+.natal-field input[type="time"],
+.natal-field select {
+  width: 100%;
+  padding: 0.625rem 0.75rem;
+  font: inherit;
+  font-size: 0.95rem;
+  color: var(--ink);
+  background: var(--surface);
+  border: 1px solid var(--outline);
+  border-radius: 8px;
+  transition: border-color 120ms ease, box-shadow 120ms ease;
+  min-height: 44px; /* touch target */
+}
+.natal-field input:focus-visible,
+.natal-field select:focus-visible {
+  outline: none;
+  border-color: var(--primary);
+  box-shadow: 0 0 0 3px var(--primary-faint);
+}
+.natal-field input:disabled {
+  opacity: 0.55;
+  cursor: not-allowed;
+}
+.natal-field .help {
+  font-size: 0.8125rem;
+  color: var(--ink-muted);
+  line-height: 1.4;
+}
+.natal-field .help--empty {
+  color: var(--gold-hover);
+}
+
+.inline-check {
+  display: inline-flex;
+  align-items: flex-start;
+  gap: 0.5rem;
+  font-size: 0.9rem;
+  font-weight: 400;
+  color: var(--ink);
+  cursor: pointer;
+  line-height: 1.45;
+}
+.inline-check input[type="checkbox"] {
+  flex: 0 0 auto;
+  width: 1.1rem;
+  height: 1.1rem;
+  margin-top: 0.15rem;
+  accent-color: var(--primary);
+}
+
+/* Combo / autocomplete */
+.natal-field--combo .combo {
+  position: relative;
+}
+.combo-listbox {
+  position: absolute;
+  z-index: 20;
+  top: calc(100% + 4px);
+  left: 0;
+  right: 0;
+  margin: 0;
+  padding: 0.25rem 0;
+  list-style: none;
+  background: var(--surface);
+  border: 1px solid var(--outline);
+  border-radius: 8px;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.12);
+  max-height: 18rem;
+  overflow-y: auto;
+}
+.combo-option {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  gap: 0.75rem;
+  padding: 0.5rem 0.75rem;
+  cursor: pointer;
+  font-size: 0.9rem;
+  color: var(--ink);
+  border-radius: 4px;
+}
+.combo-option:hover,
+.combo-option.is-active {
+  background: var(--primary-faint);
+}
+.combo-option__name {
+  font-weight: 500;
+}
+.combo-option__country {
+  font-size: 0.8rem;
+  color: var(--ink-muted);
+  white-space: nowrap;
+}
+
+/* Timezone row */
+.tz-row {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  flex-wrap: wrap;
+}
+.tz-display {
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+  font-size: 0.9rem;
+  padding: 0.375rem 0.5rem;
+  background: var(--surface);
+  border: 1px solid var(--outline);
+  border-radius: 6px;
+  color: var(--ink);
+}
+.link-btn {
+  background: none;
+  border: none;
+  color: var(--primary);
+  text-decoration: underline;
+  font: inherit;
+  font-size: 0.875rem;
+  cursor: pointer;
+  padding: 0.25rem 0.25rem;
+}
+.link-btn:hover,
+.link-btn:focus-visible {
+  color: var(--gold-hover);
+  outline: none;
+}
+.link-btn:focus-visible {
+  box-shadow: 0 0 0 3px var(--primary-faint);
+  border-radius: 4px;
+}
+
+/* Consent row */
+.natal-form .consent {
+  padding: 0.875rem 1rem;
+  background: var(--surface);
+  border: 1px solid var(--outline);
+  border-radius: 8px;
+}
+.natal-form .consent a {
+  color: var(--primary);
+  text-decoration: underline;
+}
+.natal-form .consent a:hover,
+.natal-form .consent a:focus-visible {
+  color: var(--gold-hover);
+}
+
+/* Submit row */
+.natal-field--submit {
+  display: flex;
+  flex-direction: column;
+  gap: 0.625rem;
+  align-items: flex-start;
+}
+.natal-field--submit .btn {
+  min-width: 14rem;
+}
+
+.natal-error {
+  margin: 0;
+  padding: 0.625rem 0.875rem;
+  font-size: 0.9rem;
+  color: var(--gold-hover);
+  background: rgba(180, 80, 60, 0.08);
+  border: 1px solid var(--gold-hover);
+  border-radius: 6px;
+}
+
+/* --- Results ------------------------------------------------------- */
+.natal-results {
+  display: flex;
+  flex-direction: column;
+  gap: 1.5rem;
+}
+.natal-results h2 {
+  font-family: "Noto Serif", serif;
+  font-size: clamp(1.5rem, 0.75rem + 2vw, 2rem);
+  margin: 0;
+  color: var(--ink);
+  outline: none;
+}
+
+.natal-wheel-wrap {
+  max-width: 720px;
+  margin: 0 auto;
+  width: 100%;
+  background: var(--surface);
+  border: 1px solid var(--outline);
+  border-radius: 12px;
+  padding: 0.75rem;
+}
+.natal-wheel-wrap svg {
+  width: 100%;
+  height: auto;
+  display: block;
+}
+
+.natal-meta__line {
+  font-size: 0.875rem;
+  color: var(--ink-muted);
+  margin: 0;
+}
+
+.natal-table-wrap {
+  display: flex;
+  flex-direction: column;
+  gap: 1.25rem;
+}
+.natal-table-wrap h3 {
+  font-family: "Noto Serif", serif;
+  font-size: 1.25rem;
+  margin: 0.25rem 0 0.5rem;
+  color: var(--ink);
+}
+.natal-axes-summary {
+  margin: 0;
+  font-size: 0.95rem;
+  color: var(--ink);
+}
+.natal-axes-summary strong {
+  color: var(--ink);
+}
+
+.natal-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.9rem;
+  color: var(--ink);
+}
+.natal-table th,
+.natal-table td {
+  padding: 0.55rem 0.75rem;
+  border-bottom: 1px solid var(--outline);
+  text-align: left;
+}
+.natal-table thead th {
+  background: var(--surface-2);
+  color: var(--ink-muted);
+  font-weight: 600;
+  font-size: 0.8125rem;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+.natal-table tbody tr:hover {
+  background: var(--primary-faint);
+}
+.natal-table tbody th[scope="row"] {
+  font-weight: 600;
+}
+
+.natal-attribution {
+  margin: 0;
+  font-size: 0.8rem;
+  color: var(--ink-muted);
+}
+.natal-attribution a {
+  color: var(--ink-muted);
+  text-decoration: underline;
+}
+
+/* Visually-hidden helper (re-declared locally in case .sr-only is not in the base sheet) */
+.sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border: 0;
+}

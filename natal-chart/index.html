@@ -1,0 +1,278 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Free Vedic Natal Chart — iYogaU</title>
+  <meta name="description" content="Compute your free Vedic (sidereal) natal chart with Lahiri ayanamsa. Birth date, time, and place produce an accurate astrological birth chart used in classical yoga and Jyotisha." />
+  <meta name="robots" content="index,follow" />
+  <link rel="canonical" href="https://iyogau.com/natal-chart/" />
+
+  <!-- Open Graph -->
+  <meta property="og:type" content="website" />
+  <meta property="og:title" content="Free Vedic Natal Chart — iYogaU" />
+  <meta property="og:description" content="A precise sidereal (Vedic) birth chart, computed in your browser with no birth-detail tracking." />
+  <meta property="og:url" content="https://iyogau.com/natal-chart/" />
+  <meta property="og:locale" content="en_US" />
+
+  <!-- FOUC-safe theme bootstrap (matches site-wide pattern). Uses the
+       same 'iyogau_theme' key the rest of the site reads via app.js. -->
+  <script>
+    (function () {
+      try {
+        var allowed = ['sanctuary', 'glacier', 'saffron', 'amethyst'];
+        var t = localStorage.getItem('iyogau_theme');
+        if (allowed.indexOf(t) === -1) t = 'amethyst';
+        document.documentElement.setAttribute('data-theme', t);
+      } catch (e) {
+        document.documentElement.setAttribute('data-theme', 'amethyst');
+      }
+    })();
+  </script>
+
+  <!-- Fonts: reuse existing Manrope + Noto Serif -->
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700&family=Noto+Serif:wght@400;600;700&display=swap" />
+
+  <link rel="stylesheet" href="/assets/css/styles.css" />
+  <!-- Natal-chart-specific styles (kept in a sibling file so the base sheet is untouched) -->
+  <link rel="stylesheet" href="/assets/css/natal-chart.css" />
+
+  <!-- Tool page: keep crawlers from indexing this as primary content vs. course pages -->
+  <link rel="alternate" hreflang="en" href="https://iyogau.com/natal-chart/" />
+  <link rel="alternate" hreflang="ko" href="https://iyogau.com/natal-chart/?lang=ko" />
+  <link rel="alternate" hreflang="zh" href="https://iyogau.com/natal-chart/?lang=zh" />
+  <link rel="alternate" hreflang="x-default" href="https://iyogau.com/natal-chart/" />
+
+  <!-- JSON-LD: WebApplication + data attribution -->
+  <script type="application/ld+json">
+  {
+    "@context": "https://schema.org",
+    "@type": "WebApplication",
+    "name": "iYogaU Vedic Natal Chart",
+    "applicationCategory": "LifestyleApplication",
+    "operatingSystem": "Any",
+    "url": "https://iyogau.com/natal-chart/",
+    "offers": { "@type": "Offer", "price": "0", "priceCurrency": "USD" },
+    "isAccessibleForFree": true,
+    "isFamilyFriendly": true,
+    "creator": { "@type": "Organization", "name": "iYogaU", "url": "https://iyogau.com" },
+    "potentialAction": {
+      "@type": "CreateAction",
+      "target": "https://iyogau.com/natal-chart/",
+      "result": { "@type": "CreativeWork", "name": "Sidereal natal chart" }
+    }
+  }
+  </script>
+</head>
+<body class="page-natal">
+
+<!-- ============================ Simplified interior-page header ============================ -->
+<header class="site-header site-header--interior" role="banner">
+  <div class="container site-header__inner">
+    <a href="/" class="brand" aria-label="iYogaU home">
+      <span class="brand-i">i</span>Yoga<span class="brand-u">U</span>
+    </a>
+    <a href="/" class="btn btn-ghost btn-back" data-i18n="natal.header.back">&larr; Back to iYogaU</a>
+  </div>
+</header>
+
+<!-- ============================ Main: hero + form + results ============================ -->
+<main id="main" class="natal-page" role="main">
+  <div class="container natal-page__inner">
+
+    <!-- Hero -->
+    <section class="natal-hero">
+      <h1 data-i18n="natal.title">Your Free Vedic Natal Chart</h1>
+      <p class="lead" data-i18n="natal.subtitle">A sidereal birth chart in the classical Jyotisha tradition &mdash; computed instantly, with no birth details stored on our servers.</p>
+      <p class="natal-intro" data-i18n="natal.intro">Enter the date, time, and place of your birth. We use the Lahiri ayanamsa and the whole-sign house system, the conventions used in classical yoga training.</p>
+    </section>
+
+    <!-- Form -->
+    <section class="natal-form-section" aria-labelledby="natal-form-heading">
+      <h2 id="natal-form-heading" class="sr-only" data-i18n="natal.form.heading">Birth details</h2>
+
+      <form id="natal-form" class="natal-form" novalidate>
+
+        <!-- Name (optional, not sent to server) -->
+        <div class="natal-field">
+          <label for="nf-name" data-i18n="natal.form.name">Your name (optional)</label>
+          <input id="nf-name" name="name" type="text" maxlength="60" autocomplete="given-name" inputmode="text" />
+          <small class="help" data-i18n="natal.form.name.help">For your reference only &mdash; not sent to our server.</small>
+        </div>
+
+        <!-- Birth date -->
+        <div class="natal-field">
+          <label for="nf-date" data-i18n="natal.form.date">Birth date</label>
+          <input id="nf-date" name="date" type="date" min="1900-01-01" required aria-required="true" />
+        </div>
+
+        <!-- Birth time -->
+        <div class="natal-field">
+          <label for="nf-time" data-i18n="natal.form.time">Birth time</label>
+          <input id="nf-time" name="time" type="time" required aria-required="true" />
+          <label class="inline-check">
+            <input id="nf-time-unknown" type="checkbox" />
+            <span data-i18n="natal.form.time.unknown">I don&rsquo;t know my birth time</span>
+          </label>
+        </div>
+
+        <!-- Birthplace -->
+        <div class="natal-field natal-field--combo">
+          <label for="nf-place" data-i18n="natal.form.place">Birthplace</label>
+          <div class="combo">
+            <input
+              id="nf-place"
+              name="place"
+              type="text"
+              autocomplete="off"
+              autocorrect="off"
+              spellcheck="false"
+              role="combobox"
+              aria-autocomplete="list"
+              aria-expanded="false"
+              aria-controls="nf-place-listbox"
+              aria-activedescendant=""
+              required
+              aria-required="true"
+            />
+            <ul id="nf-place-listbox" class="combo-listbox" role="listbox" hidden></ul>
+          </div>
+          <small class="help" data-i18n="natal.form.place.help">Type a city name. We match against a built-in gazetteer &mdash; no third-party lookup.</small>
+          <small class="help help--empty" id="nf-place-empty" hidden data-i18n="natal.form.place.empty">No matches. Try a larger nearby city.</small>
+          <input type="hidden" id="nf-lat" name="lat" />
+          <input type="hidden" id="nf-lon" name="lon" />
+        </div>
+
+        <!-- Timezone (auto-filled) -->
+        <div class="natal-field">
+          <span class="label-text" data-i18n="natal.form.tz">Timezone</span>
+          <div class="tz-row">
+            <span id="nf-tz-display" class="tz-display" aria-live="polite">&mdash;</span>
+            <button type="button" id="nf-tz-adjust" class="link-btn" data-i18n="natal.form.tz.adjust">adjust</button>
+          </div>
+          <select id="nf-tz-select" name="tz" hidden aria-label="IANA timezone"></select>
+        </div>
+
+        <!-- Consent -->
+        <div class="natal-field consent">
+          <label class="inline-check">
+            <input id="nf-consent" type="checkbox" required aria-required="true" />
+            <span>
+              <span data-i18n="natal.form.consent">I consent to processing my birth details (date, time, place) for this natal chart calculation.</span>
+              <a id="nf-privacy-link" href="/privacy/california/#sensitive" data-i18n="natal.form.consent.link">See our Privacy Policy.</a>
+            </span>
+          </label>
+        </div>
+
+        <!-- Submit -->
+        <div class="natal-field natal-field--submit">
+          <button type="submit" id="nf-submit" class="btn btn-primary" disabled>
+            <span data-i18n="natal.form.submit">Calculate Natal Chart</span>
+          </button>
+          <p class="natal-error" id="nf-error" role="alert" hidden></p>
+        </div>
+      </form>
+    </section>
+
+    <!-- Results (hidden until first successful calc) -->
+    <section
+      class="natal-results"
+      id="natal-results"
+      aria-labelledby="natal-results-heading"
+      aria-live="polite"
+      aria-busy="false"
+      hidden
+    >
+      <h2 id="natal-results-heading" data-i18n="natal.results.heading">Your sidereal natal chart</h2>
+
+      <div class="natal-wheel-wrap">
+        <svg
+          id="natal-wheel"
+          viewBox="0 0 800 800"
+          role="img"
+          aria-labelledby="natal-wheel-title natal-wheel-desc"
+          xmlns="http://www.w3.org/2000/svg"
+        >
+          <title id="natal-wheel-title" data-i18n="natal.results.heading">Sidereal natal chart</title>
+          <desc id="natal-wheel-desc">Astrological wheel showing twelve zodiac signs, twelve houses, planetary positions, and major aspects.</desc>
+        </svg>
+      </div>
+
+      <div class="natal-meta" id="natal-meta"></div>
+      <div class="natal-table-wrap" id="natal-tables"></div>
+    </section>
+
+    <p class="natal-attribution">
+      <small>
+        City data &copy; <a href="https://www.geonames.org/" rel="noopener" target="_blank">GeoNames</a>,
+        <a href="https://creativecommons.org/licenses/by/4.0/" rel="noopener license" target="_blank">CC&nbsp;BY&nbsp;4.0</a>.
+      </small>
+    </p>
+
+  </div>
+</main>
+
+<!-- ============================ Footer (slimmed: no newsletter) ============================ -->
+<footer class="site-footer" role="contentinfo">
+  <div class="container">
+    <div class="footer-grid">
+      <div class="footer-col footer-col--brand">
+        <a href="/" class="brand brand--footer">
+          <span class="brand-i">i</span>Yoga<span class="brand-u">U</span>
+        </a>
+        <p class="footer-tagline" data-i18n="footer.tagline">Classical Vedic yoga, taught with rigour.</p>
+      </div>
+
+      <div class="footer-col">
+        <h3 data-i18n="footer.contact">Contact</h3>
+        <ul class="footer-list">
+          <li><a href="mailto:hello@iyogau.com">hello@iyogau.com</a></li>
+        </ul>
+      </div>
+
+      <div class="footer-col">
+        <h3 data-i18n="footer.locations">Locations</h3>
+        <ul class="footer-list">
+          <li data-i18n="footer.locations.seoul">Seoul</li>
+          <li data-i18n="footer.locations.california">California</li>
+        </ul>
+      </div>
+
+      <div class="footer-col">
+        <h3 data-i18n="footer.social">Follow</h3>
+        <ul class="footer-list footer-list--inline">
+          <li><a href="https://instagram.com/iyogau" rel="noopener" target="_blank">Instagram</a></li>
+          <li><a href="https://youtube.com/@iyogau" rel="noopener" target="_blank">YouTube</a></li>
+        </ul>
+      </div>
+    </div>
+
+    <div class="footer-legal">
+      <small>&copy; <span id="year">2026</span> iYogaU. All rights reserved.</small>
+      <ul class="footer-legal__links">
+        <li><a href="/privacy/" data-i18n="footer.legal.privacy">Privacy</a></li>
+        <li><a href="/terms/" data-i18n="footer.legal.terms">Terms</a></li>
+        <li><a href="/accessibility/" data-i18n="footer.legal.accessibility">Accessibility</a></li>
+        <li><a href="/health-disclaimer/" data-i18n="footer.legal.health">Health Disclaimer</a></li>
+      </ul>
+    </div>
+  </div>
+</footer>
+
+<script src="/assets/js/i18n.js" defer></script>
+<!-- Natal-chart i18n bundle: merges new keys into IYOGAU_I18N. Loaded after i18n.js. -->
+<script src="/assets/js/i18n.natal-chart.js" defer></script>
+<script src="/assets/js/app.js" defer></script>
+<script src="/assets/js/natal-chart-wheel.js" defer></script>
+<script src="/assets/js/natal-chart-form.js" defer></script>
+<script>
+  // Tiny footer-year shim — same as other pages
+  document.addEventListener('DOMContentLoaded', function () {
+    var y = document.getElementById('year');
+    if (y) y.textContent = String(new Date().getFullYear());
+  });
+</script>
+</body>
+</html>

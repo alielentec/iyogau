@@ -1,0 +1,18 @@
+{
+  "name": "iyogau",
+  "version": "1.0.0",
+  "private": true,
+  "description": "iYogaU — Inner Transformation Yoga. Marketing site + serverless natal chart API.",
+  "homepage": "https://iyogau.com",
+  "scripts": {
+    "build:locales": "node scripts/build-locales.js",
+    "build:og": "python3 scripts/generate-og.py",
+    "inject:meta": "python3 scripts/inject-meta.py"
+  },
+  "dependencies": {
+    "astronomy-engine": "^2.1.19"
+  },
+  "engines": {
+    "node": ">=20.0.0"
+  }
+}
