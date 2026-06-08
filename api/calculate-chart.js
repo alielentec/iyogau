@@ -17,12 +17,20 @@ import { validateInput, localToUTC, ValidationError } from './_lib/validate.js';
 const ENGINE_VERSION = '2.1.19';
 const ALLOWED_ORIGIN = 'https://iyogau.com';
 const VERCEL_PREVIEW_RE = /^https:\/\/[a-z0-9-]+\.vercel\.app$/i;
+// Localhost origins (http://localhost:PORT, http://127.0.0.1:PORT) are accepted
+// ONLY when NODE_ENV !== 'production' so a real production deploy can never be
+// hit from arbitrary local browsers. Vercel sets NODE_ENV='production' on the
+// real env, so this gate is closed in prod and open during `node scripts/dev-server.mjs`.
+const LOCALHOST_RE = /^http:\/\/(localhost|127\.0\.0\.1)(:\d+)?$/i;
 const MAX_BODY_BYTES = 2 * 1024;
 
 function pickCorsOrigin(reqOrigin) {
   if (!reqOrigin) return null;
   if (reqOrigin === ALLOWED_ORIGIN) return reqOrigin;
   if (VERCEL_PREVIEW_RE.test(reqOrigin)) return reqOrigin;
+  if (process.env.NODE_ENV !== 'production' && LOCALHOST_RE.test(reqOrigin)) {
+    return reqOrigin;
+  }
   return null;
 }
 
