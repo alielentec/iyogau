@@ -118,7 +118,9 @@
     Saturn:  'var(--gold-hover)',     // ast: #984680
     Uranus:  'var(--primary-soft)',   // iyogau-only
     Neptune: 'var(--primary)',        // iyogau-only
-    Pluto:   'var(--gold-hover)'      // iyogau-only
+    Pluto:   'var(--gold-hover)',     // iyogau-only
+    Rahu:    'var(--ink-muted)',      // lunar-node grey, Vedic convention
+    Ketu:    'var(--ink-muted)'       // descending node — same family as Rahu
   };
 
   // Map iyogau planet names → Luna symbol ids.
@@ -132,7 +134,12 @@
     Saturn:  'saturn',
     Uranus:  'uranus',     // Unicode-glyph fallback (no Luna artwork)
     Neptune: 'neptune',    // ditto
-    Pluto:   'pluto'       // ditto
+    Pluto:   'pluto',      // ditto
+    // Rahu / Ketu both ride the Luna lunar-node artwork. Following ast's
+    // convention, Ketu uses the same glyph but is rotated 180° elsewhere
+    // in render() when present (descending node = ascending node flipped).
+    Rahu:    'lunar-true-nodes',
+    Ketu:    'lunar-true-nodes'
   };
 
   var SIGN_GLYPH_IDS = [
