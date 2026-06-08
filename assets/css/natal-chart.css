@@ -29,6 +29,16 @@
   gap: clamp(2rem, 4vw, 3rem);
 }
 
+/* The natal-chart page composes sections inside a flex column with `gap`
+   for inter-section rhythm. The site-wide stylesheet adds 5-7.5rem of
+   padding to every <section>, which would DOUBLE the rhythm here and
+   make scroll feel like long pauses between cramped content.
+   Override to zero on this page; the flex `gap` above handles spacing. */
+.natal-page .natal-hero,
+.natal-page .natal-results {
+  padding: 0;
+}
+
 /* --- Hero ---------------------------------------------------------- */
 .natal-hero {
   max-width: 56ch;
