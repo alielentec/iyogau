@@ -364,3 +364,99 @@
   white-space: nowrap;
   border: 0;
 }
+
+/* ===================================================================== *
+ *  Luna wheel, amethyst-tinted
+ *  ---------------------------------------------------------------------
+ *  All rules here mirror ast/src/styles.css `.luna-*` selectors. Only
+ *  color literals change — geometry/scale is identical so the 0-100
+ *  viewBox math from natal-chart-wheel.js drops in unchanged.
+ *
+ *  Stroke widths quoted in *user-space* units (the SVG viewBox is 0-100,
+ *  so 0.18 ≈ 0.18% of the wheel diameter, matching Luna's source).
+ * ===================================================================== */
+
+.luna-wheel {
+  overflow: visible;
+  font-family: "Manrope", system-ui, sans-serif;
+}
+
+/* Concentric ring fills */
+.luna-bg            { fill: var(--surface); }
+.luna-zodiac-band   { fill: var(--surface-2); stroke: var(--outline); stroke-width: 0.2; }
+.luna-field         { fill: var(--surface);   stroke: var(--outline); stroke-width: 0.25; }
+.luna-inner-band    { fill: var(--surface-3); stroke: none; }
+.luna-central-disc  { fill: var(--surface);   stroke: none; }
+
+/* Tick marks around the zodiac rim */
+.luna-tick          { stroke: var(--ink-muted); stroke-width: 0.12; opacity: 0.45; }
+.luna-tick-five     { stroke: var(--ink-soft);  stroke-width: 0.18; opacity: 0.70; }
+.luna-tick-boundary { stroke: var(--ink);       stroke-width: 0.28; opacity: 0.90; }
+
+/* Sign + house dividers */
+.luna-sign-boundary    { stroke: var(--outline-strong); stroke-width: 0.18; }
+.luna-house-line       { stroke: var(--outline);        stroke-width: 0.18; }
+.luna-house-line-axis  { stroke: var(--gold-hover);     stroke-width: 0.30; }
+
+/* House numbers */
+.luna-house-number {
+  fill: var(--ink-muted);
+  font-family: "Manrope", system-ui, sans-serif;
+  font-size: 2.3px;
+  font-weight: 600;
+  opacity: 0.85;
+}
+
+/* Aspect chord line — color set inline per-aspect; widths kept from ast.
+   ast value 0.0784 was a Luna-nested transform residue; on the 0-100
+   viewBox we use 0.18 to match the brief's stated value. */
+.luna-aspect-line {
+  stroke-width: 0.18;
+  stroke-linecap: round;
+  opacity: 0.85;
+}
+
+/* Asc/Desc + MC/IC axis lines */
+.luna-axis-line     { stroke: var(--gold-hover); stroke-width: 0.35; }
+.luna-axis-line-mc  { stroke: var(--gold);       stroke-width: 0.35; stroke-dasharray: 0.6 0.4; }
+
+/* Planet leader (radial tick + arc + nub) */
+.luna-leader {
+  stroke: var(--ink-muted);
+  stroke-width: 0.08;
+  fill: none;
+  opacity: 0.7;
+}
+/* OOB modifier — declared AFTER .luna-leader so it wins the equal-specificity
+   stroke cascade. Keep this order if you reorder rules. */
+.luna-leader-oob {
+  stroke: var(--gold);
+  stroke-width: 0.08;
+  fill: none;
+}
+
+/* Per-planet degree + minute text inside the wheel */
+.luna-degree {
+  fill: var(--ink);
+  font-family: "Manrope", system-ui, sans-serif;
+  font-weight: 500;
+}
+.luna-degree-deg    { font-size: 1.6px; }
+.luna-degree-min    { font-size: 1.6px; }
+
+/* AC/DC/MC/IC corner markers */
+.luna-angle-marker {
+  fill: var(--ink-muted);
+  font-family: "Manrope", system-ui, sans-serif;
+  font-size: 2.0px;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  paint-order: stroke;
+  stroke: var(--surface);
+  stroke-width: 0.7px;
+  stroke-linejoin: round;
+}
+.luna-angle-marker.angle-marker-mc,
+.luna-angle-marker.angle-marker-ic {
+  fill: var(--gold-hover);
+}
