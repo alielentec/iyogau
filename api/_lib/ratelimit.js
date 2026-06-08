@@ -75,24 +75,52 @@ export function checkRateLimit(ip) {
   };
 }
 
-// Anonymize IPv4 by zeroing the last octet; IPv6 by zeroing the last 80 bits
-// (keep the /48 routing prefix, drop interface identifiers).
+// Anonymize IPv4 by zeroing the last octet; IPv6 by keeping the first 48 bits
+// (the /48 routing prefix) and zeroing everything past it. Compressed IPv6
+// addresses (containing `::`) must be expanded to their full 8-group form
+// BEFORE slicing, or the `2001:db8::1` form collapses incorrectly.
 export function anonymizeIp(ip) {
   if (!ip || typeof ip !== 'string') return 'unknown';
-  // Strip IPv6 zone suffix and IPv4-mapped prefix.
+  // Strip IPv6 zone suffix and IPv4-mapped IPv6 prefix.
   let clean = ip.split('%')[0].trim();
   if (clean.startsWith('::ffff:')) clean = clean.slice(7);
+
   if (clean.includes('.') && !clean.includes(':')) {
     const parts = clean.split('.');
-    if (parts.length === 4) return parts.slice(0, 3).join('.') + '.0';
-    return 'unknown';
+    if (parts.length !== 4) return 'unknown';
+    if (!parts.every((p) => /^\d+$/.test(p) && Number(p) >= 0 && Number(p) <= 255)) return 'unknown';
+    return parts.slice(0, 3).join('.') + '.0';
   }
+
   if (clean.includes(':')) {
-    // Expand and zero everything past the first 3 groups (/48).
-    const groups = clean.split(':');
-    const firstThree = groups.slice(0, 3).filter(Boolean);
-    if (firstThree.length === 3) return firstThree.join(':') + '::';
-    return 'ipv6';
+    // Expand any `::` to the full 8-group form, then take the first three
+    // groups (the /48 routing prefix). Without expansion, e.g. `2001:db8::1`
+    // would split to ['2001','db8','','1'] and lose the position information.
+    const expanded = expandIpv6(clean);
+    if (!expanded) return 'unknown';
+    return expanded.slice(0, 3).join(':') + '::';
   }
+
   return 'unknown';
+}
+
+// Expand a possibly-compressed IPv6 address to an array of 8 hex groups.
+// Returns null if malformed.
+function expandIpv6(ip) {
+  const dcIdx = ip.indexOf('::');
+  let left = [];
+  let right = [];
+  if (dcIdx === -1) {
+    left = ip.split(':');
+  } else {
+    left = ip.slice(0, dcIdx).split(':').filter((g) => g !== '');
+    right = ip.slice(dcIdx + 2).split(':').filter((g) => g !== '');
+  }
+  const filled = 8 - left.length - right.length;
+  if (filled < 0) return null;
+  const middle = new Array(filled).fill('0');
+  const all = [...left, ...middle, ...right];
+  if (all.length !== 8) return null;
+  if (!all.every((g) => /^[0-9a-fA-F]{1,4}$/.test(g))) return null;
+  return all;
 }

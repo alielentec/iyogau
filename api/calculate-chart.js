@@ -11,24 +11,37 @@ import { computePlanetTropical, computeAscMC, PLANETS, norm360 } from './_lib/as
 import { lahiriAyanamsa, applyAyanamsa } from './_lib/ayanamsa.js';
 import { buildWholeSignHouses, decomposeLongitude, houseOf } from './_lib/houses.js';
 import { computeAspects } from './_lib/aspects.js';
+import { nakshatraOf } from './_lib/nakshatra.js';
+import { navamshaOf } from './_lib/navamsha.js';
 import { checkRateLimit, anonymizeIp } from './_lib/ratelimit.js';
 import { validateInput, localToUTC, ValidationError } from './_lib/validate.js';
 
 const ENGINE_VERSION = '2.1.19';
 const ALLOWED_ORIGIN = 'https://iyogau.com';
-const VERCEL_PREVIEW_RE = /^https:\/\/[a-z0-9-]+\.vercel\.app$/i;
-// Localhost origins (http://localhost:PORT, http://127.0.0.1:PORT) are accepted
-// ONLY when NODE_ENV !== 'production' so a real production deploy can never be
-// hit from arbitrary local browsers. Vercel sets NODE_ENV='production' on the
-// real env, so this gate is closed in prod and open during `node scripts/dev-server.mjs`.
+// Restrict Vercel preview-URL acceptance to iyogau's own project. The previous
+// catch-all `*.vercel.app` regex meant any third-party Vercel app could call
+// the API and piggyback on our free-chart compute. We now match only the
+// project prefix iyogau- followed by the standard Vercel preview suffix.
+const VERCEL_PREVIEW_RE = /^https:\/\/iyogau-[a-z0-9-]+\.vercel\.app$/i;
+// Localhost origins are accepted ONLY when VERCEL_ENV is 'development' (the
+// value Vercel sets locally when you run `vercel dev`) or when neither
+// VERCEL_ENV nor NODE_ENV mark a production-like environment. This is
+// stricter than the previous NODE_ENV-only check, which could be flipped
+// by a typoed env var.
 const LOCALHOST_RE = /^http:\/\/(localhost|127\.0\.0\.1)(:\d+)?$/i;
 const MAX_BODY_BYTES = 2 * 1024;
+
+function isProdLikeEnv() {
+  const v = process.env.VERCEL_ENV;
+  if (v) return v === 'production' || v === 'preview';
+  return process.env.NODE_ENV === 'production';
+}
 
 function pickCorsOrigin(reqOrigin) {
   if (!reqOrigin) return null;
   if (reqOrigin === ALLOWED_ORIGIN) return reqOrigin;
   if (VERCEL_PREVIEW_RE.test(reqOrigin)) return reqOrigin;
-  if (process.env.NODE_ENV !== 'production' && LOCALHOST_RE.test(reqOrigin)) {
+  if (!isProdLikeEnv() && LOCALHOST_RE.test(reqOrigin)) {
     return reqOrigin;
   }
   return null;
@@ -44,10 +57,27 @@ function setCors(res, origin) {
   }
 }
 
+// Resolve the client IP for rate-limit keying. On Vercel, `x-real-ip` and
+// `x-vercel-forwarded-for` are set by the edge to the actual client IP and
+// cannot be spoofed by the caller. `x-forwarded-for` IS attacker-controlled
+// (it gets the caller's value appended with the real client IP), so we never
+// trust its leftmost entry. If we must fall back to XFF, take the RIGHTMOST
+// entry — that is the IP added by the most-recent trusted proxy.
 function clientIp(req) {
+  const realIp = req.headers['x-real-ip'];
+  if (typeof realIp === 'string' && realIp.length > 0 && realIp.length < 64) {
+    return realIp.trim();
+  }
+  const vercelXff = req.headers['x-vercel-forwarded-for'];
+  if (typeof vercelXff === 'string' && vercelXff.length > 0 && vercelXff.length < 256) {
+    const parts = vercelXff.split(',');
+    return parts[parts.length - 1].trim();
+  }
   const xff = req.headers['x-forwarded-for'];
-  if (typeof xff === 'string' && xff.length > 0) {
-    return xff.split(',')[0].trim();
+  if (typeof xff === 'string' && xff.length > 0 && xff.length < 256) {
+    // Rightmost = most-recent trusted hop. Never the leftmost (caller-controlled).
+    const parts = xff.split(',');
+    return parts[parts.length - 1].trim();
   }
   return req.socket?.remoteAddress || 'unknown';
 }
@@ -232,6 +262,12 @@ function buildChart(input, dateUTC) {
     return { number: h.number, cusp: h.cusp, sign: d.sign, signIndex: d.signIndex, degree: d.degree, minute: d.minute };
   });
 
+  // Per-planet decomposition. Nakshatra + navamsha (D9) are sidereal
+  // divisions of the ecliptic; we compute them from the already-adjusted
+  // longitude. For tradition: 'sidereal' (the Vedic default) that is the
+  // sidereal longitude and the result is canonical. For tradition: 'tropical'
+  // the same divisions are applied to the tropical longitude — emitted for
+  // completeness, but Vedic readers should request 'sidereal'.
   const planets = planetsRaw.map((p) => {
     const d = decomposeLongitude(p.longitude);
     return {
@@ -246,16 +282,26 @@ function buildChart(input, dateUTC) {
       speed: Math.round(p.speed * 10000) / 10000,
       retrograde: p.retrograde,
       house: houseOf(p.longitude, ascLon),
+      nakshatra: nakshatraOf(p.longitude),
+      navamsha: navamshaOf(p.longitude),
     };
   });
 
   const ascD = decomposeLongitude(ascLon);
   const mcD = decomposeLongitude(mcLon);
 
+  // Convenience pointer: the Moon's nakshatra is the Vedic-cosmology
+  // centerpiece — the first thing a Vedic reader asks for. Surface it at the
+  // top level so clients don't have to scan planets[]. Defensive null if
+  // the Moon were somehow missing (it never is).
+  const moon = planets.find((p) => p.name === 'Moon');
+  const moonNakshatra = moon ? moon.nakshatra : null;
+
   return {
     ascendant: { longitude: ascLon, sign: ascD.sign, signIndex: ascD.signIndex, degree: ascD.degree, minute: ascD.minute, second: ascD.second },
     midheaven: { longitude: mcLon, sign: mcD.sign, signIndex: mcD.signIndex, degree: mcD.degree, minute: mcD.minute, second: mcD.second },
     planets,
+    moonNakshatra,
     houses,
     aspects: computeAspects(planets),
     tradition: input.tradition,

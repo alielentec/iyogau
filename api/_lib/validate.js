@@ -100,7 +100,7 @@ export function validateInput(body) {
     }
   }
 
-  if (typeof tz !== 'string' || tz.length === 0 || !validIanaTz(tz)) {
+  if (typeof tz !== 'string' || tz.length === 0 || tz.length > 64 || !validIanaTz(tz)) {
     throw new ValidationError('`tz` must be a valid IANA timezone identifier (e.g. "Asia/Seoul").');
   }
 
@@ -109,6 +109,12 @@ export function validateInput(body) {
   }
   if (!isFiniteNumber(lon) || lon < -180 || lon > 180) {
     throw new ValidationError('`lon` must be a finite number between -180 and 180.');
+  }
+  // Reject polar latitudes where the ecliptic-rising-point formula is
+  // mathematically singular and the chart concept is poorly defined.
+  // Standard astrology software (Swiss Ephemeris) warns at this boundary.
+  if (lat > 66.5 || lat < -66.5) {
+    throw new ValidationError('Births above the Arctic or below the Antarctic Circle (lat outside ±66.5°) are not currently supported — the ascendant is mathematically undefined in those regions.');
   }
 
   let traditionFinal = tradition === undefined ? 'sidereal' : tradition;
