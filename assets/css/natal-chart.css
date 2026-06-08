@@ -276,6 +276,13 @@
   flex-direction: column;
   gap: 1.5rem;
 }
+/* The class rule above has higher specificity than the user-agent
+   [hidden]{display:none} default, which would otherwise silently un-hide
+   the results section before the form is submitted. Re-state hidden
+   explicitly so <section ... hidden> actually hides. */
+.natal-results[hidden] {
+  display: none;
+}
 .natal-results h2 {
   font-family: "Noto Serif", serif;
   font-size: clamp(1.5rem, 0.75rem + 2vw, 2rem);
