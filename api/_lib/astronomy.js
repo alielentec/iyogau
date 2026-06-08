@@ -89,10 +89,13 @@ export function computeAscMC(dateUTC, latDeg, lonDeg) {
   let asc = Math.atan2(y, x) * DEG;
   asc = norm360(asc);
 
-  // Quadrant correction: ascendant must be within 180° east of the MC
-  // (i.e. the rising point is "ahead" of the culminating point on the ecliptic).
+  // Quadrant correction: ascendant must be within 180° east of the MC, i.e.
+  // (asc - mc) mod 360 must lie in (0, 180). If atan2 returned the opposite
+  // half (the descendant), flip it by 180°. Verified against Meeus 1998 Ch.13
+  // and ast/src/lib/astrology.js numerical-rootfinding ascendant on three
+  // independent test cases (Hamadan 1985, Seoul 1985, Einstein 1879).
   const diff = norm360(asc - mc);
-  if (diff < 180) {
+  if (diff > 180) {
     asc = norm360(asc + 180);
   }
 
