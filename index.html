@@ -848,11 +848,21 @@
         function recalculate() {
           if (inFlight) { pending = true; return; }
           var payload = buildPayload();
-          if (!validPayload(payload)) return;
+          if (!validPayload(payload)) {
+            // Reset the queued-recalc flag so a stale 'pending=true' from
+            // a previous in-flight cycle can't ghost-fire a recalc later
+            // in the session against a still-invalid form.
+            pending = false;
+            return;
+          }
 
           var payloadJson = JSON.stringify(payload);
           if (payloadJson === lastPayloadJson) {
-            // No-op: the chart already reflects this payload.
+            // No-op: the chart already reflects this payload. Same
+            // pending reset as above — otherwise a queued recalc that
+            // turns out to be a dupe could leak its flag into the next
+            // event loop.
+            pending = false;
             return;
           }
 
@@ -1155,10 +1165,19 @@
               // Demo-state check needs lat/lon/tz references. The
               // bootstrap's own buildPayload() declares them inside its
               // closure; the state machine runs OUTSIDE that closure so
-              // we re-lookup here.
-              var latEl    = $('home-nf-lat');
-              var lonEl    = $('home-nf-lon');
-              var tzSelEl  = $('home-nf-tz-select');
+              // we re-lookup here. Same applies to the UTC-offset
+              // override controls — when any of these are active they
+              // change the math the API receives and a preset can no
+              // longer be considered "active" (the displayed banner
+              // would not match the chart being computed).
+              var latEl       = $('home-nf-lat');
+              var lonEl       = $('home-nf-lon');
+              var tzSelEl     = $('home-nf-tz-select');
+              var useOffEl    = $('home-nf-tz-offset-enable');
+              var offSignEl   = $('home-nf-tz-offset-sign');
+              var offHrsEl    = $('home-nf-tz-offset-hours');
+              var offMinEl    = $('home-nf-tz-offset-minutes');
+              var offRowEl    = document.querySelector('#natal-calc .tz-offset-input-row');
               // Snapshot the default intro text once so we can restore it
               // verbatim when DEMO is active. The i18n applier may
               // translate this after init; we capture AFTER the
@@ -1354,17 +1373,21 @@
               // (stable identity across language switches); otherwise
               // we scan from the top.
               function detectActivePreset() {
+                // Hard short-circuits: a preset cannot be active when
+                // the user has overridden time/timezone via the
+                // "unknown time" or "use custom UTC offset" toggles.
+                // Those flags change the math the API receives even
+                // when the visible date/time/lat/lon/tz fields still
+                // match a preset's snapshot — without these guards the
+                // page can show a "Currently showing Steve Jobs" banner
+                // while the API gets 12:00 or a manually-keyed offset.
+                if (timeUnkElCap && timeUnkElCap.checked) return null;
+                if (useOffEl && useOffEl.checked) return null;
                 var date = dateElCap && dateElCap.value;
                 var time = timeElCap && timeElCap.value;
                 var lat  = latEl && latEl.value;
                 var lon  = lonEl && lonEl.value;
                 var tz   = tzSelEl && tzSelEl.value;
-                // Toggling "unknown time" sets buildPayload's time to
-                // 12:00 internally, but the user-visible time input
-                // still holds the preset's value. We treat the toggle
-                // itself as a chart-math edit (see listener below) so
-                // by the time detectActivePreset is called from a
-                // preset-active state, the toggle is off.
                 function matches(p) {
                   return p.birthDate === date
                       && p.birthTime === time
@@ -1426,6 +1449,21 @@
                   // untoggle it so the form looks coherent.
                   if (timeUnkElCap && timeUnkElCap.checked) {
                     timeUnkElCap.checked = false;
+                  }
+                  // Same treatment for the UTC-offset override: a preset
+                  // carries an IANA timezone, so any active fixed-offset
+                  // override would silently shadow it (buildPayload reads
+                  // the offset when useOff is checked). Untoggle the
+                  // checkbox, hide the row, re-enable the IANA select,
+                  // and dispatch a 'change' so anyone listening to it
+                  // (the step-3 recalculate) sees the demotion.
+                  if (useOffEl && useOffEl.checked) {
+                    useOffEl.checked = false;
+                    if (offRowEl) offRowEl.hidden = true;
+                    if (tzSelEl) tzSelEl.disabled = false;
+                    try {
+                      useOffEl.dispatchEvent(new Event('change', { bubbles: true }));
+                    } catch (e) { /* old browsers — no harm */ }
                   }
                   if (latEl) latEl.value = String(preset.lat);
                   if (lonEl) lonEl.value = String(preset.lon);
@@ -1603,6 +1641,30 @@
               }
               if (tzSelEl) {
                 tzSelEl.addEventListener('change', onChartMathEdit);
+              }
+              // UTC-offset override controls — toggling the checkbox OR
+              // editing any of sign/hours/minutes changes the timezone
+              // the API receives. Demote DEMO→CUSTOM via onChartMathEdit
+              // so the banner / intro / attribution stop claiming "Steve
+              // Jobs's chart" while the API computes something else.
+              // The offset-enable handler at step 3 already calls
+              // recalculate() (the API path); we register a SEPARATE
+              // listener here for the state machine. Two listeners are
+              // fine — both fire on the single 'change' event.
+              if (useOffEl) {
+                useOffEl.addEventListener('change', onChartMathEdit);
+              }
+              if (offSignEl) {
+                offSignEl.addEventListener('input',  onChartMathEdit);
+                offSignEl.addEventListener('change', onChartMathEdit);
+              }
+              if (offHrsEl) {
+                offHrsEl.addEventListener('input',  onChartMathEdit);
+                offHrsEl.addEventListener('change', onChartMathEdit);
+              }
+              if (offMinEl) {
+                offMinEl.addEventListener('input',  onChartMathEdit);
+                offMinEl.addEventListener('change', onChartMathEdit);
               }
 
               // Build the datalist now that the i18n bundle should be

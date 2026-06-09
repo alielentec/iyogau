@@ -289,6 +289,28 @@
     if (locDetail) locDetail.hidden = false;
     listboxEl.hidden = true;
     placeEl.setAttribute('aria-expanded', 'false');
+    // Programmatic writes to value do NOT fire 'input' or 'change'
+    // events — only user typing does. Dispatch them ourselves so the
+    // homepage bootstrap's onChartMathEdit (state machine) AND its
+    // recalculateDebounced (API trigger) actually run. Without this,
+    // picking a city updates the lat/lon/tz fields visually but
+    // nothing else fires — the chart doesn't redraw, and the DEMO
+    // banner stays up while the user's city/lat/lon shows under it.
+    [latEl, lonEl, tzSelect].forEach(function (el) {
+      if (!el) return;
+      try {
+        el.dispatchEvent(new Event('input',  { bubbles: true }));
+        el.dispatchEvent(new Event('change', { bubbles: true }));
+      } catch (e) {
+        // Very old browsers: fall back to the deprecated init pattern.
+        var ev;
+        try {
+          ev = document.createEvent('Event');
+          ev.initEvent('change', true, false);
+          el.dispatchEvent(ev);
+        } catch (e2) { /* swallow */ }
+      }
+    });
     revalidate();
   }
 
