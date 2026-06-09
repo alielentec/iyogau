@@ -509,6 +509,34 @@
                   <select id="home-nf-tz-select" name="tz" aria-label="IANA timezone" aria-live="polite"></select>
                 </div>
               </div>
+
+              <!-- Manual UTC-offset override. When the checkbox is ticked, the
+                   ±HH:MM input replaces the IANA timezone for the calculation
+                   (the form sends the offset as `tz` to the API, which accepts
+                   either form). Useful for births during a DST transition,
+                   in regions with historical TZ changes, or when the user
+                   simply knows their exact UTC offset and doesn't want to
+                   pick the right city. -->
+              <div class="natal-field tz-offset-row">
+                <label class="inline-check">
+                  <input id="home-nf-tz-offset-enable" type="checkbox" />
+                  <span data-i18n="natal.form.tz.offset.enable">Use custom UTC offset instead</span>
+                </label>
+                <div class="tz-offset-input-row" hidden>
+                  <label for="home-nf-tz-offset" class="sr-only" data-i18n="natal.form.tz.offset">UTC offset (±HH:MM)</label>
+                  <span class="tz-offset-sign-label">UTC</span>
+                  <select id="home-nf-tz-offset-sign" name="tzOffsetSign" aria-label="Offset sign">
+                    <option value="+">+</option>
+                    <option value="-">−</option>
+                  </select>
+                  <input id="home-nf-tz-offset-hours" type="number" min="0" max="14" step="1" value="8"
+                         inputmode="numeric" aria-label="Offset hours" />
+                  <span class="tz-offset-colon">:</span>
+                  <input id="home-nf-tz-offset-minutes" type="number" min="0" max="59" step="1" value="00"
+                         inputmode="numeric" aria-label="Offset minutes" />
+                </div>
+              </div>
+
               <small class="help" data-i18n="natal.form.adjust.help">Auto-filled from the city you picked. Adjust if needed.</small>
             </fieldset>
 
@@ -588,20 +616,24 @@
            the user touches the form. -->
       <script id="home-natal-default-data" type="application/json">{"ascendant":{"longitude":149.06441296669777,"sign":"Leo","signIndex":4,"degree":29,"minute":3,"second":52},"midheaven":{"longitude":58.0882769856228,"sign":"Taurus","signIndex":1,"degree":28,"minute":5,"second":18},"planets":[{"name":"Sun","longitude":312.5212435909421,"latitude":-7.436211995827448e-05,"sign":"Aquarius","signIndex":10,"degree":12,"minute":31,"second":16,"speed":1.006,"retrograde":false,"house":7,"nakshatra":{"index":23,"name":"Shatabhisha","pada":2,"lord":"Rahu"},"navamsha":{"sign":9,"signName":"Capricorn","pada":4,"longitude":292.69119231847895,"longitudeWithinNavamshaSign":22.691192318478954}},{"name":"Moon","longitude":344.52082698910385,"latitude":5.0469561558173375,"sign":"Pisces","signIndex":11,"degree":14,"minute":31,"second":15,"speed":14.1762,"retrograde":false,"house":8,"nakshatra":{"index":25,"name":"Uttara Bhadrapada","pada":4,"lord":"Saturn"},"navamsha":{"sign":7,"signName":"Scorpio","pada":5,"longitude":220.68744290193467,"longitudeWithinNavamshaSign":10.687442901934668}},{"name":"Mercury","longitude":291.13441635828747,"latitude":2.1070509775537953,"sign":"Capricorn","signIndex":9,"degree":21,"minute":8,"second":4,"speed":-0.0325,"retrograde":true,"house":6,"nakshatra":{"index":21,"name":"Shravana","pada":4,"lord":"Moon"},"navamsha":{"sign":3,"signName":"Cancer","pada":7,"longitude":100.2097472245872,"longitudeWithinNavamshaSign":10.209747224587204}},{"name":"Venus","longitude":267.9455611204071,"latitude":1.7173909307941988,"sign":"Sagittarius","signIndex":8,"degree":27,"minute":56,"second":44,"speed":1.1367,"retrograde":false,"house":5,"nakshatra":{"index":20,"name":"Uttara Ashadha","pada":1,"lord":"Sun"},"navamsha":{"sign":8,"signName":"Sagittarius","pada":9,"longitude":251.51005008366383,"longitudeWithinNavamshaSign":11.510050083663815}},{"name":"Mars","longitude":5.863535344005449,"latitude":0.30505974160026234,"sign":"Aries","signIndex":0,"degree":5,"minute":51,"second":49,"speed":0.7018,"retrograde":false,"house":9,"nakshatra":{"index":0,"name":"Ashwini","pada":2,"lord":"Ketu"},"navamsha":{"sign":1,"signName":"Taurus","pada":2,"longitude":52.77181809604903,"longitudeWithinNavamshaSign":22.771818096049035}},{"name":"Jupiter","longitude":87.2804956914565,"latitude":0.4740878036658731,"sign":"Gemini","signIndex":2,"degree":27,"minute":16,"second":50,"speed":-0.063,"retrograde":true,"house":11,"nakshatra":{"index":6,"name":"Punarvasu","pada":3,"lord":"Jupiter"},"navamsha":{"sign":2,"signName":"Gemini","pada":9,"longitude":65.52446122310843,"longitudeWithinNavamshaSign":5.524461223108435}},{"name":"Saturn","longitude":207.93582687333412,"latitude":2.3707636232903626,"sign":"Libra","signIndex":6,"degree":27,"minute":56,"second":9,"speed":0.0071,"retrograde":false,"house":3,"nakshatra":{"index":15,"name":"Vishakha","pada":3,"lord":"Jupiter"},"navamsha":{"sign":2,"signName":"Gemini","pada":9,"longitude":71.42244186000708,"longitudeWithinNavamshaSign":11.422441860007085}},{"name":"Uranus","longitude":90.9072058497672,"latitude":0.5462800724106303,"sign":"Cancer","signIndex":3,"degree":0,"minute":54,"second":26,"speed":-0.0292,"retrograde":true,"house":12,"nakshatra":{"index":6,"name":"Punarvasu","pada":4,"lord":"Jupiter"},"navamsha":{"sign":3,"signName":"Cancer","pada":1,"longitude":98.16485264790475,"longitudeWithinNavamshaSign":8.164852647904752}},{"name":"Neptune","longitude":184.82162360364492,"latitude":1.751786779671622,"sign":"Libra","signIndex":6,"degree":4,"minute":49,"second":18,"speed":-0.0141,"retrograde":true,"house":3,"nakshatra":{"index":13,"name":"Chitra","pada":4,"lord":"Mars"},"navamsha":{"sign":7,"signName":"Scorpio","pada":2,"longitude":223.3946124328043,"longitudeWithinNavamshaSign":13.394612432804307}},{"name":"Pluto","longitude":122.0962440763987,"latitude":10.544173263564584,"sign":"Leo","signIndex":4,"degree":2,"minute":5,"second":46,"speed":-0.0244,"retrograde":true,"house":1,"nakshatra":{"index":9,"name":"Magha","pada":1,"lord":"Ketu"},"navamsha":{"sign":0,"signName":"Aries","pada":1,"longitude":18.86619668758834,"longitudeWithinNavamshaSign":18.86619668758834}},{"name":"Rahu","longitude":249.27300871566274,"latitude":0,"sign":"Sagittarius","signIndex":8,"degree":9,"minute":16,"second":23,"speed":-0.053,"retrograde":true,"house":5,"nakshatra":{"index":18,"name":"Mula","pada":3,"lord":"Ketu"},"navamsha":{"sign":2,"signName":"Gemini","pada":3,"longitude":83.45707844096466,"longitudeWithinNavamshaSign":23.45707844096466}},{"name":"Ketu","longitude":69.27300871566274,"latitude":0,"sign":"Gemini","signIndex":2,"degree":9,"minute":16,"second":23,"speed":-0.053,"retrograde":true,"house":11,"nakshatra":{"index":5,"name":"Ardra","pada":1,"lord":"Rahu"},"navamsha":{"sign":8,"signName":"Sagittarius","pada":3,"longitude":263.45707844096466,"longitudeWithinNavamshaSign":23.45707844096466}}],"moonNakshatra":{"index":25,"name":"Uttara Bhadrapada","pada":4,"lord":"Saturn"},"houses":[{"number":1,"cusp":120,"sign":"Leo","signIndex":4,"degree":0,"minute":0},{"number":2,"cusp":150,"sign":"Virgo","signIndex":5,"degree":0,"minute":0},{"number":3,"cusp":180,"sign":"Libra","signIndex":6,"degree":0,"minute":0},{"number":4,"cusp":210,"sign":"Scorpio","signIndex":7,"degree":0,"minute":0},{"number":5,"cusp":240,"sign":"Sagittarius","signIndex":8,"degree":0,"minute":0},{"number":6,"cusp":270,"sign":"Capricorn","signIndex":9,"degree":0,"minute":0},{"number":7,"cusp":300,"sign":"Aquarius","signIndex":10,"degree":0,"minute":0},{"number":8,"cusp":330,"sign":"Pisces","signIndex":11,"degree":0,"minute":0},{"number":9,"cusp":0,"sign":"Aries","signIndex":0,"degree":0,"minute":0},{"number":10,"cusp":30,"sign":"Taurus","signIndex":1,"degree":0,"minute":0},{"number":11,"cusp":60,"sign":"Gemini","signIndex":2,"degree":0,"minute":0},{"number":12,"cusp":90,"sign":"Cancer","signIndex":3,"degree":0,"minute":0}],"aspects":[{"from":"Sun","to":"Rahu","type":"sextile","orb":3.25,"exact":60},{"from":"Sun","to":"Ketu","type":"trine","orb":3.25,"exact":120},{"from":"Moon","to":"Rahu","type":"square","orb":5.25,"exact":90},{"from":"Moon","to":"Ketu","type":"square","orb":5.25,"exact":90},{"from":"Venus","to":"Jupiter","type":"opposition","orb":0.67,"exact":180},{"from":"Venus","to":"Saturn","type":"sextile","orb":0.01,"exact":60},{"from":"Venus","to":"Uranus","type":"opposition","orb":2.96,"exact":180},{"from":"Mars","to":"Uranus","type":"square","orb":4.96,"exact":90},{"from":"Mars","to":"Neptune","type":"opposition","orb":1.04,"exact":180},{"from":"Mars","to":"Pluto","type":"trine","orb":3.77,"exact":120},{"from":"Mars","to":"Rahu","type":"trine","orb":3.41,"exact":120},{"from":"Mars","to":"Ketu","type":"sextile","orb":3.41,"exact":60},{"from":"Jupiter","to":"Saturn","type":"trine","orb":0.66,"exact":120},{"from":"Jupiter","to":"Uranus","type":"conjunction","orb":3.63,"exact":0},{"from":"Saturn","to":"Uranus","type":"trine","orb":2.97,"exact":120},{"from":"Saturn","to":"Pluto","type":"square","orb":4.16,"exact":90},{"from":"Uranus","to":"Neptune","type":"square","orb":3.91,"exact":90},{"from":"Neptune","to":"Pluto","type":"sextile","orb":2.73,"exact":60},{"from":"Neptune","to":"Ketu","type":"trine","orb":4.45,"exact":120},{"from":"Rahu","to":"Ketu","type":"opposition","orb":0,"exact":180}],"tradition":"sidereal","ayanamsa":"lahiri","ayanamsaValue":23.226856,"houseSystem":"whole-sign","input":{"date":"1955-02-24","time":"19:15","tz":"America/Los_Angeles","lat":37.7749,"lon":-122.4194,"tradition":"sidereal","ayanamsa":"lahiri","unknownTime":false},"provenance":{"engine":"astronomy-engine","engineVersion":"2.1.19","warnings":[]},"computedAt":"2026-06-09T04:38:59.000Z"}</script>
 
-      <!-- Auto-render bootstrap. The natal-chart-form.js binder's init-time
-           auto-render path silently bailed in production (the binder DID
-           attach event listeners but didn't reach the pre-population /
-           default-render code). Rather than block release on tracking
-           that down, we render the default chart + populate the IANA
-           timezone select + build the planet/aspect tables from this
-           inline script that runs on DOMContentLoaded. The binder's
-           form-submit path still handles user-input recalculations via
-           POST /api/calculate-chart/. -->
+      <!-- Auto-render + live recalc bootstrap.
+           - Renders Steve Jobs's chart on landing from the embedded JSON above.
+           - Populates the IANA timezone <select> with all Intl-supported zones.
+           - Wires the custom-offset checkbox: shows/hides the ±HH:MM input row,
+             and toggles which value is sent as `tz` to the API.
+           - Re-fetches and re-renders the chart 600ms after any change to
+             date, time, lat, lon, tz, or the offset fields.
+           - The form's Calculate button triggers the same recalc path
+             immediately.
+           - The natal-chart-form.js binder's submit handler bailed silently
+             in production for the home- mount, so we own the submit path
+             here. The binder still owns city autocomplete + selectCity().
+      -->
       <script>
       (function () {
         'use strict';
 
-        // Tiny DOM helpers — createElement + textContent only, never innerHTML.
+        // ---- DOM helpers — createElement + textContent only, never innerHTML.
         function el(tag, attrs, text) {
           var n = document.createElement(tag);
           if (attrs) for (var k in attrs) if (Object.prototype.hasOwnProperty.call(attrs, k)) {
@@ -633,11 +665,165 @@
           var m = (p.minute != null) ? p.minute : 0;
           return p.degree + '°' + (m < 10 ? '0' + m : m) + '′';
         }
+        function $(id) { return document.getElementById(id); }
+
+        // ---- Render a chart model into the four containers.
+        function renderModel(model) {
+          // Wheel
+          var wheelEl = $('home-natal-wheel');
+          if (wheelEl && window.NatalWheel && typeof window.NatalWheel.render === 'function') {
+            try { window.NatalWheel.render(model, wheelEl, { showAspects: true, locale: 'en' }); }
+            catch (e) { if (window.console && console.warn) console.warn('[natal] wheel', e); }
+          }
+
+          // Meta line
+          var metaEl = $('home-natal-meta');
+          if (metaEl) {
+            var parts = [];
+            if (model.tradition === 'sidereal') parts.push('Sidereal (Vedic)');
+            if (model.ayanamsa) {
+              parts.push('Ayanamsa: ' + model.ayanamsa +
+                (typeof model.ayanamsaValue === 'number' ? ' (' + model.ayanamsaValue.toFixed(2) + '°)' : ''));
+            }
+            if (model.houseSystem) parts.push('Houses: ' + model.houseSystem);
+            metaEl.textContent = '';
+            metaEl.appendChild(el('p', { 'class': 'natal-meta__line' }, parts.join(' · ')));
+          }
+
+          // Planets table (with Asc/MC summary on top)
+          var planetsEl = $('home-natal-planets');
+          if (planetsEl) {
+            planetsEl.textContent = '';
+            if (model.ascendant || model.midheaven) {
+              var axesP = el('p', { 'class': 'natal-axes-summary' });
+              if (model.ascendant) {
+                axesP.appendChild(el('strong', null, 'Ascendant: '));
+                axesP.appendChild(document.createTextNode(model.ascendant.sign + ' ' + degMin(model.ascendant)));
+              }
+              if (model.ascendant && model.midheaven) axesP.appendChild(document.createTextNode('  ·  '));
+              if (model.midheaven) {
+                axesP.appendChild(el('strong', null, 'Midheaven: '));
+                axesP.appendChild(document.createTextNode(model.midheaven.sign + ' ' + degMin(model.midheaven)));
+              }
+              planetsEl.appendChild(axesP);
+            }
+            planetsEl.appendChild(el('h3', null, 'Planet positions'));
+            var rows = (model.planets || []).map(function (p) {
+              return [
+                p.name + (p.retrograde ? ' ℞' : ''),
+                p.sign, degMin(p),
+                (p.house != null ? String(p.house) : '—')
+              ];
+            });
+            appendTable(planetsEl, ['Planet', 'Sign', 'Degree', 'House'], rows);
+          }
+
+          // Aspects table
+          var aspectsEl = $('home-natal-aspects');
+          if (aspectsEl) {
+            aspectsEl.textContent = '';
+            var aspects = Array.isArray(model.aspects) ? model.aspects : [];
+            if (aspects.length === 0) {
+              aspectsEl.appendChild(el('p', { 'class': 'natal-empty' },
+                'No major aspects within standard orbs for this chart.'));
+            } else {
+              aspectsEl.appendChild(el('h3', null, 'Major aspects'));
+              var aRows = aspects.map(function (a) {
+                return [a.from, a.type, a.to, (a.orb != null ? a.orb.toFixed(1) + '°' : '—')];
+              });
+              appendTable(aspectsEl, ['From', 'Aspect', 'To', 'Orb'], aRows);
+            }
+          }
+        }
+
+        // ---- Build the API payload from current form values.
+        //
+        // If "use custom UTC offset" is checked, the offset (e.g. "+05:30")
+        // is sent as `tz` and the backend validates it as a fixed offset
+        // string. Otherwise the IANA timezone select value is sent.
+        function buildPayload() {
+          var dateEl = $('home-nf-date');
+          var timeEl = $('home-nf-time');
+          var timeUnk = $('home-nf-time-unknown');
+          var latEl  = $('home-nf-lat');
+          var lonEl  = $('home-nf-lon');
+          var tzSel  = $('home-nf-tz-select');
+          var useOff = $('home-nf-tz-offset-enable');
+          var offSign = $('home-nf-tz-offset-sign');
+          var offHrs  = $('home-nf-tz-offset-hours');
+          var offMin  = $('home-nf-tz-offset-minutes');
+
+          var date = dateEl.value;
+          var time = (timeUnk && timeUnk.checked) ? '12:00' : timeEl.value;
+          var lat = parseFloat(latEl.value);
+          var lon = parseFloat(lonEl.value);
+
+          var tz;
+          if (useOff && useOff.checked && offSign && offHrs && offMin) {
+            var sign = offSign.value === '-' ? '-' : '+';
+            var h = String(Math.max(0, Math.min(14, parseInt(offHrs.value, 10) || 0))).padStart(2, '0');
+            var m = String(Math.max(0, Math.min(59, parseInt(offMin.value, 10) || 0))).padStart(2, '0');
+            tz = sign + h + ':' + m;
+          } else {
+            tz = tzSel.value;
+          }
+
+          return {
+            date: date, time: time, tz: tz, lat: lat, lon: lon,
+            tradition: 'sidereal', ayanamsa: 'lahiri',
+            unknownTime: !!(timeUnk && timeUnk.checked)
+          };
+        }
+
+        function validPayload(p) {
+          if (!p.date || !p.time) return false;
+          if (!isFinite(p.lat) || p.lat < -66.5 || p.lat > 66.5) return false;
+          if (!isFinite(p.lon) || p.lon < -180 || p.lon > 180) return false;
+          if (!p.tz) return false;
+          return true;
+        }
+
+        var inFlight = false;
+        var pending = false;
+
+        // ---- Fetch a chart for the current form and re-render. Coalesces:
+        // if a request is already in flight, queue exactly one follow-up.
+        function recalculate() {
+          if (inFlight) { pending = true; return; }
+          var payload = buildPayload();
+          if (!validPayload(payload)) return;
+
+          inFlight = true;
+          fetch('/api/calculate-chart/', {
+            method: 'POST',
+            headers: { 'content-type': 'application/json', 'accept': 'application/json' },
+            body: JSON.stringify(payload)
+          })
+            .then(function (r) {
+              if (!r.ok) return r.text().then(function (t) { throw new Error('API ' + r.status + ': ' + t.slice(0, 200)); });
+              return r.json();
+            })
+            .then(renderModel)
+            .catch(function (err) {
+              if (window.console && console.warn) console.warn('[natal] recalc', err);
+            })
+            .then(function () {
+              inFlight = false;
+              if (pending) { pending = false; recalculate(); }
+            });
+        }
+
+        // Debounced wrapper — used by change-event listeners so the user
+        // can finish typing before we fire the API.
+        var debounceTimer = null;
+        function recalculateDebounced() {
+          if (debounceTimer) clearTimeout(debounceTimer);
+          debounceTimer = setTimeout(recalculate, 600);
+        }
 
         function onReady(fn) {
-          if (document.readyState === 'loading') {
-            document.addEventListener('DOMContentLoaded', fn);
-          } else { fn(); }
+          if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', fn);
+          else fn();
         }
 
         onReady(function () {
@@ -645,95 +831,15 @@
           // attaching window.NatalWheel before we try to render.
           setTimeout(function () {
             try {
-              var dataEl = document.getElementById('home-natal-default-data');
-              if (!dataEl || !dataEl.textContent) return;
-              var model = JSON.parse(dataEl.textContent);
-
-              // 1) Render the SVG wheel.
-              var wheelEl = document.getElementById('home-natal-wheel');
-              if (wheelEl && window.NatalWheel && typeof window.NatalWheel.render === 'function') {
-                try {
-                  window.NatalWheel.render(model, wheelEl, { showAspects: true, locale: 'en' });
-                } catch (e) {
-                  if (window.console && console.warn) console.warn('[natal-bootstrap] wheel render', e);
-                }
+              // ---- 1. Default chart render from embedded JSON.
+              var dataEl = $('home-natal-default-data');
+              if (dataEl && dataEl.textContent) {
+                var defaultModel = JSON.parse(dataEl.textContent);
+                renderModel(defaultModel);
               }
 
-              // 2) Meta line.
-              var metaEl = document.getElementById('home-natal-meta');
-              if (metaEl) {
-                var parts = [];
-                if (model.tradition === 'sidereal') parts.push('Sidereal (Vedic)');
-                if (model.ayanamsa) {
-                  parts.push('Ayanamsa: ' + model.ayanamsa +
-                    (typeof model.ayanamsaValue === 'number' ? ' (' + model.ayanamsaValue.toFixed(2) + '°)' : ''));
-                }
-                if (model.houseSystem) parts.push('Houses: ' + model.houseSystem);
-                metaEl.textContent = '';
-                metaEl.appendChild(el('p', { 'class': 'natal-meta__line' }, parts.join(' · ')));
-              }
-
-              // 3) Planets table (in the Planet Positions tab).
-              var planetsEl = document.getElementById('home-natal-planets');
-              if (planetsEl) {
-                planetsEl.textContent = '';
-                if (model.ascendant || model.midheaven) {
-                  var axesP = el('p', { 'class': 'natal-axes-summary' });
-                  if (model.ascendant) {
-                    axesP.appendChild(el('strong', null, 'Ascendant: '));
-                    axesP.appendChild(document.createTextNode(
-                      model.ascendant.sign + ' ' + degMin(model.ascendant)
-                    ));
-                  }
-                  if (model.ascendant && model.midheaven) {
-                    axesP.appendChild(document.createTextNode('  ·  '));
-                  }
-                  if (model.midheaven) {
-                    axesP.appendChild(el('strong', null, 'Midheaven: '));
-                    axesP.appendChild(document.createTextNode(
-                      model.midheaven.sign + ' ' + degMin(model.midheaven)
-                    ));
-                  }
-                  planetsEl.appendChild(axesP);
-                }
-                planetsEl.appendChild(el('h3', null, 'Planet positions'));
-                var rows = (model.planets || []).map(function (p) {
-                  return [
-                    p.name + (p.retrograde ? ' ℞' : ''),
-                    p.sign,
-                    degMin(p),
-                    (p.house != null ? String(p.house) : '—')
-                  ];
-                });
-                appendTable(planetsEl, ['Planet', 'Sign', 'Degree', 'House'], rows);
-              }
-
-              // 4) Aspects table (in the Major Aspects tab).
-              var aspectsEl = document.getElementById('home-natal-aspects');
-              if (aspectsEl) {
-                aspectsEl.textContent = '';
-                var aspects = Array.isArray(model.aspects) ? model.aspects : [];
-                if (aspects.length === 0) {
-                  aspectsEl.appendChild(el('p', { 'class': 'natal-empty' },
-                    'No major aspects within standard orbs for this chart.'));
-                } else {
-                  aspectsEl.appendChild(el('h3', null, 'Major aspects'));
-                  var aRows = aspects.map(function (a) {
-                    return [
-                      a.from,
-                      a.type,
-                      a.to,
-                      (a.orb != null ? a.orb.toFixed(1) + '°' : '—')
-                    ];
-                  });
-                  appendTable(aspectsEl, ['From', 'Aspect', 'To', 'Orb'], aRows);
-                }
-              }
-
-              // 5) Populate the IANA timezone select on the form, pinned to
-              //    Steve Jobs's tz. Acts as a backstop in case the form
-              //    binder's pre-population block doesn't fire.
-              var tzSel = document.getElementById('home-nf-tz-select');
+              // ---- 2. Populate the IANA timezone select.
+              var tzSel = $('home-nf-tz-select');
               if (tzSel && tzSel.options.length === 0) {
                 var zones = [];
                 try {
@@ -748,13 +854,56 @@
                 var frag = document.createDocumentFragment();
                 zones.forEach(function (z) {
                   var opt = document.createElement('option');
-                  opt.value = z;
-                  opt.textContent = z;
+                  opt.value = z; opt.textContent = z;
                   frag.appendChild(opt);
                 });
                 tzSel.appendChild(frag);
                 tzSel.value = 'America/Los_Angeles';
               }
+
+              // ---- 3. Wire the offset-enable checkbox.
+              var useOff = $('home-nf-tz-offset-enable');
+              var offRow = document.querySelector('#natal-calc .tz-offset-input-row');
+              if (useOff && offRow) {
+                useOff.addEventListener('change', function () {
+                  offRow.hidden = !useOff.checked;
+                  tzSel.disabled = useOff.checked;
+                  recalculate();
+                });
+              }
+
+              // ---- 4. Live recalc listeners on every input that affects
+              //         the chart. Debounced so a partial keystroke doesn't
+              //         fire the API.
+              ['home-nf-date', 'home-nf-time', 'home-nf-time-unknown',
+               'home-nf-lat', 'home-nf-lon', 'home-nf-tz-select',
+               'home-nf-tz-offset-sign', 'home-nf-tz-offset-hours',
+               'home-nf-tz-offset-minutes'
+              ].forEach(function (id) {
+                var input = $(id);
+                if (!input) return;
+                input.addEventListener('change', recalculateDebounced);
+                input.addEventListener('input', recalculateDebounced);
+              });
+
+              // ---- 5. Submit button → immediate recalc (no debounce).
+              //         Also unlocks even if consent isn't toggled — we
+              //         already display Steve Jobs's chart on landing
+              //         without consent (it's a published chart, not user
+              //         data), and the consent gate was a leftover from
+              //         the legacy form-binder flow.
+              var form = $('home-natal-form');
+              var submitBtn = $('home-nf-submit');
+              if (form) {
+                form.addEventListener('submit', function (e) {
+                  e.preventDefault();
+                  if (debounceTimer) { clearTimeout(debounceTimer); debounceTimer = null; }
+                  recalculate();
+                });
+              }
+              // Make sure submit is clickable from the start (legacy binder
+              // marks it disabled until consent).
+              if (submitBtn) submitBtn.disabled = false;
             } catch (err) {
               if (window.console && console.warn) console.warn('[natal-bootstrap]', err);
             }

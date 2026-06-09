@@ -8,6 +8,12 @@ export class ValidationError extends Error {
 
 const DATE_RE = /^\d{4}-\d{2}-\d{2}$/;
 const TIME_RE = /^([01]\d|2[0-3]):[0-5]\d$/;
+// Fixed UTC offset format: ±H:MM or ±HH:MM (e.g. "+05:30", "-08:00", "+9:00").
+// When tz matches this, we use the offset directly and ignore any IANA DST
+// rules — the user has told us exactly how many minutes ahead of (or behind)
+// UTC their wall-clock was. Range ±14:00 covers all real-world offsets;
+// historic anomalies (Liberia +44min, Kiribati +14:00) sit inside this.
+const OFFSET_RE = /^([+-])(\d{1,2}):([0-5]\d)$/;
 const MIN_DATE = '1900-01-01';
 
 function isFiniteNumber(x) {
@@ -31,13 +37,35 @@ function validIanaTz(tz) {
   }
 }
 
-// Convert a local civil date/time in zone `tz` to a UTC Date by inverting
-// the offset that JS reports for the candidate UTC instant. We iterate
-// twice to converge across DST transitions (the candidate UTC may land in
-// a different offset than the wall-clock instant).
+// Parse a "±H:MM" / "±HH:MM" offset to total minutes east of UTC.
+// Returns null if the string doesn't match, or if the value is outside
+// the realistic ±14:00 range.
+function parseOffsetMinutes(tz) {
+  const m = tz.match(OFFSET_RE);
+  if (!m) return null;
+  const sign = m[1] === '+' ? 1 : -1;
+  const hours = Number(m[2]);
+  const mins = Number(m[3]);
+  if (hours > 14 || (hours === 14 && mins > 0)) return null;
+  return sign * (hours * 60 + mins);
+}
+
+// Convert a local civil date/time in zone `tz` to a UTC Date. `tz` may be:
+//   - an IANA timezone identifier (e.g. "Asia/Seoul") — full DST support
+//   - a fixed offset string in "±H:MM" / "±HH:MM" form — DST ignored, the
+//     user has told us exactly how many minutes east/west of UTC their
+//     wall-clock was at the birth instant
+//
+// IANA path: iterate twice to converge across DST transitions (the
+// candidate UTC may land in a different offset than the wall-clock instant).
+// Fixed-offset path: single subtraction, no iteration needed.
 export function localToUTC(dateStr, timeStr, tz) {
   const [y, mo, d] = dateStr.split('-').map(Number);
   const [hh, mm] = timeStr.split(':').map(Number);
+  const fixedOffset = parseOffsetMinutes(tz);
+  if (fixedOffset !== null) {
+    return new Date(Date.UTC(y, mo - 1, d, hh, mm, 0) - fixedOffset * 60_000);
+  }
   // First guess: treat input as if it were UTC.
   let utcGuess = Date.UTC(y, mo - 1, d, hh, mm, 0);
   for (let i = 0; i < 2; i++) {
@@ -100,8 +128,13 @@ export function validateInput(body) {
     }
   }
 
-  if (typeof tz !== 'string' || tz.length === 0 || tz.length > 64 || !validIanaTz(tz)) {
-    throw new ValidationError('`tz` must be a valid IANA timezone identifier (e.g. "Asia/Seoul").');
+  if (typeof tz !== 'string' || tz.length === 0 || tz.length > 64) {
+    throw new ValidationError('`tz` must be either an IANA timezone identifier (e.g. "Asia/Seoul") or a fixed offset in ±HH:MM form (e.g. "+05:30").');
+  }
+  // tz accepts EITHER an IANA timezone OR a fixed ±HH:MM offset.
+  const isOffsetForm = parseOffsetMinutes(tz) !== null;
+  if (!isOffsetForm && !validIanaTz(tz)) {
+    throw new ValidationError('`tz` must be either an IANA timezone identifier (e.g. "Asia/Seoul") or a fixed offset in ±HH:MM form (e.g. "+05:30").');
   }
 
   if (!isFiniteNumber(lat) || lat < -90 || lat > 90) {

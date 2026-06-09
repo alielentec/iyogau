@@ -675,3 +675,60 @@
   min-width: 12rem;
   padding: 0.5rem 1rem;
 }
+
+/* =====================================================================
+ * Custom UTC-offset override row
+ * (lives inside .natal-loc-detail, sits below the lat/lon/tz grid)
+ * =================================================================== */
+
+.tz-offset-row {
+  margin-top: 0.625rem;
+  padding-top: 0.625rem;
+  border-top: 1px dashed var(--outline);
+}
+.tz-offset-input-row {
+  display: flex;
+  align-items: center;
+  gap: 0.375rem;
+  margin-top: 0.5rem;
+  flex-wrap: wrap;
+}
+.tz-offset-input-row[hidden] { display: none; }
+.tz-offset-sign-label {
+  font-size: 0.8125rem;
+  color: var(--ink-muted);
+  font-weight: 500;
+}
+.tz-offset-input-row select,
+.tz-offset-input-row input[type="number"] {
+  width: auto;
+  min-width: 3rem;
+  max-width: 4rem;
+  padding: 0.375rem 0.5rem;
+  font-size: 0.875rem;
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+  min-height: 32px;
+}
+.tz-offset-input-row select#home-nf-tz-offset-sign,
+.tz-offset-input-row select#nf-tz-offset-sign {
+  min-width: 2.5rem;
+  max-width: 3rem;
+  text-align: center;
+}
+.tz-offset-colon {
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+  font-size: 1rem;
+  color: var(--ink);
+  font-weight: 600;
+}
+
+/* Greyed-out IANA select when custom offset is active */
+#home-nf-tz-select:disabled,
+#nf-tz-select:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+}
+
+/* Hide the legacy "loc-detail" `hidden` attribute behavior — the fieldset
+   stays visible whenever the form is shown (pre-populated by default). */
+.natal-loc-detail[hidden] { display: none; }
