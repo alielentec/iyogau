@@ -185,7 +185,7 @@
     centralDisc:  22.28,               // central aspect disc
     signGlyphR:   47.58,               // rim sign glyphs
     signGlyphScale:       0.0484 * 0.55,
-    planetGlyphR: 39.5,
+    planetGlyphR: 38.5,               // user directive 2026-06-09: 1 unit inward to clear zodiac boundary ticks (Sun glyph reaches r≈41.18 at 39.5; tick boundary inner end at 43.56 — visually tight at sign cusps)
     planetGlyphScale:     0.0484 * 0.821,
     degreeR:      35.34,
     signGlyphInR: 32.22,
@@ -308,32 +308,24 @@
     var out = [];
     clusters.forEach(function (cluster) {
       var spread = cluster.length > 3 ? 10 : 11;
-      // Radial staggering: when consecutive planets in the cluster are
-      // within ~3° their angular fan alone is not enough to clear glyph
-      // overlap, so we also offset them radially (alternating inner/outer
-      // rings). The leader's R_OUT rides with the glyph, so each planet's
-      // tick ends at its own radius — producing a readable "comb".
-      // Offset is in viewBox units; 1.6 ≈ half a glyph diameter at the
-      // current planetGlyphScale, enough to clear adjacent glyphs.
-      var STAGGER_STEP = 1.6;
-      var TIGHT_THRESHOLD = 3;
-      var radialSlots = new Array(cluster.length);
-      radialSlots[0] = 0;
-      var nextSlot = 0;
+      // Inner-endpoint staggering (per user directive 2026-06-09):
+      // ALL planet glyphs sit on a SINGLE outer ring (L.planetGlyphR).
+      // When consecutive cluster members fall within TIGHT_THRESHOLD_DEG
+      // of each other, we walk an inward-only "comb" — each successive
+      // member's leader inner endpoint pulls further inward by exactly
+      // one stroke-width (INNER_STAGGER_STEP). Glyph position never moves
+      // radially. The comb resets to 0 the moment the angular gap to the
+      // previous member exceeds TIGHT_THRESHOLD_DEG.
+      var TIGHT_THRESHOLD_DEG = 3;
+      var INNER_STAGGER_STEP = 0.08; // matches .luna-leader stroke-width
+      var innerSlots = new Array(cluster.length);
+      innerSlots[0] = 0;
       for (var ri = 1; ri < cluster.length; ri += 1) {
         var prev = cluster[ri - 1];
         var here = cluster[ri];
-        if (angleDistance(here.longitude, prev.longitude) < TIGHT_THRESHOLD) {
-          // Walk the comb: 0, +1, -1, +2, -2, ... so the cluster grows
-          // outward symmetrically rather than drifting to one side.
-          if (nextSlot >= 0) nextSlot = -(nextSlot + 1);
-          else nextSlot = -nextSlot;
-          radialSlots[ri] = nextSlot;
-        } else {
-          // Wide enough — reset the comb to the base ring.
-          nextSlot = 0;
-          radialSlots[ri] = 0;
-        }
+        innerSlots[ri] = (angleDistance(here.longitude, prev.longitude) < TIGHT_THRESHOLD_DEG)
+          ? innerSlots[ri - 1] + 1
+          : 0;
       }
       cluster.forEach(function (planet, index) {
         var labelLongitude = normalizeDegrees(
@@ -342,10 +334,10 @@
         out.push(Object.assign({}, planet, {
           clusterSize: cluster.length,
           labelLongitude: labelLongitude,
-          // Positive = pushed outward (longer leader), negative = pushed
-          // inward (shorter leader). render() multiplies by STAGGER_STEP.
-          radialSlot: radialSlots[index],
-          radialOffset: radialSlots[index] * STAGGER_STEP
+          // Only the leader's inner endpoint moves; glyph stays on the
+          // single planet ring. Multiplied by INNER_STAGGER_STEP in render().
+          innerSlot: innerSlots[index],
+          innerRadiusOffset: innerSlots[index] * INNER_STAGGER_STEP
         }));
       });
     });
@@ -722,40 +714,26 @@
       var exactAngle = chartAngle(planet.longitude, asc);
       var color = PLANET_COLORS[planet.key] || 'var(--ink-muted)';
       var s = splitLongitude(planet.longitude);
-      // Radial staggering: layoutPlanets() assigns a per-planet radialOffset
-      // (viewBox units, positive = outward, negative = inward) when two
-      // planets sit within ~3° of each other. The glyph rides on this
-      // offset; the leader's outer anchor stays at L.field so leaders end
-      // at different inner radii, producing a comb of staggered lines.
-      var radialOffset = Number.isFinite(planet.radialOffset) ? planet.radialOffset : 0;
-      var glyphR = L.planetGlyphR + radialOffset;
+      // SINGLE PLANET RING (per user directive 2026-06-09): every glyph
+      // sits at L.planetGlyphR. No radial offset is applied to glyphs.
+      // layoutPlanets() supplies a per-planet innerRadiusOffset that pulls
+      // the leader's INNER endpoint deeper inward by one stroke-width per
+      // tight-cluster slot — glyph position never moves.
+      var innerOffset = Number.isFinite(planet.innerRadiusOffset) ? planet.innerRadiusOffset : 0;
+      var glyphR = L.planetGlyphR;
       var glyphId = PLANET_GLYPH_IDS[planet.key] || 'sun'; // safety fallback
       var glyphTransform = placeGlyph(angle, glyphR, L.planetGlyphScale);
 
-      // ---- Leader: radial tick at true degree → arc to fanned glyph → inner nub ----
-      // R_OUT anchors at the wheel field for ALL planets (constant outer
-      // edge on the ring). The inner endpoints follow the staggered glyph
-      // radius — so inner-pushed planets have longer leaders, outer-pushed
-      // shorter ones.
+      // ---- Leader: single straight radial line from ring edge inward ----
+      // Drawn from L.field (outer ring edge) straight inward to
+      // (glyphR - 0.946 - innerOffset). For tight-cluster members, each
+      // successive line stops one stroke-width shorter inward — producing
+      // a clean comb of parallel sticks at the same outer anchor.
       var R_OUT = L.field;
-      var R_ARC = L.field - 0.946 + radialOffset;
-      var R_IN  = R_ARC - 0.946;
+      var R_IN  = L.planetGlyphR - 0.946 - innerOffset;
       var p0 = polar(c, R_OUT, exactAngle);
-      var p1 = polar(c, R_ARC, exactAngle);
-      var p2 = polar(c, R_ARC, angle);
-      var p3 = polar(c, R_IN, angle);
-
-      var leaderDelta = angle - exactAngle;
-      if (leaderDelta > 180) leaderDelta -= 360;
-      if (leaderDelta < -180) leaderDelta += 360;
-      var isFanned = Math.abs(leaderDelta) >= 0.25;
-      var leaderSweep = leaderDelta > 0 ? 1 : 0;
-      var leaderPath = isFanned
-        ? 'M ' + p0[0] + ' ' + p0[1] +
-          ' L ' + p1[0] + ' ' + p1[1] +
-          ' A ' + R_ARC + ' ' + R_ARC + ' 0 0 ' + leaderSweep + ' ' + p2[0] + ' ' + p2[1] +
-          ' L ' + p3[0] + ' ' + p3[1]
-        : 'M ' + p0[0] + ' ' + p0[1] + ' L ' + p1[0] + ' ' + p1[1];
+      var p1 = polar(c, R_IN,  exactAngle);
+      var leaderPath = 'M ' + p0[0] + ' ' + p0[1] + ' L ' + p1[0] + ' ' + p1[1];
       var leaderClass = 'luna-leader' + (planet.oob ? ' luna-leader-oob' : '');
 
       // ---- Inner stack: degree, per-planet sign glyph, minute ----
