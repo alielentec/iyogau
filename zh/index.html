@@ -66,7 +66,7 @@
 
 <link rel="preload" as="style" href="/assets/css/styles.css" />
 <link rel="stylesheet" href="/assets/css/styles.css" />
-<link rel="stylesheet" href="/assets/css/natal-chart.css?v=16" />
+<link rel="stylesheet" href="/assets/css/natal-chart.css?v=17" />
 
 <!-- Schema.org -->
 <script type="application/ld+json">
@@ -1500,13 +1500,22 @@
                 if (preset) {
                   if (demoBannerEl) demoBannerEl.hidden = false;
                   if (demoAttribEl) demoAttribEl.hidden = false;
-                  if (demoIntroEl)  demoIntroEl.textContent = demoIntroCached;
+                  // Intro paragraph is INTENTIONALLY not swapped here.
+                  // Per user request the section intro is now a static
+                  // statement ("The chart below is computed from your
+                  // birth details. The calculator runs sidereal Vedic
+                  // math…") that stays the same across DEMO ↔ CUSTOM
+                  // transitions. Previously we swapped to a per-preset
+                  // intro mentioning the active person by name — that
+                  // was confusing because the visible person changes
+                  // every time the user picks from the dropdown, and
+                  // the sentence couldn't honestly name only one of them.
                   renderBannerText(preset);
                   renderAttribText(preset);
                 } else {
                   if (demoBannerEl) demoBannerEl.hidden = true;
                   if (demoAttribEl) demoAttribEl.hidden = true;
-                  if (demoIntroEl)  demoIntroEl.textContent = getEditedIntro();
+                  // Intro paragraph also static in CUSTOM. No swap.
                 }
                 // Caption / title always re-derive from current input
                 // values (typed name overrides preset name as title;
@@ -2171,6 +2180,6 @@
 <script src="/assets/js/i18n.natal-chart.js?v=12" defer></script>
 <script src="/assets/js/natal-chart-wheel.js?v=10" defer></script>
 <script src="/assets/js/natal-chart-tabs.js?v=10" defer></script>
-<script src="/assets/js/natal-chart-form.js?v=13" defer></script>
+<script src="/assets/js/natal-chart-form.js?v=14" defer></script>
 </body>
 </html>
