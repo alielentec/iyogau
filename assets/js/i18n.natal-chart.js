@@ -59,6 +59,12 @@
           'place.empty': 'No matches. Try a larger nearby city.',
           tz: 'Timezone',
           'tz.adjust': 'adjust',
+          lat: 'Latitude',
+          lon: 'Longitude',
+          adjust: {
+            legend: 'Fine-tune location (optional)',
+            help: 'Auto-filled from the city you picked. Adjust if needed.'
+          },
           consent: 'I consent to processing my birth details (date, time, place) for this natal chart calculation.',
           'consent.link': 'See our Privacy Policy.',
           submit: 'Calculate Natal Chart',
@@ -122,6 +128,12 @@
           'place.empty': '일치하는 도시가 없습니다. 인근의 더 큰 도시를 입력해 보세요.',
           tz: '시간대',
           'tz.adjust': '수정',
+          lat: '위도',
+          lon: '경도',
+          adjust: {
+            legend: '위치 세부 조정 (선택 사항)',
+            help: '선택하신 도시를 기반으로 자동 입력됩니다. 필요하면 직접 조정하세요.'
+          },
           consent: '이 출생 차트 계산을 위해 내 출생 정보(날짜, 시각, 장소)의 처리에 동의합니다.',
           'consent.link': '개인정보 처리방침 보기',
           submit: '출생 차트 계산하기',
@@ -207,6 +219,12 @@
           'place.empty': '未找到匹配项。请尝试较大的附近城市。',
           tz: '时区',
           'tz.adjust': '调整',
+          lat: '纬度',
+          lon: '经度',
+          adjust: {
+            legend: '微调位置（可选）',
+            help: '根据您选择的城市自动填充。如需调整请修改。'
+          },
           consent: '我同意为了本次出生星盘计算而处理我的出生资料（日期、时间、地点）。',
           'consent.link': '查看隐私政策',
           submit: '计算出生星盘',

@@ -817,7 +817,13 @@
 <script src="/assets/js/app.js" defer></script>
 <!-- Inline natal-chart calculator. Loads on every homepage view; the
      binder auto-skips if it can't find #home-natal-form, so adding
-     these scripts to other pages is harmless. -->
+     these scripts to other pages is harmless.
+     Load order matters: i18n.natal-chart.js MUST run before
+     natal-chart-form.js so window.IYOGAU_I18N is populated when the
+     form's `t()` helper looks up labels (sign / planet / aspect /
+     error / "Calculating…" strings) — otherwise ko/zh visitors get
+     English fallbacks for everything below the section heading. -->
+<script src="/assets/js/i18n.natal-chart.js" defer></script>
 <script src="/assets/js/natal-chart-wheel.js" defer></script>
 <script src="/assets/js/natal-chart-form.js" defer></script>
 </body>
