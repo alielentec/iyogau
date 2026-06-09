@@ -66,7 +66,7 @@
 
 <link rel="preload" as="style" href="/assets/css/styles.css" />
 <link rel="stylesheet" href="/assets/css/styles.css" />
-<link rel="stylesheet" href="/assets/css/natal-chart.css?v=10" />
+<link rel="stylesheet" href="/assets/css/natal-chart.css?v=11" />
 
 <!-- Schema.org -->
 <script type="application/ld+json">
@@ -959,11 +959,14 @@
               // backward compatibility (e.g. if the i18n bundle hasn't
               // loaded yet on a slow connection).
               function getDefaultName() {
-                // Closure over activePresetId / window.IYOGAU_NATAL_PRESETS
-                // — both are declared below this function in source
-                // order but the closure is evaluated lazily on each
-                // call (only fires from inside event handlers, by
-                // which time everything is wired up).
+                // Returns the chart's "vanity title" when the user has
+                // not typed a custom name:
+                //   - DEMO state (activePresetId set) → that preset's
+                //     localized display name ("Steve Jobs", "스티브 잡스",
+                //     "Albert Einstein", …)
+                //   - CUSTOM state (activePresetId null) → empty string,
+                //     so the wheel's title renders blank and the user
+                //     understands the chart is purely theirs.
                 try {
                   var html = document.documentElement.getAttribute('lang') || 'en';
                   var lang = html.indexOf('ko') === 0 ? 'ko'
@@ -979,11 +982,12 @@
                       if (presets[i].id === activePresetId) return presets[i].name;
                     }
                   }
-                  var localized = dict && dict.natal && dict.natal.results
-                                && dict.natal.results.defaultName;
-                  if (typeof localized === 'string' && localized) return localized;
+                  // CUSTOM state — no active preset. Empty string is
+                  // semantically "no labeled person for this chart" —
+                  // the user is editing their own data without a name.
+                  return '';
                 } catch (e) {}
-                return 'Steve Jobs';
+                return '';
               }
 
               // Format an <input type="date"> value (YYYY-MM-DD) as
@@ -1009,8 +1013,16 @@
                 // so language switches reflect immediately and the
                 // strict-mode ReferenceError on the missing `defaultName`
                 // var (beta evaluator finding) goes away.
+                // In CUSTOM state (no active preset), getDefaultName()
+                // returns '' so an empty typed-name yields display=''.
                 var display = typed || getDefaultName();
-                if (titleEl) titleEl.textContent = display;
+                if (titleEl) {
+                  titleEl.textContent = display;
+                  // Hide the title row entirely when the chart has no
+                  // labeled person (CUSTOM state + no typed name).
+                  // Otherwise the empty <p> leaves a vertical gap.
+                  titleEl.hidden = !display;
+                }
                 if (!captionEl) return;
 
                 // Cache the i18n-resolved default caption once so we can
@@ -1043,7 +1055,11 @@
                 // the original caption (everything up to the first colon).
                 var colonAt = orig.indexOf(':');
                 var prefix  = colonAt >= 0 ? orig.slice(0, colonAt + 1) + ' ' : '';
-                var bits    = [display];
+                // Skip the name bit entirely when there's nothing to
+                // show — otherwise the caption renders as
+                // "Currently showing:  · 22 Jan 1948 · …" with a blank
+                // leading slot.
+                var bits    = display ? [display] : [];
                 if (dateStr) bits.push(dateStr);
                 // i18n-aware "your chart" fallback when the user has
                 // typed in the birthplace input but hasn't picked from
@@ -1821,9 +1837,9 @@
      Current version round: i18n.natal-chart.js (adds defaultName key) and
      natal-chart-form.js (other recent edits). -->
 <script src="/assets/js/natal-presets.js?v=1" defer></script>
-<script src="/assets/js/i18n.natal-chart.js?v=6" defer></script>
-<script src="/assets/js/natal-chart-wheel.js?v=6" defer></script>
-<script src="/assets/js/natal-chart-tabs.js?v=6" defer></script>
-<script src="/assets/js/natal-chart-form.js?v=6" defer></script>
+<script src="/assets/js/i18n.natal-chart.js?v=7" defer></script>
+<script src="/assets/js/natal-chart-wheel.js?v=7" defer></script>
+<script src="/assets/js/natal-chart-tabs.js?v=7" defer></script>
+<script src="/assets/js/natal-chart-form.js?v=7" defer></script>
 </body>
 </html>
