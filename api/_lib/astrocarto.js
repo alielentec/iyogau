@@ -327,15 +327,6 @@ function gaussianClosenessKm(distanceKm) {
   return Math.exp(-Math.pow(distanceKm / HEAT_MATRIX_SIGMA_KM, 2));
 }
 
-function dashaMapBoost() {
-  // Astrocarto API does not compute dasha (which requires birth-date arithmetic
-  // beyond the chart instant); we pass an empty boost. The reference engine
-  // adds 1.18× boost for the current maha-lord, which lifts the heat-matrix
-  // by ~3-5%. Not implementing dasha here keeps the API stateless and
-  // matches the published response (mode-driven only, no time-window inputs).
-  return {};
-}
-
 function hasForeignSignal(natal) {
   return natal.positions.some((p) => ['Rahu', 'Jupiter', 'Saturn'].includes(p.key) && [9, 10, 11, 12].includes(p.house));
 }
@@ -365,7 +356,6 @@ function matrixImmigrationDistanceAdjustment(natal, mode, location) {
 }
 
 export function scoreMatrixCell(natal, lines, mode, location) {
-  const dashaBoost = dashaMapBoost();
   const contributions = lines
     .map((line) => {
       const distance = lineDistanceKm(location, line);
@@ -376,7 +366,7 @@ export function scoreMatrixCell(natal, lines, mode, location) {
         planet: line.planet,
         type: line.type,
         distance,
-        value: base * angularBonus * (dashaBoost[line.planet] || 1),
+        value: base * angularBonus,
       };
     })
     .filter((item) => item.value > 1.2)

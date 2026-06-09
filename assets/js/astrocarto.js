@@ -288,7 +288,8 @@
     // Filter to top planets per mode to keep the map readable: ditch lines
     // whose mode weight < 0.5. For Sun/Jupiter/Venus etc this still shows
     // all major lines; it drops Ketu/Mars from soulmate, etc.
-    var modeWeights = MODE_WEIGHTS[mode] || {};
+    // Source of truth is the API response (see /api/_lib/astrocarto.js#L485).
+    var modeWeights = response.modeWeights || {};
     for (var li = 0; li < lines.length; li += 1) {
       var line = lines[li];
       if ((modeWeights[line.planet] || 0) < 0.5) continue;
@@ -337,12 +338,13 @@
       if (!latitudes.length || !longitudes.length) { tooltip.hidden = true; return; }
       var lat0 = latitudes[0];
       var lon0 = longitudes[0];
-      var ri = Math.round((latP - lat0) / latStep);
-      var ci = Math.round((lonP - lon0) / lonStep);
-      if (ri < 0 || ri >= latitudes.length || ci < 0 || ci >= longitudes.length) {
-        tooltip.hidden = true;
-        return;
-      }
+      // Cells render with SW-corner anchor extending NORTH+EAST (see renderMap
+      // around line 255: `y = lat2y(rowLat) - cellH`). Use floor — not round —
+      // so a pointer inside a cell maps to that cell's index, not the neighbour.
+      var ri = Math.floor((latP - lat0) / latStep);
+      var ci = Math.floor((lonP - lon0) / lonStep);
+      if (ri < 0) ri = 0; else if (ri >= latitudes.length) ri = latitudes.length - 1;
+      if (ci < 0) ci = 0; else if (ci >= longitudes.length) ci = longitudes.length - 1;
       var rowV = values[ri] || [];
       var rowM = cellMeta[ri] || [];
       var match = {
@@ -431,20 +433,16 @@
     return d;
   }
 
-  // Per-mode weights — used in the renderer to filter low-weight lines so the
-  // map stays readable. Must mirror MODE_WEIGHTS in /api/astrocarto.js.
-  var MODE_WEIGHTS = {
-    relocation:  { Jupiter: 1.35, Venus: 1.15, Sun: 1.05, Moon: 0.7,  Mercury: 0.65, Saturn: 0.55, Rahu: 0.45, Mars: 0.2,  Ketu: 0.15 },
-    immigration: { Rahu:    1.35, Jupiter: 1.05, Saturn: 1.0, Mercury: 0.85, Moon: 0.5,  Venus: 0.45, Sun: 0.35, Mars: 0.25, Ketu: 0.2  },
-    soulmate:    { Venus:   1.45, Jupiter: 1.0, Moon: 0.95, Mars: 0.55, Mercury: 0.45, Sun: 0.35, Rahu: 0.3,  Saturn: 0.25, Ketu: 0.2  }
-  };
+  // Mode weights are no longer duplicated here — the API ships them in the
+  // response (`response.modeWeights`, see /api/_lib/astrocarto.js#L485) and
+  // the renderer / legend read from there. Single source of truth.
 
   // ---------- Legend ----------
 
-  function renderLegend(container, mode) {
+  function renderLegend(container, mode, response) {
     if (!container) return;
     removeAllChildren(container);
-    var weights = MODE_WEIGHTS[mode] || {};
+    var weights = (response && response.modeWeights) || {};
     // Top 5 planets by weight.
     var ordered = Object.keys(weights)
       .map(function (k) { return { planet: k, weight: weights[k] }; })
@@ -530,17 +528,22 @@
     if (responseCache[mode]) return Promise.resolve(responseCache[mode]);
     if (pendingFetches[mode]) return pendingFetches[mode];
 
+    // Only include `ayanamsa` when sidereal — the API validator rejects the
+    // field for tropical charts (see /api/_lib/astrocarto.js schema).
+    var tradition = src.tradition || 'sidereal';
     var body = {
       date: src.date,
       time: src.time,
       tz: src.tz,
       lat: src.lat,
       lon: src.lon,
-      tradition: src.tradition || 'sidereal',
-      ayanamsa: src.ayanamsa || 'lahiri',
+      tradition: tradition,
       mode: mode,
       resolution: 'medium'
     };
+    if (tradition === 'sidereal') {
+      body.ayanamsa = src.ayanamsa || 'lahiri';
+    }
     pendingFetches[mode] = fetch('/api/astrocarto/', {
       method: 'POST',
       headers: { 'content-type': 'application/json', 'accept': 'application/json' },
@@ -592,7 +595,7 @@
       .then(function (json) {
         setBusy(panel, false);
         renderMap(mapEl, json, mode);
-        if (legendEl) renderLegend(legendEl, mode);
+        if (legendEl) renderLegend(legendEl, mode, json);
         panel.setAttribute('data-astrocarto-loaded', '1');
       })
       .catch(function (err) {

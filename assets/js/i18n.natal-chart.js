@@ -149,7 +149,8 @@
         planets: {
           sun: 'Sun', moon: 'Moon', mercury: 'Mercury', venus: 'Venus',
           mars: 'Mars', jupiter: 'Jupiter', saturn: 'Saturn',
-          uranus: 'Uranus', neptune: 'Neptune', pluto: 'Pluto'
+          uranus: 'Uranus', neptune: 'Neptune', pluto: 'Pluto',
+          rahu: 'Rahu', ketu: 'Ketu'
         },
         aspects: {
           conjunction: 'Conjunction', sextile: 'Sextile',
@@ -369,7 +370,9 @@
           saturn:  '토성',
           uranus:  '천왕성',
           neptune: '해왕성',
-          pluto:   '명왕성'
+          pluto:   '명왕성',
+          rahu:    '라후',
+          ketu:    '케투'
         },
         aspects: {
           conjunction: '합 (Conjunction)',     // TODO native-review
@@ -583,7 +586,9 @@
           saturn: '土星',
           uranus: '天王星',
           neptune: '海王星',
-          pluto: '冥王星'
+          pluto: '冥王星',
+          rahu: '罗睺',
+          ketu: '计都'
         },
         aspects: {
           conjunction: '合相',
