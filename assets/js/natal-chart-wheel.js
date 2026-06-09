@@ -219,11 +219,12 @@
    *   - RED (R_OUT → R_MID_BASE at exact longitude) is identical for
    *     every planet → every degree-tick anchor reads the same.
    *   - The arc radius walks inward by exactly STAGGER_STEP per cluster
-   *     slot, where STAGGER_STEP = 2 × LEADER_STROKE_WIDTH. The 2×
+   *     slot, where STAGGER_STEP = 3 × LEADER_STROKE_WIDTH. The 3×
    *     spacing means adjacent staggered arcs are separated by exactly
-   *     one stroke-width of background — a 0.08-wide line, then a
-   *     0.08-wide background gap, then the next 0.08-wide line — so a
-   *     5-planet stellium produces 5 visually distinct nested arcs.
+   *     two stroke-widths of background — a 0.08-wide line, then a
+   *     0.16-wide background gap, then the next 0.08-wide line — so a
+   *     5-planet stellium produces 5 visually distinct nested arcs that
+   *     are easier to differentiate at viewer scale.
    *   - GREEN length therefore varies only by i × STAGGER_STEP.
    *   - All glyphs are centred on L.planetGlyphR exactly — single ring.
    *   - GREEN's inner endpoint is at (planetGlyphR + GLYPH_STANDOFF),
@@ -236,7 +237,7 @@
   var RED_LENGTH          = 0.946;               // CONSTANT length of the RED outer segment for EVERY planet
   var R_MID_BASE          = R_OUT - RED_LENGTH;  // 43.334 — base arc radius (solo planets / cluster slot 0)
   var LEADER_STROKE_WIDTH = 0.08;                // matches CSS .luna-leader stroke-width
-  var STAGGER_STEP        = 2 * LEADER_STROKE_WIDTH; // 0.16 — per-cluster-slot radial step (2× = 1 line + 1 background-gap between adjacent lines)
+  var STAGGER_STEP        = 3 * LEADER_STROKE_WIDTH; // 0.24 — 1 line + 2 background-gap thicknesses between adjacent staggered lines
   var GLYPH_STANDOFF      = 2.0;                 // viewBox units; leader GREEN segment stops this far ABOVE planetGlyphR so glyph artwork is not crossed
 
   /* -----------------------------------------------------------------
