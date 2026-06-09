@@ -11,7 +11,7 @@
  *
  *  Each preset is a snapshot. The picker writes lat/lon/tz directly
  *  to the form (bypassing the gazetteer for places not in the
- *  iyogau cities list — Ulm, Bellur, Vadnagar, Taktser/Xining).
+ *  iyogau cities list — Queens, Pretoria, Albuquerque, Funchal, etc.).
  *  When all five chart-math fields (date, time, lat, lon, tz) match
  *  a preset exactly, the form is in DEMO state for that preset; any
  *  edit to one of those fields demotes to CUSTOM (hard auto-clear).
@@ -21,6 +21,10 @@
  *  Sources / data-quality notes live in the `source` field; the
  *  picker surfaces them as the "<name> birth data: <source>"
  *  attribution in the demo callout under the wheel.
+ *
+ *  Ordering: Steve Jobs is FIRST (he's the default-landing chart;
+ *  index.html line ~660 holds his pre-computed JSON). The remaining
+ *  13 entries follow the user-requested order for the dropdown.
  * ===================================================================== */
 
 (function () {
@@ -40,16 +44,136 @@
       blurb: "Apple co-founder; long-time Zen Buddhist practitioner; 1974 pilgrimage to Neem Karoli Baba's ashram in India"
     },
     {
-      id: 'mahatma-gandhi',
-      name: 'Mahatma Gandhi',
-      birthDate: '1869-10-02',
-      birthTime: '07:11',
-      placeLabel: 'Porbandar, India',
-      lat: 21.6422,
-      lon: 69.6093,
-      tz: 'Asia/Kolkata',
-      source: 'Astro-Databank AA-rated (K.S. Krishnamurti, from mother). Time is 07:11 LMT; the API receives 07:11 with tz Asia/Kolkata, which differs from LMT by ~22 minutes — flag for review with the chart engine',
-      blurb: 'Father of modern India; daily karma-yoga discipline and Bhagavad Gita study'
+      id: 'donald-trump',
+      name: 'Donald Trump',
+      birthDate: '1946-06-14',
+      birthTime: '10:54',
+      placeLabel: 'Queens, New York, United States',
+      lat: 40.7282,
+      lon: -73.7949,
+      tz: 'America/New_York',
+      source: 'Astro-Databank AA-rated (birth certificate)',
+      blurb: '45th and 47th President of the United States; real-estate businessman and television personality'
+    },
+    {
+      id: 'elon-musk',
+      name: 'Elon Musk',
+      birthDate: '1971-06-28',
+      birthTime: '07:30',
+      placeLabel: 'Pretoria, South Africa',
+      lat: -25.7461,
+      lon: 28.1881,
+      tz: 'Africa/Johannesburg',
+      source: 'Astro-Databank DD-rated (dirty data; time disputed). 07:30 SAST is the most-cited figure but Musk himself has on occasion said the time is unknown — flag for review',
+      blurb: 'Tesla / SpaceX founder; CEO of X; one of the most-followed figures in modern technology'
+    },
+    {
+      id: 'jeff-bezos',
+      name: 'Jeff Bezos',
+      birthDate: '1964-01-12',
+      birthTime: '01:00',
+      placeLabel: 'Albuquerque, New Mexico, United States',
+      lat: 35.0844,
+      lon: -106.6504,
+      tz: 'America/Denver',
+      source: 'Astro-Databank A-rated (from him via biographers)',
+      blurb: 'Amazon founder; Blue Origin founder; long-time investor in space technology'
+    },
+    {
+      id: 'mark-zuckerberg',
+      name: 'Mark Zuckerberg',
+      birthDate: '1984-05-14',
+      birthTime: '14:30',
+      placeLabel: 'White Plains, New York, United States',
+      lat: 41.0340,
+      lon: -73.7629,
+      tz: 'America/New_York',
+      source: 'Astro-Databank C-rated (uncertain; 14:30 is the widely-cited figure but no birth-certificate time has been published) — flag for review',
+      blurb: 'Meta (Facebook) co-founder and CEO; computer programmer and businessman'
+    },
+    {
+      id: 'michael-jackson',
+      name: 'Michael Jackson',
+      birthDate: '1958-08-29',
+      birthTime: '19:33',
+      placeLabel: 'Gary, Indiana, United States',
+      lat: 41.5934,
+      lon: -87.3464,
+      tz: 'America/Chicago',
+      source: 'Astro-Databank AA-rated (from his mother Katherine Jackson, hospital records)',
+      blurb: 'King of Pop; singer, songwriter, dancer; cultural icon of the late 20th century'
+    },
+    {
+      id: 'michael-jordan',
+      name: 'Michael Jordan',
+      birthDate: '1963-02-17',
+      birthTime: '13:40',
+      placeLabel: 'Brooklyn, New York, United States',
+      lat: 40.6782,
+      lon: -73.9442,
+      tz: 'America/New_York',
+      source: 'Astro-Databank AA-rated (birth certificate)',
+      blurb: 'Six-time NBA champion; widely considered the greatest basketball player of all time'
+    },
+    {
+      id: 'taylor-swift',
+      name: 'Taylor Swift',
+      birthDate: '1989-12-13',
+      birthTime: '05:17',
+      placeLabel: 'West Reading, Pennsylvania, United States',
+      lat: 40.3354,
+      lon: -75.9521,
+      tz: 'America/New_York',
+      source: 'Astro-Databank AA-rated (birth certificate)',
+      blurb: 'Singer-songwriter; 14-time Grammy winner; defining pop / country crossover artist'
+    },
+    {
+      id: 'cristiano-ronaldo',
+      name: 'Cristiano Ronaldo',
+      birthDate: '1985-02-05',
+      birthTime: '05:25',
+      placeLabel: 'Funchal, Madeira, Portugal',
+      lat: 32.6669,
+      lon: -16.9241,
+      tz: 'Atlantic/Madeira',
+      source: 'Astro-Databank A-rated (from him via Hello! magazine interview)',
+      blurb: 'Portuguese footballer; five-time Ballon d’Or winner; all-time top international goal-scorer'
+    },
+    {
+      id: 'shakira',
+      name: 'Shakira',
+      birthDate: '1977-02-02',
+      birthTime: '14:30',
+      placeLabel: 'Barranquilla, Colombia',
+      lat: 10.9685,
+      lon: -74.7813,
+      tz: 'America/Bogota',
+      source: 'Astro-Databank A-rated (commonly cited; from her or her family)',
+      blurb: 'Colombian singer-songwriter; trilingual recording artist; Latin music icon'
+    },
+    {
+      id: 'diego-maradona',
+      name: 'Diego Maradona',
+      birthDate: '1960-10-30',
+      birthTime: '06:25',
+      placeLabel: 'Lanús, Buenos Aires, Argentina',
+      lat: -34.7035,
+      lon: -58.4124,
+      tz: 'America/Argentina/Buenos_Aires',
+      source: 'Astro-Databank A-rated (from his mother)',
+      blurb: 'Argentine footballer; 1986 World Cup winner; widely regarded as one of the greatest of all time'
+    },
+    {
+      id: 'roberto-carlos',
+      name: 'Roberto Carlos',
+      birthDate: '1973-04-10',
+      birthTime: '12:00',
+      placeLabel: 'Garça, São Paulo, Brazil',
+      lat: -22.2089,
+      lon: -49.6553,
+      tz: 'America/Sao_Paulo',
+      source: 'Astro-Databank X-rated (time unknown; noon used as a conventional placeholder — Ascendant and house cusps are NOT reliable for this chart)',
+      blurb: 'Brazilian footballer; 2002 World Cup winner; legendary left-back famous for his free-kick technique'
     },
     {
       id: 'albert-einstein',
@@ -64,64 +188,16 @@
       blurb: 'Theoretical physicist; deep interest in Spinoza, Indian philosophy, and the unity of natural law'
     },
     {
-      id: 'paramahansa-yogananda',
-      name: 'Paramahansa Yogananda',
-      birthDate: '1893-01-05',
-      birthTime: '20:38',
-      placeLabel: 'Gorakhpur, India',
-      lat: 26.7663,
-      lon: 83.3689,
-      tz: 'Asia/Kolkata',
-      source: "Astro-Databank A-rated (from Yogananda's family / Self-Realization Fellowship records). Time 20:38 LMT — see Mahatma-Gandhi note on LMT-vs-IST drift (~22 min); flag for chart-engine review",
-      blurb: 'Author of Autobiography of a Yogi; brought Kriya Yoga to the West (1920)'
-    },
-    {
-      id: 'bks-iyengar',
-      name: 'B.K.S. Iyengar',
-      birthDate: '1918-12-14',
-      birthTime: '04:30',
-      placeLabel: 'Bellur, India',
-      lat: 12.6276,
-      lon: 76.7956,
-      tz: 'Asia/Kolkata',
-      source: 'uncertain — consensus is 04:30 IST per his autobiography and Iyengar Yoga sources, but Astro-Databank rates the time C (caution; rectified or family-reported, not from records). Bellur is NOT in the iyogau cities gazetteer; picker writes lat/lon/tz directly (lat/lon from Bellur village, Kolar district, Karnataka)',
-      blurb: 'Founder of Iyengar Yoga; author of Light on Yoga (1966); precision and alignment lineage'
-    },
-    {
-      id: 'sachin-tendulkar',
-      name: 'Sachin Tendulkar',
-      birthDate: '1973-04-24',
-      birthTime: '17:18',
-      placeLabel: 'Mumbai, India',
-      lat: 19.0728,
-      lon: 72.8826,
-      tz: 'Asia/Kolkata',
-      source: 'Astro-Databank A-rated (from him, via Times of India interview)',
-      blurb: "Cricket legend ('Little Master'); 100 international centuries; Bharat Ratna 2014"
-    },
-    {
-      id: 'narendra-modi',
-      name: 'Narendra Modi',
-      birthDate: '1950-09-17',
-      birthTime: '11:00',
-      placeLabel: 'Vadnagar, India',
-      lat: 23.7833,
-      lon: 72.6333,
-      tz: 'Asia/Kolkata',
-      source: 'uncertain — Astro-Databank DD-rated (dirty data; conflicting times in circulation). 11:00 IST is the most widely cited value. Vadnagar is NOT in the iyogau cities gazetteer; picker writes lat/lon/tz directly',
-      blurb: 'Prime Minister of India since 2014; long-time daily yoga practitioner; founded International Yoga Day (UN, 2014)'
-    },
-    {
-      id: 'dalai-lama-14',
-      name: 'Dalai Lama (14th, Tenzin Gyatso)',
-      birthDate: '1935-07-06',
-      birthTime: '04:38',
-      placeLabel: 'Xining, China',
-      lat: 36.6171,
-      lon: 101.7782,
-      tz: 'Asia/Shanghai',
-      source: 'Astro-Databank AA-rated (from him). Note: birthplace is the village of Taktser, ~100km NE of Xining in Qinghai province; using nearest gazetteer city Xining and tz Asia/Shanghai (China standard time, the IANA zone covering Qinghai)',
-      blurb: '14th Dalai Lama; spiritual leader of Tibetan Buddhism; Nobel Peace 1989'
+      id: 'thomas-edison',
+      name: 'Thomas Edison',
+      birthDate: '1847-02-11',
+      birthTime: '03:00',
+      placeLabel: 'Milan, Ohio, United States',
+      lat: 41.2961,
+      lon: -82.6024,
+      tz: 'America/New_York',
+      source: 'Astro-Databank C-rated (uncertain time; 03:00 is the widely-cited value but no birth-certificate time exists). Note: 1847 is pre-standard-time in the US (railroad time zones adopted 1883); the IANA zone America/New_York is used for consistency with the engine but the local clock at Milan, Ohio in 1847 ran on local mean time — flag for review',
+      blurb: 'American inventor and businessman; phonograph, motion-picture camera, practical incandescent light bulb'
     }
   ];
 

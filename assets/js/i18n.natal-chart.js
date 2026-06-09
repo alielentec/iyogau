@@ -140,40 +140,70 @@
             placeLabel: 'San Francisco, United States',
             blurb: "Apple co-founder; long-time Zen Buddhist practitioner; 1974 pilgrimage to Neem Karoli Baba's ashram in India"
           },
-          'mahatma-gandhi': {
-            name: 'Mahatma Gandhi',
-            placeLabel: 'Porbandar, India',
-            blurb: 'Father of modern India; daily karma-yoga discipline and Bhagavad Gita study'
+          'donald-trump': {
+            name: 'Donald Trump',
+            placeLabel: 'Queens, New York, United States',
+            blurb: '45th and 47th President of the United States; real-estate businessman and television personality'
+          },
+          'elon-musk': {
+            name: 'Elon Musk',
+            placeLabel: 'Pretoria, South Africa',
+            blurb: 'Tesla / SpaceX founder; CEO of X; one of the most-followed figures in modern technology'
+          },
+          'jeff-bezos': {
+            name: 'Jeff Bezos',
+            placeLabel: 'Albuquerque, New Mexico, United States',
+            blurb: 'Amazon founder; Blue Origin founder; long-time investor in space technology'
+          },
+          'mark-zuckerberg': {
+            name: 'Mark Zuckerberg',
+            placeLabel: 'White Plains, New York, United States',
+            blurb: 'Meta (Facebook) co-founder and CEO; computer programmer and businessman'
+          },
+          'michael-jackson': {
+            name: 'Michael Jackson',
+            placeLabel: 'Gary, Indiana, United States',
+            blurb: 'King of Pop; singer, songwriter, dancer; cultural icon of the late 20th century'
+          },
+          'michael-jordan': {
+            name: 'Michael Jordan',
+            placeLabel: 'Brooklyn, New York, United States',
+            blurb: 'Six-time NBA champion; widely considered the greatest basketball player of all time'
+          },
+          'taylor-swift': {
+            name: 'Taylor Swift',
+            placeLabel: 'West Reading, Pennsylvania, United States',
+            blurb: 'Singer-songwriter; 14-time Grammy winner; defining pop / country crossover artist'
+          },
+          'cristiano-ronaldo': {
+            name: 'Cristiano Ronaldo',
+            placeLabel: 'Funchal, Madeira, Portugal',
+            blurb: 'Portuguese footballer; five-time Ballon d’Or winner; all-time top international goal-scorer'
+          },
+          'shakira': {
+            name: 'Shakira',
+            placeLabel: 'Barranquilla, Colombia',
+            blurb: 'Colombian singer-songwriter; trilingual recording artist; Latin music icon'
+          },
+          'diego-maradona': {
+            name: 'Diego Maradona',
+            placeLabel: 'Lanús, Buenos Aires, Argentina',
+            blurb: 'Argentine footballer; 1986 World Cup winner; widely regarded as one of the greatest of all time'
+          },
+          'roberto-carlos': {
+            name: 'Roberto Carlos',
+            placeLabel: 'Garça, São Paulo, Brazil',
+            blurb: 'Brazilian footballer; 2002 World Cup winner; legendary left-back famous for his free-kick technique'
           },
           'albert-einstein': {
             name: 'Albert Einstein',
             placeLabel: 'Ulm, Germany',
             blurb: 'Theoretical physicist; deep interest in Spinoza, Indian philosophy, and the unity of natural law'
           },
-          'paramahansa-yogananda': {
-            name: 'Paramahansa Yogananda',
-            placeLabel: 'Gorakhpur, India',
-            blurb: 'Author of Autobiography of a Yogi; brought Kriya Yoga to the West (1920)'
-          },
-          'bks-iyengar': {
-            name: 'B.K.S. Iyengar',
-            placeLabel: 'Bellur, India',
-            blurb: 'Founder of Iyengar Yoga; author of Light on Yoga (1966); precision and alignment lineage'
-          },
-          'sachin-tendulkar': {
-            name: 'Sachin Tendulkar',
-            placeLabel: 'Mumbai, India',
-            blurb: "Cricket legend ('Little Master'); 100 international centuries; Bharat Ratna 2014"
-          },
-          'narendra-modi': {
-            name: 'Narendra Modi',
-            placeLabel: 'Vadnagar, India',
-            blurb: 'Prime Minister of India since 2014; long-time daily yoga practitioner; founded International Yoga Day (UN, 2014)'
-          },
-          'dalai-lama-14': {
-            name: 'Dalai Lama (14th, Tenzin Gyatso)',
-            placeLabel: 'Xining, China',
-            blurb: '14th Dalai Lama; spiritual leader of Tibetan Buddhism; Nobel Peace 1989'
+          'thomas-edison': {
+            name: 'Thomas Edison',
+            placeLabel: 'Milan, Ohio, United States',
+            blurb: 'American inventor and businessman; phonograph, motion-picture camera, practical incandescent light bulb'
           }
         }
       }
@@ -295,40 +325,70 @@
             placeLabel: '샌프란시스코, 미국',
             blurb: '애플 공동 창업자; 오랜 선불교 수행자; 1974년 인도의 님 카롤리 바바 아쉬람을 순례'
           },
-          'mahatma-gandhi': {
-            name: '마하트마 간디',
-            placeLabel: '포르반다르, 인도',
-            blurb: '현대 인도의 아버지; 매일 카르마 요가 수행과 바가바드 기타 공부'
+          'donald-trump': {
+            name: '도널드 트럼프',
+            placeLabel: '퀸스, 뉴욕, 미국',
+            blurb: '미국 제45·47대 대통령; 부동산 사업가이자 텔레비전 진행자'
+          },
+          'elon-musk': {
+            name: '일론 머스크',
+            placeLabel: '프리토리아, 남아프리카 공화국',
+            blurb: '테슬라·스페이스X 창업자; X(구 트위터) CEO; 현대 기술계의 가장 영향력 있는 인물 중 한 명'
+          },
+          'jeff-bezos': {
+            name: '제프 베이조스',
+            placeLabel: '앨버커키, 뉴멕시코, 미국',
+            blurb: '아마존 창업자; 블루 오리진 창업자; 우주 기술 분야의 장기 투자자'
+          },
+          'mark-zuckerberg': {
+            name: '마크 저커버그',
+            placeLabel: '화이트 플레인스, 뉴욕, 미국',
+            blurb: '메타(페이스북) 공동 창업자 겸 CEO; 컴퓨터 프로그래머이자 기업가'
+          },
+          'michael-jackson': {
+            name: '마이클 잭슨',
+            placeLabel: '게리, 인디애나, 미국',
+            blurb: '"팝의 황제"; 가수·작곡가·댄서; 20세기 후반 문화의 아이콘'
+          },
+          'michael-jordan': {
+            name: '마이클 조던',
+            placeLabel: '브루클린, 뉴욕, 미국',
+            blurb: 'NBA 6회 우승; 역사상 가장 위대한 농구 선수로 평가받음'
+          },
+          'taylor-swift': {
+            name: '테일러 스위프트',
+            placeLabel: '웨스트 리딩, 펜실베이니아, 미국',
+            blurb: '싱어송라이터; 그래미 14회 수상; 팝과 컨트리를 잇는 대표 아티스트'
+          },
+          'cristiano-ronaldo': {
+            name: '크리스티아누 호날두',
+            placeLabel: '푼샬, 마데이라, 포르투갈',
+            blurb: '포르투갈 축구 선수; 발롱도르 5회 수상; 국가대표 통산 최다 득점자'
+          },
+          'shakira': {
+            name: '샤키라',
+            placeLabel: '바랑키야, 콜롬비아',
+            blurb: '콜롬비아 싱어송라이터; 다국어로 활동하는 아티스트; 라틴 음악의 아이콘'
+          },
+          'diego-maradona': {
+            name: '디에고 마라도나',
+            placeLabel: '라누스, 부에노스아이레스, 아르헨티나',
+            blurb: '아르헨티나 축구 선수; 1986년 월드컵 우승; 역사상 최고의 선수 중 한 명'
+          },
+          'roberto-carlos': {
+            name: '호베르투 카를루스',
+            placeLabel: '가르사, 상파울루, 브라질',
+            blurb: '브라질 축구 선수; 2002년 월드컵 우승; 강력한 프리킥으로 유명한 전설적인 왼쪽 풀백'
           },
           'albert-einstein': {
             name: '알베르트 아인슈타인',
             placeLabel: '울름, 독일',
             blurb: '이론 물리학자; 스피노자, 인도 철학, 자연 법칙의 통일성에 깊은 관심'
           },
-          'paramahansa-yogananda': {
-            name: '파라마한사 요가난다',
-            placeLabel: '고라크푸르, 인도',
-            blurb: '《요가난다, 영혼의 자서전》 저자; 크리야 요가를 서양에 전파(1920)'
-          },
-          'bks-iyengar': {
-            name: 'B.K.S. 아헹가',
-            placeLabel: '벨루르, 인도',
-            blurb: '아헹가 요가 창시자; 《요가 디피카》(1966) 저자; 정밀성과 정렬 계보'
-          },
-          'sachin-tendulkar': {
-            name: '사친 텐둘카르',
-            placeLabel: '뭄바이, 인도',
-            blurb: '크리켓 전설(리틀 마스터); 국제 경기 100세기 기록; 2014년 인도 최고 훈장'
-          },
-          'narendra-modi': {
-            name: '나렌드라 모디',
-            placeLabel: '바드나가르, 인도',
-            blurb: '2014년부터 인도 총리; 오랜 일일 요가 수행자; UN 국제 요가의 날 제안(2014)'
-          },
-          'dalai-lama-14': {
-            name: '달라이 라마 14세 (텐진 갸초)',
-            placeLabel: '시닝, 중국',
-            blurb: '제14대 달라이 라마; 티베트 불교 영적 지도자; 1989년 노벨 평화상'
+          'thomas-edison': {
+            name: '토머스 에디슨',
+            placeLabel: '밀란, 오하이오, 미국',
+            blurb: '미국의 발명가 겸 기업가; 축음기·영사기·실용적 백열전구의 발명자'
           }
         }
       }
@@ -446,40 +506,70 @@
             placeLabel: '旧金山, 美国',
             blurb: '苹果联合创始人；长期禅宗修行者；1974 年赴印度尼姆·卡罗利·巴巴道场参学'
           },
-          'mahatma-gandhi': {
-            name: '圣雄甘地',
-            placeLabel: '波尔本德尔, 印度',
-            blurb: '现代印度国父；每日实践业瑜伽并研读《薄伽梵歌》'
+          'donald-trump': {
+            name: '唐纳德·特朗普',
+            placeLabel: '皇后区, 纽约, 美国',
+            blurb: '美国第 45 任及第 47 任总统；房地产企业家与电视名人'
+          },
+          'elon-musk': {
+            name: '埃隆·马斯克',
+            placeLabel: '比勒陀利亚, 南非',
+            blurb: '特斯拉、SpaceX 创始人；X（原推特）CEO；当代科技界最具影响力的人物之一'
+          },
+          'jeff-bezos': {
+            name: '杰夫·贝索斯',
+            placeLabel: '阿尔伯克基, 新墨西哥州, 美国',
+            blurb: '亚马逊创始人；蓝色起源创始人；长期投资航天科技'
+          },
+          'mark-zuckerberg': {
+            name: '马克·扎克伯格',
+            placeLabel: '白原市, 纽约, 美国',
+            blurb: 'Meta（Facebook）联合创始人兼 CEO；计算机程序员与企业家'
+          },
+          'michael-jackson': {
+            name: '迈克尔·杰克逊',
+            placeLabel: '加里, 印第安纳州, 美国',
+            blurb: '"流行之王"；歌手、词曲作者、舞者；20 世纪后期的文化偶像'
+          },
+          'michael-jordan': {
+            name: '迈克尔·乔丹',
+            placeLabel: '布鲁克林, 纽约, 美国',
+            blurb: '六届 NBA 总冠军；公认史上最伟大的篮球运动员'
+          },
+          'taylor-swift': {
+            name: '泰勒·斯威夫特',
+            placeLabel: '西雷丁, 宾夕法尼亚州, 美国',
+            blurb: '创作型歌手；14 次格莱美奖得主；跨流行与乡村音乐的标志性艺人'
+          },
+          'cristiano-ronaldo': {
+            name: '克里斯蒂亚诺·罗纳尔多',
+            placeLabel: '丰沙尔, 马德拉, 葡萄牙',
+            blurb: '葡萄牙足球运动员；五届金球奖得主；国家队历史最佳射手'
+          },
+          'shakira': {
+            name: '夏奇拉',
+            placeLabel: '巴兰基亚, 哥伦比亚',
+            blurb: '哥伦比亚创作型歌手；多语种歌手；拉丁音乐标志性人物'
+          },
+          'diego-maradona': {
+            name: '迭戈·马拉多纳',
+            placeLabel: '拉努斯, 布宜诺斯艾利斯, 阿根廷',
+            blurb: '阿根廷足球运动员；1986 年世界杯冠军；公认史上最伟大的球员之一'
+          },
+          'roberto-carlos': {
+            name: '罗伯托·卡洛斯',
+            placeLabel: '加尔萨, 圣保罗, 巴西',
+            blurb: '巴西足球运动员；2002 年世界杯冠军；以强力任意球闻名的传奇左后卫'
           },
           'albert-einstein': {
             name: '阿尔伯特·爱因斯坦',
             placeLabel: '乌尔姆, 德国',
             blurb: '理论物理学家；深研斯宾诺莎、印度哲学与自然法则的统一'
           },
-          'paramahansa-yogananda': {
-            name: '帕拉宏撒·尤迦南达',
-            placeLabel: '戈勒克布尔, 印度',
-            blurb: '《一个瑜伽行者的自传》作者；1920 年将克利亚瑜伽传入西方'
-          },
-          'bks-iyengar': {
-            name: '艾扬格 (B.K.S. Iyengar)',
-            placeLabel: '贝卢尔, 印度',
-            blurb: '艾扬格瑜伽创始人；《瑜伽之光》(1966) 作者；以精准与对位著称的瑜伽传承'
-          },
-          'sachin-tendulkar': {
-            name: '萨钦·坦杜尔卡',
-            placeLabel: '孟买, 印度',
-            blurb: '板球传奇"小大师"；国际赛事百次百分纪录；2014 年获印度最高荣誉国宝勋章'
-          },
-          'narendra-modi': {
-            name: '纳伦德拉·莫迪',
-            placeLabel: '瓦德纳加尔, 印度',
-            blurb: '自 2014 年起任印度总理；长期每日瑜伽修行者；2014 年倡议联合国国际瑜伽日'
-          },
-          'dalai-lama-14': {
-            name: '第十四世达赖喇嘛 (丹增嘉措)',
-            placeLabel: '西宁, 中国',
-            blurb: '第十四世达赖喇嘛；藏传佛教精神领袖；1989 年诺贝尔和平奖得主'
+          'thomas-edison': {
+            name: '托马斯·爱迪生',
+            placeLabel: '米兰, 俄亥俄州, 美国',
+            blurb: '美国发明家与企业家；留声机、电影摄影机、实用白炽灯的发明者'
           }
         }
       }
