@@ -9,7 +9,14 @@ import * as Astronomy from 'astronomy-engine';
 
 const RAD = Math.PI / 180;
 const DEG = 180 / Math.PI;
-const SPEED_DT_DAYS = 0.01; // ~14 minutes — finite-difference step for speed
+// Centered finite difference (±SPEED_DT_DAYS/2) — second-order accurate,
+// halves the truncation error vs the previous forward difference and
+// stabilises the retrograde flag near stationary points (Mercury / Venus
+// reverse direction once or twice per year and the speed crosses zero
+// slowly enough that a 14-minute one-sided difference straddles the sign).
+// 0.5 day total window keeps the diff still tight enough that we capture
+// per-day Moon motion accurately while smoothing inner-planet noise.
+const SPEED_DT_DAYS = 0.5;
 
 export function norm360(deg) {
   const x = deg % 360;
@@ -79,9 +86,15 @@ export function computePlanetTropical(name, dateUTC) {
   }
 
   const here = geocentricEcliptic(name, dateUTC);
-  // Speed via finite difference. We unwrap across the 0/360 seam.
-  const later = geocentricEcliptic(name, new Date(dateUTC.getTime() + SPEED_DT_DAYS * 86400000));
-  let dlon = later.lon - here.lon;
+  // Speed via CENTERED finite difference (±SPEED_DT_DAYS/2). We unwrap
+  // across the 0/360 seam. The centered form is second-order accurate
+  // (O(h^2) truncation vs O(h) for one-sided) and matches the canonical
+  // definition of "instantaneous longitude rate" — important near the
+  // stations of Mercury / Venus where the speed crosses zero.
+  const halfDay = SPEED_DT_DAYS / 2;
+  const before = geocentricEcliptic(name, new Date(dateUTC.getTime() - halfDay * 86400000));
+  const after  = geocentricEcliptic(name, new Date(dateUTC.getTime() + halfDay * 86400000));
+  let dlon = after.lon - before.lon;
   if (dlon > 180) dlon -= 360;
   if (dlon < -180) dlon += 360;
   const speed = dlon / SPEED_DT_DAYS; // degrees per day

@@ -92,6 +92,15 @@
     if (ogDesc && dict['meta.description']) ogDesc.setAttribute('content', fill(dict['meta.description']));
     const ogTitle = document.querySelector('meta[property="og:title"]');
     if (ogTitle && dict['meta.title']) ogTitle.setAttribute('content', fill(dict['meta.title']));
+
+    // Notify subsystems (natal calc, privacy-link rewriter, etc.) so
+    // they can re-derive language-dependent state without polling.
+    // setLang() typically follows up with a full-page navigation, but
+    // in-place callers (e.g. an SPA route change) only mutate the DOM —
+    // they need this event to react.
+    try {
+      window.dispatchEvent(new CustomEvent('iyogau:lang-changed', { detail: { lang } }));
+    } catch (e) { /* old browsers */ }
   }
 
   function setLang(lang) {

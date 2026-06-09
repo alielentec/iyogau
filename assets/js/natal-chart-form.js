@@ -737,6 +737,15 @@
   // We deliberately skip the smooth scroll + focus jump that happens
   // after a real submit — on initial render the user hasn't engaged
   // yet and scrolling them anywhere is wrong.
+  //
+  // Homepage mount exemption: the index.html inline bootstrap owns the
+  // home render path end-to-end (default data is parsed inline before
+  // this file's onReady IIFE fires). Letting the binder also auto-render
+  // produces a visible double-render on slow devices and an extra
+  // render-cycle of work everywhere else.
+  if (cfg.formId === 'home-natal-form') {
+    return;
+  }
   try {
     var defaultDataEl = document.getElementById(cfg.resultPrefix + '-default-data');
     if (defaultDataEl && defaultDataEl.textContent) {

@@ -845,6 +845,19 @@
         //       having changed anything, or when input/change events
         //       fire (e.g. autocomplete listener) without the value
         //       actually moving.
+        // Canonical key for dedupe — serialise with SORTED object keys
+        // so the dedupe cache compares values regardless of which
+        // serialiser populated `lastPayloadJson` (the API's input echo
+        // vs the bootstrap's buildPayload have different field orders).
+        function canonicalJson(obj) {
+          if (obj === null || typeof obj !== 'object') return JSON.stringify(obj);
+          if (Array.isArray(obj)) return '[' + obj.map(canonicalJson).join(',') + ']';
+          var keys = Object.keys(obj).sort();
+          return '{' + keys.map(function (k) {
+            return JSON.stringify(k) + ':' + canonicalJson(obj[k]);
+          }).join(',') + '}';
+        }
+
         function recalculate() {
           if (inFlight) { pending = true; return; }
           var payload = buildPayload();
@@ -856,7 +869,7 @@
             return;
           }
 
-          var payloadJson = JSON.stringify(payload);
+          var payloadJson = canonicalJson(payload);
           if (payloadJson === lastPayloadJson) {
             // No-op: the chart already reflects this payload. Same
             // pending reset as above — otherwise a queued recalc that
@@ -887,6 +900,14 @@
             })
             .then(function () {
               inFlight = false;
+              // Clear aria-busy now that the in-flight cycle is done. If
+              // a follow-up `pending` recalc is queued, recalculate()
+              // will set it again. Look up the element lazily so we
+              // tolerate the bootstrap not having reached step-5 yet.
+              try {
+                var rsEl = document.getElementById('home-natal-results');
+                if (rsEl) rsEl.setAttribute('aria-busy', 'false');
+              } catch (e) {}
               if (pending) { pending = false; recalculate(); }
             });
         }
@@ -908,6 +929,12 @@
           // setTimeout(0) lets the deferred natal-chart-wheel.js IIFE finish
           // attaching window.NatalWheel before we try to render.
           setTimeout(function () {
+            // Idempotency guard: if this bootstrap has already run (e.g.
+            // a future SPA route change re-evaluates the inline script),
+            // bail. Double-binding event listeners would fire each
+            // handler twice and double the rate-limit consumption.
+            if (window.__natalHomeBootstrapInit) return;
+            window.__natalHomeBootstrapInit = true;
             try {
               // ---- 1. Default chart render from embedded JSON.
               var dataEl = $('home-natal-default-data');
@@ -922,7 +949,7 @@
                 // would fire a redundant /api/calculate-chart/ POST
                 // for data the page is already rendering.
                 if (defaultModel.input) {
-                  lastPayloadJson = JSON.stringify(defaultModel.input);
+                  lastPayloadJson = canonicalJson(defaultModel.input);
                 }
               }
 
@@ -1070,13 +1097,30 @@
                 }
                 if (!captionEl) return;
 
-                // Cache the i18n-resolved default caption once so we can
-                // restore it (and harvest its localized prefix) regardless
-                // of what we've written to the node since.
-                if (!captionEl.dataset.origCaption) {
-                  captionEl.dataset.origCaption = captionEl.textContent;
-                }
-                var orig = captionEl.dataset.origCaption;
+                // Always read the localized "default caption" template
+                // straight from the i18n dict — never cache it on the
+                // DOM. Caching on dataset.origCaption was lazy-bound on
+                // the first updateCaption() call, locking the value to
+                // whatever language was active at that moment. Reading
+                // fresh each time means language switches don't strand
+                // the prefix in the previous locale.
+                var orig = (function () {
+                  try {
+                    var lang = getActiveLang
+                            ? getActiveLang()
+                            : (function () {
+                                var html = document.documentElement.getAttribute('lang') || 'en';
+                                if (html.indexOf('ko') === 0) return 'ko';
+                                if (html.indexOf('zh') === 0) return 'zh';
+                                return 'en';
+                              }());
+                    var flat = window.I18N && window.I18N[lang];
+                    if (flat && typeof flat['natal.results.defaultCaption'] === 'string') {
+                      return flat['natal.results.defaultCaption'];
+                    }
+                  } catch (e) {}
+                  return captionEl.textContent;
+                }());
 
                 var dateStr = dateElCap ? formatCaptionDate(dateElCap.value) : '';
                 // Only show the place when the autocomplete has resolved
@@ -1178,11 +1222,13 @@
               var offHrsEl    = $('home-nf-tz-offset-hours');
               var offMinEl    = $('home-nf-tz-offset-minutes');
               var offRowEl    = document.querySelector('#natal-calc .tz-offset-input-row');
-              // Snapshot the default intro text once so we can restore it
-              // verbatim when DEMO is active. The i18n applier may
-              // translate this after init; we capture AFTER the
-              // setTimeout(0) priming so the cached value is locale-aware.
-              var demoIntroCached = demoIntroEl ? demoIntroEl.textContent : '';
+              // Snapshot of the default intro text — initialised below
+              // AFTER the i18n applier has had a chance to translate
+              // the DOM. Captured once at boot (line ~1753 below) and
+              // refreshed by the lang-change listener so the cached
+              // value stays locale-aware. Declared here (empty) just to
+              // hoist the variable into the enclosing scope.
+              var demoIntroCached = '';
 
               // Session-only state. activePresetId is the source of
               // truth — language switches preserve it; only chart-math
@@ -1409,13 +1455,16 @@
               // so banner / intro / attribution / wheel title stay
               // consistent regardless of which event fired.
               function renderState() {
-                if (activePresetId) {
-                  var preset = getPresetById(activePresetId);
-                  if (!preset) {
-                    activePresetId = null;
-                    renderState();
-                    return;
-                  }
+                // Resolve the active preset (if any). If the id is set
+                // but the preset has gone missing (e.g. a stale localStorage
+                // value from before a preset list rewrite), demote to
+                // CUSTOM in-place rather than recursing — the recursion was
+                // bounded in practice but unbounded in theory.
+                var preset = activePresetId ? getPresetById(activePresetId) : null;
+                if (activePresetId && !preset) {
+                  activePresetId = null;
+                }
+                if (preset) {
                   if (demoBannerEl) demoBannerEl.hidden = false;
                   if (demoAttribEl) demoAttribEl.hidden = false;
                   if (demoIntroEl)  demoIntroEl.textContent = demoIntroCached;
@@ -1628,7 +1677,22 @@
                 timeUnkElCap.addEventListener('change', onChartMathEdit);
               }
               if (placeElCap) {
-                placeElCap.addEventListener('input', onChartMathEdit);
+                // Place-input is special: any typing in it is by definition
+                // a CUSTOM-state trigger (the natal-chart-form.js binder
+                // clears lat/lon and toggles `data-resolved=''` on every
+                // keystroke, so even before selectCity() finishes the form
+                // no longer matches the active preset). A binder/listener
+                // ordering race means detectActivePreset can run with stale
+                // lat/lon and incorrectly keep DEMO. Unconditionally demote.
+                function onPlaceTyped() {
+                  if (internalUpdate) return;
+                  if (activePresetId) {
+                    activePresetId = null;
+                    if (nameEl) nameEl.value = '';
+                  }
+                  renderState();
+                }
+                placeElCap.addEventListener('input',  onPlaceTyped);
                 placeElCap.addEventListener('change', onChartMathEdit);
               }
               if (latEl) {
@@ -1675,27 +1739,36 @@
               rebuildPresetDatalist();
 
               // Re-render banner / attribution / datalist on language
-              // switch. The base i18n loader doesn't fire a documented
-              // event; we observe the <html lang> attribute as a proxy.
+              // change. The base i18n applier (assets/js/app.js) does a
+              // full-page reload on language switch via setLang(), so a
+              // MutationObserver on <html lang> rarely fires from the
+              // picker. Listen to a custom event instead — matches the
+              // pattern already used by natal-chart-form.js (line ~139).
+              // The MutationObserver is kept as a defensive fallback for
+              // any path that mutates lang in-place (e.g. a future SPA
+              // route change).
+              function onLangChanged() {
+                rebuildPresetDatalist();
+                if (demoIntroEl) {
+                  // Read fresh localized text. The home demo intro lives
+                  // in the FLAT window.I18N dict (assets/js/i18n.js)
+                  // under the literal key "natal.section.intro", NOT in
+                  // the nested IYOGAU_I18N bundle's natal.section.intro.
+                  // The nested bundle only exposes section.editedIntro
+                  // (used by the CUSTOM branch of renderState).
+                  try {
+                    var flat = window.I18N && window.I18N[getActiveLang()];
+                    var loc = flat && flat['natal.section.intro'];
+                    if (typeof loc === 'string' && loc) {
+                      demoIntroCached = loc;
+                    }
+                  } catch (e) {}
+                }
+                renderState();
+              }
+              window.addEventListener('iyogau:lang-changed', onLangChanged);
               try {
-                var langObserver = new MutationObserver(function () {
-                  rebuildPresetDatalist();
-                  // Re-snapshot the localized intro (it just changed).
-                  if (demoIntroEl) {
-                    // Read the FRESH localized text from the i18n
-                    // dict, not the DOM (the DOM may already hold
-                    // our "edited intro" override).
-                    try {
-                      var d = window.IYOGAU_I18N && window.IYOGAU_I18N[getActiveLang()];
-                      var loc = d && d.natal && d.natal.section
-                             && d.natal.section.intro;
-                      if (typeof loc === 'string' && loc) {
-                        demoIntroCached = loc;
-                      }
-                    } catch (e) {}
-                  }
-                  renderState();
-                });
+                var langObserver = new MutationObserver(onLangChanged);
                 langObserver.observe(document.documentElement,
                   { attributes: true, attributeFilter: ['lang'] });
               } catch (e) {}
@@ -1718,10 +1791,18 @@
               //         the legacy form-binder flow.
               var form = $('home-natal-form');
               var submitBtn = $('home-nf-submit');
+              var resultsSection = $('home-natal-results');
               if (form) {
                 form.addEventListener('submit', function (e) {
                   e.preventDefault();
+                  // Cancel any pending debounced recalc — the submit is
+                  // the explicit user intent and should not be raced by
+                  // the trailing edge of the debounce timer.
                   if (debounceTimer) { clearTimeout(debounceTimer); debounceTimer = null; }
+                  // Surface "work in progress" to assistive tech so a
+                  // screen reader doesn't announce stale numbers while
+                  // the new chart is loading.
+                  if (resultsSection) resultsSection.setAttribute('aria-busy', 'true');
                   recalculate();
                 });
               }

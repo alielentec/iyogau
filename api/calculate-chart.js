@@ -108,7 +108,12 @@ function logLine(fields) {
   try { console.log(JSON.stringify(fields)); } catch { /* swallow */ }
 }
 
-// Read the request body as a string, with a hard byte cap.
+// Read the request body. Returns either:
+//   - a string (raw text, to be JSON.parse'd by the caller), or
+//   - an object (already-parsed by Vercel — pass through to validateInput
+//     directly so we skip a JSON.parse round-trip and surface clearer
+//     errors).
+// In all cases a 2KB byte cap is enforced.
 async function readBody(req) {
   if (typeof req.body === 'string') {
     if (Buffer.byteLength(req.body, 'utf8') > MAX_BODY_BYTES) {
@@ -117,12 +122,15 @@ async function readBody(req) {
     return req.body;
   }
   if (req.body && typeof req.body === 'object') {
-    // Vercel may pre-parse JSON. Re-serialize so the size check is consistent.
+    // Vercel pre-parsed it. Apply the size check against the serialised
+    // form (the only honest way to express a 2KB cap on a structured
+    // object) and return the object itself — the handler bypasses
+    // JSON.parse for this path.
     const s = JSON.stringify(req.body);
     if (Buffer.byteLength(s, 'utf8') > MAX_BODY_BYTES) {
       const err = new Error('payload too large'); err.code = 'TOO_LARGE'; throw err;
     }
-    return s;
+    return req.body;
   }
   return await new Promise((resolve, reject) => {
     let size = 0;
@@ -189,6 +197,25 @@ export default async function handler(req, res) {
   }
 
   // Rate limit (after method/CT checks so we don't burn a token on a misroute).
+  // 'unknown' is a sentinel meaning we could not extract a client IP from
+  // any header — that should only happen for direct sockets to the Node
+  // server (extremely rare in production). All such requests share the
+  // same bucket, so one bad actor would block all legit callers. Apply
+  // a much tighter throttle. We do this by checking the same bucket
+  // twice (cheap; the bucket is in-process Map) — once for the normal
+  // limit and once with a synthetic 'unknown:tight' key that has its
+  // own 1/min cap.
+  if (ip === 'unknown') {
+    const tight = checkRateLimit('unknown:tight');
+    if (!tight.allowed || tight.minuteRemaining < (tight.minuteLimit - 1)) {
+      // Either already over its own tight limit, or this is the second+
+      // request to the shared 'unknown' bucket within the minute.
+      res.setHeader('Retry-After', '60');
+      res.status(429).json({ error: 'Rate limit exceeded (anonymous client). Retry after 60s.' });
+      logLine({ t: new Date().toISOString(), ip: anonIp, status: 429, ms: Date.now() - startedAt, rl: 'unknown' });
+      return;
+    }
+  }
   const rl = checkRateLimit(ip);
   res.setHeader('X-RateLimit-Limit-Minute', String(rl.minuteLimit));
   res.setHeader('X-RateLimit-Remaining-Minute', String(rl.minuteRemaining));
@@ -217,12 +244,20 @@ export default async function handler(req, res) {
   }
 
   let parsed;
-  try {
-    parsed = raw.length === 0 ? {} : JSON.parse(raw);
-  } catch {
-    res.status(400).json({ error: 'Request body must be valid JSON.' });
-    logLine({ t: new Date().toISOString(), ip: anonIp, status: 400, ms: Date.now() - startedAt, reason: 'json' });
-    return;
+  // readBody returns either a string (raw bytes / pre-stringified body)
+  // or an object (Vercel pre-parsed JSON). Skip JSON.parse for the
+  // object path — it has nothing to add and would either round-trip or
+  // throw on a re-stringify edge case.
+  if (typeof raw === 'object') {
+    parsed = raw;
+  } else {
+    try {
+      parsed = raw.length === 0 ? {} : JSON.parse(raw);
+    } catch {
+      res.status(400).json({ error: 'Request body must be valid JSON.' });
+      logLine({ t: new Date().toISOString(), ip: anonIp, status: 400, ms: Date.now() - startedAt, reason: 'json' });
+      return;
+    }
   }
 
   let input;
@@ -275,6 +310,15 @@ function buildChart(input, dateUTC) {
   if (input.unknownTime) warnings.push('approximate ascendant due to unknown birth time');
   if (dateUTC && dateUTC.__ambiguous) {
     warnings.push('birth time fell inside a DST fall-back hour and was ambiguous; the earlier occurrence was used (standard convention)');
+  }
+  // Pre-1883 dates predate the standardised timezone system in most of
+  // the world — wall clocks ran on Local Mean Time (LMT) tied to the
+  // observer's longitude, and the IANA tz database's pre-1883 offsets
+  // for most zones are best-effort approximations of that LMT. The
+  // computed chart is still close but the timezone-of-record may be
+  // off by minutes for non-IANA-canonical historic locations.
+  if (input.date < '1883-01-01') {
+    warnings.push('pre-1883 date: most regions used Local Mean Time, not the modern IANA zone; computed offset may differ from the historic wall-clock by minutes');
   }
 
   const ayanamsaValue = input.tradition === 'sidereal' ? lahiriAyanamsa(dateUTC) : 0;
