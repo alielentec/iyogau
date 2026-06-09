@@ -81,7 +81,38 @@
           input: 'Input Data',
           chart: 'Natal Chart',
           planets: 'Planet Positions',
-          aspects: 'Major Aspects'
+          aspects: 'Major Aspects',
+          relocation: 'Relocation',
+          immigration: 'Immigration',
+          soulmate: 'Soulmate'
+        },
+        astrocarto: {
+          loading: 'Computing astrocartography map…',
+          error: 'Sorry — we could not load the astrocartography map. Please try again.',
+          errorUnknownTime: 'Astrocartography needs your birth time. Please enter your exact birth time above to see this map.',
+          errorNoSource: 'Please calculate your natal chart first — the map needs your birth details.',
+          relocation: { intro: 'Places where the planets that support stability, visibility, and growth in your chart amplify their effects. Warmer cells mark stronger zones; lines mark exact angular activation.' },
+          immigration: { intro: 'Places that support foreign movement, paperwork endurance, and settlement. Rahu, Saturn, and Jupiter lead this lens; warmer cells indicate where the transition can take root.' },
+          soulmate:    { intro: 'Places that favor partnership and meeting: where Venus, the Moon, and Jupiter lines run close to angular points. Warmer cells mark zones of relationship resonance.' },
+          tabs: { relocation: 'Relocation', immigration: 'Immigration', soulmate: 'Soulmate' },
+          legend: {
+            planets: 'Planets',
+            lines: 'Lines',
+            heat: 'Heat scale',
+            heatLabels: 'Lower ▸ Higher'
+          },
+          lineTypes: {
+            mc: 'MC', ic: 'IC', ac: 'AC', dc: 'DC',
+            mcLong: 'MC (career)',
+            icLong: 'IC (home)',
+            acLong: 'AC (self)',
+            dcLong: 'DC (partners)'
+          },
+          tooltip: {
+            score: 'Score',
+            topLines: 'Top contributing lines',
+            noLines: 'No major lines nearby'
+          }
         },
         section: {
           editedIntro: 'The chart below is computed from your birth details. The calculator runs sidereal Vedic math on our server and your details are never stored, sold, or sent anywhere else.'
@@ -251,7 +282,38 @@
           input: '입력 데이터',
           chart: '베다 차트',
           planets: '행성 위치',
-          aspects: '주요 각도'
+          aspects: '주요 각도',
+          relocation: '이주',
+          immigration: '이민',
+          soulmate: '소울메이트'
+        },
+        astrocarto: {
+          loading: '점성지리도(astrocartography) 지도를 계산하는 중…',
+          error: '죄송합니다. 점성지리도 지도를 불러올 수 없습니다. 다시 시도해 주세요.',
+          errorUnknownTime: '점성지리도에는 정확한 출생 시각이 필요합니다. 위에 출생 시각을 입력하면 이 지도가 표시됩니다.',
+          errorNoSource: '먼저 출생 차트를 계산해 주세요. 지도를 그리려면 출생 정보가 필요합니다.',
+          relocation: { intro: '안정, 가시성, 성장에 도움이 되는 행성의 영향이 강해지는 장소들입니다. 따뜻한 색상의 셀일수록 강한 구역이며, 선은 정확한 각도 활성화를 표시합니다.' },
+          immigration: { intro: '해외 이주, 행정 절차의 인내, 정착을 돕는 장소들입니다. 라후·토성·목성이 이 렌즈를 이끌며, 따뜻한 색상의 셀은 이주가 자리잡기 좋은 곳을 나타냅니다.' },
+          soulmate:    { intro: '관계와 만남에 유리한 장소들입니다. 금성·달·목성의 선이 각점(angular points) 가까이를 지나는 곳이며, 따뜻한 색상의 셀은 관계 공명의 구역을 표시합니다.' },
+          tabs: { relocation: '이주', immigration: '이민', soulmate: '소울메이트' },
+          legend: {
+            planets: '행성',
+            lines: '라인',
+            heat: '강도 척도',
+            heatLabels: '낮음 ▸ 높음'
+          },
+          lineTypes: {
+            mc: 'MC', ic: 'IC', ac: 'AC', dc: 'DC',
+            mcLong: 'MC (직업)',
+            icLong: 'IC (집)',
+            acLong: 'AC (자신)',
+            dcLong: 'DC (파트너)'
+          },
+          tooltip: {
+            score: '점수',
+            topLines: '주요 기여 라인',
+            noLines: '근처에 주요 라인 없음'
+          }
         },
         section: {
           editedIntro: '아래 차트는 입력하신 출생 정보로 계산되었습니다. 계산은 시데레알(베다) 방식으로 서버에서 수행되며, 입력하신 정보는 저장·판매·전송되지 않습니다.'
@@ -438,7 +500,38 @@
           input: '输入数据',
           chart: '吠陀星盘',
           planets: '行星位置',
-          aspects: '主要相位'
+          aspects: '主要相位',
+          relocation: '迁居',
+          immigration: '移民',
+          soulmate: '灵魂伴侣'
+        },
+        astrocarto: {
+          loading: '正在计算占星地理（astrocartography）地图…',
+          error: '抱歉 — 无法加载占星地理地图，请重试。',
+          errorUnknownTime: '占星地理地图需要您的确切出生时间。请在上方输入出生时间以查看此地图。',
+          errorNoSource: '请先计算您的出生星盘 — 地图需要您的出生资料。',
+          relocation: { intro: '在您星盘中支持稳定、能见度与成长的行星在这些地方影响最强。颜色越暖的格子代表越强区域；线条标示精确的角度激活位置。' },
+          immigration: { intro: '有助于跨国迁徙、办理手续与定居的地方。罗睺、土星与木星主导此视角；颜色更暖的格子表示更易扎根之处。' },
+          soulmate:    { intro: '有利于伴侣关系与相遇的地方：金星、月亮与木星的线条经过角点附近。颜色更暖的格子标示关系共振区域。' },
+          tabs: { relocation: '迁居', immigration: '移民', soulmate: '灵魂伴侣' },
+          legend: {
+            planets: '行星',
+            lines: '线条',
+            heat: '强度刻度',
+            heatLabels: '低 ▸ 高'
+          },
+          lineTypes: {
+            mc: 'MC', ic: 'IC', ac: 'AC', dc: 'DC',
+            mcLong: 'MC（事业）',
+            icLong: 'IC（家庭）',
+            acLong: 'AC（自我）',
+            dcLong: 'DC（伴侣）'
+          },
+          tooltip: {
+            score: '分数',
+            topLines: '主要贡献线条',
+            noLines: '附近无主要线条'
+          }
         },
         section: {
           editedIntro: '下方星盘是根据您输入的出生信息计算的。计算采用恒星黄道（吠陀）方法在我们服务器上完成，您输入的信息不会被保存、出售或转发给任何第三方。'

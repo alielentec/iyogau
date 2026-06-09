@@ -66,7 +66,7 @@
 
 <link rel="preload" as="style" href="/assets/css/styles.css" />
 <link rel="stylesheet" href="/assets/css/styles.css" />
-<link rel="stylesheet" href="/assets/css/natal-chart.css?v=23" />
+<link rel="stylesheet" href="/assets/css/natal-chart.css?v=25" />
 
 <!-- Schema.org -->
 <script type="application/ld+json">
@@ -428,10 +428,18 @@
            authoring practice (only the active tab is in the focus
            ring, arrow keys move between siblings). -->
       <div class="natal-tabs" role="tablist" aria-label="Natal chart sections" data-natal-tabs>
-        <button id="home-tab-input"   role="tab" aria-controls="home-panel-input"   aria-selected="false" tabindex="-1" class="natal-tab"           data-i18n="natal.tabs.input">Input Data</button>
-        <button id="home-tab-chart"   role="tab" aria-controls="home-panel-chart"   aria-selected="true"  tabindex="0"  class="natal-tab is-active" data-i18n="natal.tabs.chart">Natal Chart</button>
-        <button id="home-tab-planets" role="tab" aria-controls="home-panel-planets" aria-selected="false" tabindex="-1" class="natal-tab"           data-i18n="natal.tabs.planets">Planet Positions</button>
-        <button id="home-tab-aspects" role="tab" aria-controls="home-panel-aspects" aria-selected="false" tabindex="-1" class="natal-tab"           data-i18n="natal.tabs.aspects">Major Aspects</button>
+        <button id="home-tab-input"       role="tab" aria-controls="home-panel-input"       aria-selected="false" tabindex="-1" class="natal-tab"           data-i18n="natal.tabs.input">Input Data</button>
+        <button id="home-tab-chart"       role="tab" aria-controls="home-panel-chart"       aria-selected="true"  tabindex="0"  class="natal-tab is-active" data-i18n="natal.tabs.chart">Natal Chart</button>
+        <button id="home-tab-planets"     role="tab" aria-controls="home-panel-planets"     aria-selected="false" tabindex="-1" class="natal-tab"           data-i18n="natal.tabs.planets">Planet Positions</button>
+        <button id="home-tab-aspects"     role="tab" aria-controls="home-panel-aspects"     aria-selected="false" tabindex="-1" class="natal-tab"           data-i18n="natal.tabs.aspects">Major Aspects</button>
+        <!-- Astrocartography: world-map heat overlay scored under three
+             life-mode lenses. Each tab fetches /api/astrocarto only on
+             first activation (debounced; cached for the session). The
+             panel body markup is identical except for data-astrocarto
+             mode, so the renderer keys behavior off that one attribute. -->
+        <button id="home-tab-relocation"  role="tab" aria-controls="home-panel-relocation"  aria-selected="false" tabindex="-1" class="natal-tab"           data-i18n="natal.tabs.relocation">Relocation</button>
+        <button id="home-tab-immigration" role="tab" aria-controls="home-panel-immigration" aria-selected="false" tabindex="-1" class="natal-tab"           data-i18n="natal.tabs.immigration">Immigration</button>
+        <button id="home-tab-soulmate"    role="tab" aria-controls="home-panel-soulmate"    aria-selected="false" tabindex="-1" class="natal-tab"           data-i18n="natal.tabs.soulmate">Soulmate</button>
       </div>
 
       <!-- ----- Tabpanel 1: Input Data ----- -->
@@ -641,6 +649,49 @@
       <!-- ----- Tabpanel 4: Major Aspects ----- -->
       <div role="tabpanel" id="home-panel-aspects" aria-labelledby="home-tab-aspects" class="natal-tabpanel" hidden>
         <div class="natal-table-wrap" id="home-natal-aspects"></div>
+      </div>
+
+      <!-- ----- Tabpanel 5: Relocation (astrocartography) -----
+           data-astrocarto="<mode>" tells assets/js/astrocarto.js which
+           mode payload to fetch from /api/astrocarto. The renderer paints
+           the SVG into [data-astrocarto-map] and the legend into
+           [data-astrocarto-legend]; loading/error chrome reuses the
+           shared .astrocarto-state component. The panel only fetches on
+           first activation (debounced) — landing visitors who never
+           click this tab pay zero compute. -->
+      <div role="tabpanel" id="home-panel-relocation" aria-labelledby="home-tab-relocation" class="natal-tabpanel astrocarto-panel" data-astrocarto="relocation" hidden>
+        <p class="astrocarto-panel__intro" data-i18n="natal.astrocarto.relocation.intro">Places where the planets that support stability, visibility, and growth in your chart amplify their effects. Warmer cells mark stronger zones; lines mark exact angular activation.</p>
+        <div class="astrocarto-map" data-astrocarto-map aria-busy="false"></div>
+        <div class="astrocarto-state" data-astrocarto-loader hidden>
+          <span class="astrocarto-state__spinner" aria-hidden="true"></span>
+          <span data-i18n="natal.astrocarto.loading">Computing astrocartography map…</span>
+        </div>
+        <div class="astrocarto-state astrocarto-state--error" data-astrocarto-error role="alert" hidden></div>
+        <div class="astrocarto-legend" data-astrocarto-legend aria-label="Map legend"></div>
+      </div>
+
+      <!-- ----- Tabpanel 6: Immigration (astrocartography) ----- -->
+      <div role="tabpanel" id="home-panel-immigration" aria-labelledby="home-tab-immigration" class="natal-tabpanel astrocarto-panel" data-astrocarto="immigration" hidden>
+        <p class="astrocarto-panel__intro" data-i18n="natal.astrocarto.immigration.intro">Places that support foreign movement, paperwork endurance, and settlement. Rahu, Saturn, and Jupiter lead this lens; warmer cells indicate where the transition can take root.</p>
+        <div class="astrocarto-map" data-astrocarto-map aria-busy="false"></div>
+        <div class="astrocarto-state" data-astrocarto-loader hidden>
+          <span class="astrocarto-state__spinner" aria-hidden="true"></span>
+          <span data-i18n="natal.astrocarto.loading">Computing astrocartography map…</span>
+        </div>
+        <div class="astrocarto-state astrocarto-state--error" data-astrocarto-error role="alert" hidden></div>
+        <div class="astrocarto-legend" data-astrocarto-legend aria-label="Map legend"></div>
+      </div>
+
+      <!-- ----- Tabpanel 7: Soulmate (astrocartography) ----- -->
+      <div role="tabpanel" id="home-panel-soulmate" aria-labelledby="home-tab-soulmate" class="natal-tabpanel astrocarto-panel" data-astrocarto="soulmate" hidden>
+        <p class="astrocarto-panel__intro" data-i18n="natal.astrocarto.soulmate.intro">Places that favor partnership and meeting: where Venus, the Moon, and Jupiter lines run close to angular points. Warmer cells mark zones of relationship resonance.</p>
+        <div class="astrocarto-map" data-astrocarto-map aria-busy="false"></div>
+        <div class="astrocarto-state" data-astrocarto-loader hidden>
+          <span class="astrocarto-state__spinner" aria-hidden="true"></span>
+          <span data-i18n="natal.astrocarto.loading">Computing astrocartography map…</span>
+        </div>
+        <div class="astrocarto-state astrocarto-state--error" data-astrocarto-error role="alert" hidden></div>
+        <div class="astrocarto-legend" data-astrocarto-legend aria-label="Map legend"></div>
       </div>
 
       <p class="natal-attribution">
@@ -894,6 +945,16 @@
               // Stamp the successful payload only AFTER render succeeds,
               // so a transient API error doesn't poison the dedup cache.
               lastPayloadJson = payloadJson;
+              // Hand the validated payload to the astrocartography renderer
+              // so the Relocation / Immigration / Soulmate tabs pick up the
+              // new birth data on next activation. setNatalSource is a
+              // no-op when the payload key hasn't changed, so we can fire
+              // it freely on every successful recalc.
+              try {
+                if (window.__astrocarto && typeof window.__astrocarto.setNatalSource === 'function') {
+                  window.__astrocarto.setNatalSource(payload);
+                }
+              } catch (e) {}
             })
             .catch(function (err) {
               if (window.console && console.warn) console.warn('[natal] recalc', err);
@@ -950,6 +1011,20 @@
                 // for data the page is already rendering.
                 if (defaultModel.input) {
                   lastPayloadJson = canonicalJson(defaultModel.input);
+                  // Seed the astrocartography renderer with Steve Jobs's
+                  // input so the three map tabs work immediately on first
+                  // click — no need to wait for a form-driven recalc.
+                  // setNatalSource is idempotent under the same key.
+                  try {
+                    if (window.__astrocarto && typeof window.__astrocarto.setNatalSource === 'function') {
+                      window.__astrocarto.setNatalSource(defaultModel.input);
+                    } else {
+                      // Renderer hasn't loaded yet (defer order). Stash on
+                      // a placeholder; astrocarto.js init() will read this
+                      // before its first fetch.
+                      window.__astrocartoPending = defaultModel.input;
+                    }
+                  } catch (e) {}
                 }
               }
 
@@ -2177,9 +2252,16 @@
      Current version round: i18n.natal-chart.js (adds defaultName key) and
      natal-chart-form.js (other recent edits). -->
 <script src="/assets/js/natal-presets.js?v=5" defer></script>
-<script src="/assets/js/i18n.natal-chart.js?v=12" defer></script>
+<script src="/assets/js/i18n.natal-chart.js?v=13" defer></script>
 <script src="/assets/js/natal-chart-wheel.js?v=21" defer></script>
 <script src="/assets/js/natal-chart-tabs.js?v=10" defer></script>
 <script src="/assets/js/natal-chart-form.js?v=14" defer></script>
+<!-- Astrocartography: data + renderer for the Relocation / Immigration /
+     Soulmate tabs. Loaded `defer` so it runs AFTER the bootstrap above
+     attaches __astrocarto.setNatalSource() (the renderer reads it lazily,
+     so even if the order ever swaps, the first tab activation just shows
+     the loading state until the natal data is available). -->
+<script src="/assets/data/world-continents.js?v=1" defer></script>
+<script src="/assets/js/astrocarto.js?v=2" defer></script>
 </body>
 </html>
