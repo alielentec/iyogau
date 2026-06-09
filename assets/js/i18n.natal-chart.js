@@ -136,6 +136,7 @@
           currentlyShowing: "Currently showing {name}'s chart. Edit any field below and your own chart will appear in the Natal Chart tab.",
           attribution: '{name} birth data: {source}',
           ratingWarning: 'Time unreliable ({rating}-rated) — chart shown for reference; Ascendant and houses may not be accurate.',
+          ratingWarningX: 'Time unknown (X-rated) — only date/sun/moon positions are reliable; Ascendant, houses, and rising chart are NOT astrologically valid for this preset.',
           'steve-jobs': {
             name: 'Steve Jobs',
             placeLabel: 'San Francisco, United States',
@@ -322,6 +323,7 @@
           currentlyShowing: '현재 {name}의 차트를 표시 중입니다. 아래 항목을 수정하면 베다 차트 탭에 본인의 차트가 표시됩니다.',
           attribution: '{name} 출생 정보: {source}',
           ratingWarning: '출생 시각 신뢰도 낮음 ({rating}등급) — 참고용 차트입니다. 어센던트 및 하우스 정보가 정확하지 않을 수 있습니다.',
+          ratingWarningX: '출생 시각 미상 (X등급) — 날짜·태양·달의 위치만 신뢰할 수 있습니다. 어센던트, 하우스, 상승 차트는 이 프리셋에 대해 천문학적으로 유효하지 않습니다.',
           'steve-jobs': {
             name: '스티브 잡스',
             placeLabel: '샌프란시스코, 미국',
@@ -504,6 +506,7 @@
           currentlyShowing: '当前显示的是 {name} 的星盘。修改下方任意字段，您自己的星盘将出现在"吠陀星盘"标签页。',
           attribution: '{name} 出生数据：{source}',
           ratingWarning: '出生时间不可靠（{rating}级）— 仅供参考，上升点与宫位可能不准确。',
+          ratingWarningX: '出生时间未知（X 级）— 只有日期、太阳和月亮位置可靠。上升点、宫位与上升星图对该预设而言在占星学上无效。',
           'steve-jobs': {
             name: '史蒂夫·乔布斯',
             placeLabel: '旧金山, 美国',

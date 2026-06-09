@@ -66,7 +66,7 @@
 
 <link rel="preload" as="style" href="/assets/css/styles.css" />
 <link rel="stylesheet" href="/assets/css/styles.css" />
-<link rel="stylesheet" href="/assets/css/natal-chart.css?v=14" />
+<link rel="stylesheet" href="/assets/css/natal-chart.css?v=15" />
 
 <!-- Schema.org -->
 <script type="application/ld+json">
@@ -1347,7 +1347,10 @@
               // Returns one of 'AA', 'A', 'B', 'C', 'DD', 'X' or null.
               // We look for the FIRST unreliable rating token (DD, C, X)
               // because those are the only ones we surface as warnings;
-              // AA/A/B are reliable and need no badge.
+              // AA/A are reliable and need no badge. B is included because
+              // Maradona's preset is B-rated with explicit "time disputed"
+              // caveat in the source field — beta evaluator flagged that
+              // B was falling through with no badge.
               function getUnreliableRating(sourceStr) {
                 if (typeof sourceStr !== 'string' || !sourceStr) return null;
                 // Order matters: DD before D, and we want the first match.
@@ -1357,6 +1360,10 @@
                 // C-rated must NOT be confused with "Cancer rising" or similar.
                 // The "-rated" suffix anchors it.
                 if (/(^|[^A-Z])C[- ]?rated\b/.test(sourceStr)) return 'C';
+                // B-rated: time disputed (e.g. multiple conflicting cites).
+                // Surfaced as a badge so users know the Ascendant/houses
+                // shown may differ from canonical published charts.
+                if (/(^|[^A-Z])B[- ]?rated\b/.test(sourceStr)) return 'B';
                 return null;
               }
 
@@ -1366,8 +1373,15 @@
               function getRatingWarningText(rating) {
                 try {
                   var d = window.IYOGAU_I18N && window.IYOGAU_I18N[getActiveLang()];
-                  var tpl = d && d.natal && d.natal.presets
-                         && d.natal.presets.ratingWarning;
+                  var presets = d && d.natal && d.natal.presets;
+                  // X has its own template — "time UNKNOWN" not "unreliable".
+                  // ko/zh used to fall through to the generic template; now
+                  // they get the X-specific localized warning too.
+                  if (rating === 'X') {
+                    var tplX = presets && presets.ratingWarningX;
+                    if (typeof tplX === 'string' && tplX) return tplX;
+                  }
+                  var tpl = presets && presets.ratingWarning;
                   if (typeof tpl === 'string' && tpl) {
                     return tpl.replace('{rating}', rating);
                   }
@@ -1527,6 +1541,16 @@
                   // offset code path naturally.
                   var offsetMatch = /^([+-])(\d{1,2}):(\d{2})$/.exec(preset.tz || '');
                   if (offsetMatch && useOffEl && offSignEl && offHrsEl && offMinEl) {
+                    // CRITICAL ORDER: write sign/hrs/min FIRST, then
+                    // toggle the offset checkbox + dispatch its 'change'.
+                    // The 'change' listener triggers recalculate() which
+                    // reads these three inputs via buildPayload(); if we
+                    // dispatched before writing, the first recalc would
+                    // POST with a stale offset (race flagged by alpha
+                    // evaluator).
+                    offSignEl.value = offsetMatch[1];
+                    offHrsEl.value  = String(parseInt(offsetMatch[2], 10));
+                    offMinEl.value  = offsetMatch[3];
                     if (!useOffEl.checked) {
                       useOffEl.checked = true;
                       if (offRowEl) offRowEl.hidden = false;
@@ -1538,9 +1562,6 @@
                       if (offRowEl) offRowEl.hidden = false;
                       if (tzSelEl) tzSelEl.disabled = true;
                     }
-                    offSignEl.value = offsetMatch[1];
-                    offHrsEl.value  = String(parseInt(offsetMatch[2], 10));
-                    offMinEl.value  = offsetMatch[3];
                   } else {
                     // IANA preset: ensure the offset override is OFF so
                     // buildPayload picks up the IANA select value, not
@@ -2141,9 +2162,9 @@
      Current version round: i18n.natal-chart.js (adds defaultName key) and
      natal-chart-form.js (other recent edits). -->
 <script src="/assets/js/natal-presets.js?v=5" defer></script>
-<script src="/assets/js/i18n.natal-chart.js?v=11" defer></script>
+<script src="/assets/js/i18n.natal-chart.js?v=12" defer></script>
 <script src="/assets/js/natal-chart-wheel.js?v=10" defer></script>
 <script src="/assets/js/natal-chart-tabs.js?v=10" defer></script>
-<script src="/assets/js/natal-chart-form.js?v=11" defer></script>
+<script src="/assets/js/natal-chart-form.js?v=12" defer></script>
 </body>
 </html>
