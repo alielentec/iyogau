@@ -209,6 +209,10 @@
     <p class="hero-sub" data-i18n="hero.sub">Higher consciousness isn't a mountain to climb. It's a hidden wingspan waiting to unfurl. Practical transformation through yoga, meditation, and inner science.</p>
     <div class="hero-cta">
       <a href="#course" class="btn btn-primary" data-i18n="hero.cta1">Explore Programs</a>
+      <!-- High-discoverability link to the inline natal-chart calculator below.
+           Placed between the two primary CTAs so it gets visual attention
+           without competing with the course-application path. -->
+      <a href="#natal-calc" class="btn btn-secondary" data-i18n="hero.cta_natal">Try Free Vedic Natal Chart</a>
       <a href="#cta" class="btn btn-ghost" data-i18n="hero.cta2">Apply Now</a>
     </div>
     <div class="trust-badges">
@@ -409,7 +413,7 @@
      section; the form binder picks it up on init.
      All IDs are prefixed `home-nf-` / `home-natal-` to avoid collision
      with the dedicated /natal-chart/ page.  -->
-<section id="natal-calc" class="natal-page" aria-labelledby="natal-calc-heading">
+<section id="natal-calc" class="natal-page natal-page--lifted" aria-labelledby="natal-calc-heading">
   <div class="container">
     <div class="natal-page__inner">
 
