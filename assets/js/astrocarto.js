@@ -46,16 +46,142 @@
   'use strict';
 
   // ---------- Map projection geometry ----------
-
-  // Equirectangular: x = (lon + 180) * SCALE_X, y = (90 - lat) * SCALE_Y.
-  // We render at the SVG viewBox 800×400, so SCALE_X = 800/360 = 2.222,
-  // SCALE_Y = 400/180 = 2.222 — same factor, square pixels.
+  //
+  // Equirectangular projection (Plate carrée). Mathematically exact, fully
+  // invertible. (x, y) in viewport pixels ↔ (lon, lat) in degrees.
+  //
+  // Forward:
+  //   x = (lon + 180) / 360 * W
+  //   y = (90 - lat) / 180 * H        (north-up; y=0 at lat=90, y=H at lat=-90)
+  //
+  // Inverse (used by the tooltip + hover-explain path):
+  //   lon = x / W * 360 - 180
+  //   lat = 90 - y / H * 180
+  //
+  // Round-trip: lonOfX(xOfLon(λ)) === λ to floating-point precision,
+  // and likewise for lat. The tooltip + cell-lookup paths use the same
+  // inverse to recover (lat, lon) from a mouse pointer — see showTooltipFor()
+  // in renderMap() below.
+  //
+  // SVG viewBox is 800×400, so the per-axis scale is 800/360 = 400/180 =
+  // 2.2222… — same factor on both axes, i.e. square pixels.
   var VIEW_W = 800;
   var VIEW_H = 400;
-  function lon2x(lon) { return (lon + 180) * (VIEW_W / 360); }
-  function lat2y(lat) { return (90 - lat) * (VIEW_H / 180); }
-  function x2lon(x) { return (x / (VIEW_W / 360)) - 180; }
-  function y2lat(y) { return 90 - (y / (VIEW_H / 180)); }
+  function xOfLon(lon) { return (lon + 180) / 360 * VIEW_W; }
+  function yOfLat(lat) { return (90 - lat) / 180 * VIEW_H; }
+  function lonOfX(x)   { return x / VIEW_W * 360 - 180; }
+  function latOfY(y)   { return 90 - y / VIEW_H * 180; }
+  // Shorter aliases kept for the existing call sites in this file.
+  var lon2x = xOfLon, lat2y = yOfLat, x2lon = lonOfX, y2lat = latOfY;
+
+  // Runtime self-check of the round-trip projection identities. Gated on
+  // ?astrocartoDebug=1 so production isn't polluted with console.assert.
+  function runProjectionSelfCheck() {
+    var ok = true;
+    var maxDelta = 0;
+    for (var i = -180; i <= 180; i += 30) {
+      var d1 = Math.abs(lonOfX(xOfLon(i)) - i);
+      console.assert(d1 < 1e-9, '[astrocarto] lon round-trip failed at ' + i + ' Δ=' + d1);
+      if (d1 >= 1e-9) ok = false;
+      if (d1 > maxDelta) maxDelta = d1;
+    }
+    for (var j = -90; j <= 90; j += 30) {
+      var d2 = Math.abs(latOfY(yOfLat(j)) - j);
+      console.assert(d2 < 1e-9, '[astrocarto] lat round-trip failed at ' + j + ' Δ=' + d2);
+      if (d2 >= 1e-9) ok = false;
+      if (d2 > maxDelta) maxDelta = d2;
+    }
+    if (window.console && console.info) {
+      console.info('[astrocarto] projection self-check ' + (ok ? 'OK' : 'FAILED') +
+        ' — max round-trip error: ' + maxDelta.toExponential(2) + '°');
+    }
+    return ok;
+  }
+
+  // ---------- Gaussian smoothing of the heat-matrix score field ----------
+  //
+  // After the heat matrix arrives from the API we apply a 2D Gaussian blur to
+  // the raw scores. The smoothing is purely cosmetic — it makes the gradient
+  // continuous instead of stair-stepped — and crucially DOES NOT invent
+  // information:
+  //
+  //   - Each smoothed cell is a local weighted average of nearby cells.
+  //   - σ is exposed in the UI ("Gaussian blur σ = N° latitude") so the
+  //     user knows exactly how much smoothing was applied.
+  //
+  // σ = 1.5 cells ≈ 6° of lat/lon at the default 4° grid → ~660 km on Earth's
+  // surface, comparable to the LINE_INFLUENCE_KM = 1100 km already used by
+  // the scoring kernel in /api/_lib/astrocarto.js. The blur is therefore
+  // consistent with the existing physical orb of influence — it does NOT
+  // extend that influence beyond what the scoring already implies.
+  //
+  // Kernel: discrete 1D Gaussian, radius 3σ → clamp to a max of 5 cells
+  // either side for performance. The convolution is separable: pass 1 blurs
+  // each row (longitude axis, wrap-around because longitude is periodic);
+  // pass 2 blurs each column (latitude axis, clamp at poles — the world
+  // does not wrap N↔S).
+  var GAUSSIAN_SIGMA_CELLS = 1.5;
+  function gaussianKernel(sigma) {
+    if (sigma <= 0) return [1];
+    var r = Math.min(5, Math.ceil(3 * sigma));
+    var k = new Array(2 * r + 1);
+    var sum = 0;
+    var twoSig2 = 2 * sigma * sigma;
+    for (var i = -r; i <= r; i += 1) {
+      var w = Math.exp(-(i * i) / twoSig2);
+      k[i + r] = w;
+      sum += w;
+    }
+    for (var j = 0; j < k.length; j += 1) k[j] /= sum;
+    return k;
+  }
+  function gaussian1D(arr, kernel, wrap) {
+    var n = arr.length;
+    var r = (kernel.length - 1) >> 1;
+    var out = new Array(n);
+    for (var i = 0; i < n; i += 1) {
+      var acc = 0;
+      var wAcc = 0;
+      for (var k = -r; k <= r; k += 1) {
+        var idx = i + k;
+        if (wrap) {
+          // Periodic wrap (longitude): ((idx % n) + n) % n
+          idx = ((idx % n) + n) % n;
+        } else if (idx < 0 || idx >= n) {
+          // Clamp-to-edge (latitude: poles do not wrap N↔S)
+          idx = (idx < 0) ? 0 : (n - 1);
+        }
+        var v = arr[idx];
+        if (v == null || !isFinite(v)) continue;
+        var w = kernel[k + r];
+        acc += v * w;
+        wAcc += w;
+      }
+      out[i] = (wAcc > 0) ? (acc / wAcc) : arr[i];
+    }
+    return out;
+  }
+  function gaussianBlur2D(matrix, sigmaCells) {
+    if (!matrix || !matrix.length || !matrix[0] || !matrix[0].length) return matrix;
+    var kernel = gaussianKernel(sigmaCells);
+    var h = matrix.length;
+    var w = matrix[0].length;
+    // Pass 1: blur each row (longitude axis, wrap-around)
+    var rowBlurred = new Array(h);
+    for (var r = 0; r < h; r += 1) {
+      rowBlurred[r] = gaussian1D(matrix[r], kernel, true);
+    }
+    // Pass 2: blur each column (latitude axis, clamp at poles)
+    var out = new Array(h);
+    for (var r2 = 0; r2 < h; r2 += 1) out[r2] = new Array(w);
+    for (var c = 0; c < w; c += 1) {
+      var col = new Array(h);
+      for (var rr = 0; rr < h; rr += 1) col[rr] = rowBlurred[rr][c];
+      var blurredCol = gaussian1D(col, kernel, false);
+      for (var rr2 = 0; rr2 < h; rr2 += 1) out[rr2][c] = blurredCol[rr2];
+    }
+    return out;
+  }
 
   // ---------- i18n helper ----------
 
