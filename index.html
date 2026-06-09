@@ -66,7 +66,7 @@
 
 <link rel="preload" as="style" href="/assets/css/styles.css" />
 <link rel="stylesheet" href="/assets/css/styles.css" />
-<link rel="stylesheet" href="/assets/css/natal-chart.css?v=4" />
+<link rel="stylesheet" href="/assets/css/natal-chart.css?v=5" />
 
 <!-- Schema.org -->
 <script type="application/ld+json">
@@ -921,9 +921,11 @@
               //          attribute below is preserved across language
               //          switches by re-snapshotting whenever the active
               //          name field is empty.
-              var nameEl    = $('home-nf-name');
-              var titleEl   = $('home-natal-chart-title');
-              var captionEl = $('home-natal-default-caption');
+              var nameEl     = $('home-nf-name');
+              var titleEl    = $('home-natal-chart-title');
+              var captionEl  = $('home-natal-default-caption');
+              var dateElCap  = $('home-nf-date');
+              var placeElCap = $('home-nf-place');
 
               // Look up the LOCALIZED default name from the i18n bundle.
               // Without this, ko/zh visitors would type a name and see
@@ -945,30 +947,86 @@
               }
               var defaultName = getDefaultName();
 
-              function updateName() {
+              // Format an <input type="date"> value (YYYY-MM-DD) as
+              // "DD Mon YYYY" (e.g. "22 Jan 1948"). Returns '' on
+              // parse failure so the caller can omit the segment.
+              function formatCaptionDate(iso) {
+                if (!iso) return '';
+                var parts = String(iso).split('-');
+                if (parts.length !== 3) return '';
+                var months = ['Jan','Feb','Mar','Apr','May','Jun',
+                              'Jul','Aug','Sep','Oct','Nov','Dec'];
+                var y = parts[0];
+                var m = parseInt(parts[1], 10) - 1;
+                var d = parseInt(parts[2], 10);
+                if (isNaN(m) || isNaN(d) || !months[m]) return '';
+                return (d < 10 ? '0' + d : d) + ' ' + months[m] + ' ' + y;
+              }
+
+              function updateCaption() {
                 if (!nameEl) return;
-                var typed = (nameEl.value || '').trim();
+                var typed   = (nameEl.value || '').trim();
                 var display = typed || defaultName;
                 if (titleEl) titleEl.textContent = display;
-                if (captionEl) {
-                  // Cache the i18n-resolved default caption the first
-                  // time we see the field empty so re-empty restores it.
-                  if (!captionEl.dataset.origCaption && !typed) {
-                    captionEl.dataset.origCaption = captionEl.textContent;
-                  }
-                  var orig = captionEl.dataset.origCaption || captionEl.textContent;
-                  captionEl.textContent = typed
-                    ? orig.replace(defaultName, typed)
-                    : orig;
+                if (!captionEl) return;
+
+                // Cache the i18n-resolved default caption once so we can
+                // restore it (and harvest its localized prefix) regardless
+                // of what we've written to the node since.
+                if (!captionEl.dataset.origCaption) {
+                  captionEl.dataset.origCaption = captionEl.textContent;
                 }
+                var orig = captionEl.dataset.origCaption;
+
+                var dateStr = dateElCap ? formatCaptionDate(dateElCap.value) : '';
+                // Only show the place when the autocomplete has resolved
+                // a real city — while the user is still typing we don't
+                // want to splash partial text into the caption.
+                var resolved = placeElCap
+                  && placeElCap.getAttribute('data-resolved') === '1';
+                var placeStr = (resolved && placeElCap.value.trim())
+                  ? placeElCap.value.trim()
+                  : '';
+
+                // Graceful fallback: nothing the user can drive → restore
+                // the i18n original verbatim.
+                if (!typed && !dateStr && !placeStr) {
+                  captionEl.textContent = orig;
+                  captionEl.hidden = false;
+                  return;
+                }
+
+                // Recover the localized "Currently showing:" prefix from
+                // the original caption (everything up to the first colon).
+                var colonAt = orig.indexOf(':');
+                var prefix  = colonAt >= 0 ? orig.slice(0, colonAt + 1) + ' ' : '';
+                var bits    = [display];
+                if (dateStr) bits.push(dateStr);
+                bits.push(placeStr || 'your chart');
+                captionEl.textContent = prefix + bits.join(' · ');
+                captionEl.hidden = false;
               }
+
+              // Backward-compat alias — earlier code paths may still call
+              // updateName() (e.g. on language switch). Route to the new
+              // caption builder.
+              var updateName = updateCaption;
+
               if (nameEl) {
-                nameEl.addEventListener('input', updateName);
-                nameEl.addEventListener('change', updateName);
-                // Prime the cache so the very first keystroke has an
-                // i18n-resolved fallback to swap against.
-                updateName();
+                nameEl.addEventListener('input', updateCaption);
+                nameEl.addEventListener('change', updateCaption);
               }
+              if (dateElCap) {
+                dateElCap.addEventListener('input', updateCaption);
+                dateElCap.addEventListener('change', updateCaption);
+              }
+              if (placeElCap) {
+                placeElCap.addEventListener('input', updateCaption);
+                placeElCap.addEventListener('change', updateCaption);
+              }
+              // Prime the cache so the first keystroke has an i18n-resolved
+              // original to fall back to.
+              updateCaption();
 
               // ---- 5. Submit button → immediate recalc (no debounce).
               //         Also unlocks even if consent isn't toggled — we
@@ -1281,9 +1339,9 @@
      Bump these on every JS change (same pattern as natal-chart.css?v=N).
      Current version round: i18n.natal-chart.js (adds defaultName key) and
      natal-chart-form.js (other recent edits). -->
-<script src="/assets/js/i18n.natal-chart.js?v=2" defer></script>
-<script src="/assets/js/natal-chart-wheel.js?v=2" defer></script>
-<script src="/assets/js/natal-chart-tabs.js?v=2" defer></script>
-<script src="/assets/js/natal-chart-form.js?v=2" defer></script>
+<script src="/assets/js/i18n.natal-chart.js?v=3" defer></script>
+<script src="/assets/js/natal-chart-wheel.js?v=3" defer></script>
+<script src="/assets/js/natal-chart-tabs.js?v=3" defer></script>
+<script src="/assets/js/natal-chart-form.js?v=3" defer></script>
 </body>
 </html>

@@ -1073,3 +1073,42 @@
      don't reflow the page. */
   min-height: 0;
 }
+
+/* ---- v=5 patch ----
+   (a) Remove the white card around the wheel. The wheel SVG sits
+       directly on the section's lifted --surface-2 background — no
+       inner panel, no 1px outline, no inner gap. This overrides the
+       earlier `.natal-wheel-wrap { background/border/padding }` block
+       at lines 305-313.
+   (b) Lock the wheel to a true 1:1 square (matching the SVG's
+       0 0 100 100 viewBox) so its rendered height is predictable.
+   (c) Pin every tabpanel to that same rendered wheel height so
+       Input / Planets / Aspects don't reflow when the user swaps
+       tabs. Replaces the hardcoded 620px floor from lines 761-770.
+   ---- */
+.natal-wheel-wrap {
+  max-width: 720px;
+  aspect-ratio: 1 / 1;
+  background: transparent;
+  border: 0;
+  padding: 0;
+  border-radius: 0;
+}
+.natal-wheel-wrap svg { height: 100%; }
+
+.natal-tabpanel {
+  /* Track the wheel's actual square dimension: it is capped at 720px
+     but on narrower viewports it shrinks to the panel's content
+     width (the panel section is `padding: 0 1rem` so content width
+     is approximately 100vw - 2rem). */
+  min-height: min(720px, 100vw - 2rem);
+  max-height: none;
+  overflow: visible;
+}
+@media (max-width: 640px) {
+  .natal-tabpanel {
+    /* Phone: square = viewport minus the section's 1rem horizontal
+       padding on each side. */
+    min-height: calc(100vw - 2rem);
+  }
+}

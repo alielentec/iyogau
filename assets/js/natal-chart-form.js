@@ -436,6 +436,16 @@
   // ---------- submit ----------
 
   form.addEventListener('submit', function (e) {
+    // On the homepage mount, the inline bootstrap in index.html owns the
+    // submit path end-to-end (validation, fetch, render, error display).
+    // The binder was double-firing here — two POSTs per click, racing the
+    // per-IP rate limiter and writing a spurious api-error into
+    // #home-nf-error even when the bootstrap render succeeded.
+    // We still keep the binder mounted on the homepage form for its other
+    // responsibilities: city autocomplete, lazy cities load, timezone
+    // select population, and selectCity wiring.
+    if (cfg.formId === 'home-natal-form') return;
+
     e.preventDefault();
     clearError();
 
