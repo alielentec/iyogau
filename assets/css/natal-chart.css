@@ -380,6 +380,30 @@
   text-decoration: underline;
 }
 
+/* Surfaced when a preset's source string carries an unreliable Rodden
+   rating (DD = dirty data, C = uncertain, X = time unknown). Rendered
+   by index.html's renderAttribText() as a leading badge before the
+   citation. Inherits the small attribution-line font size; uses a
+   warning-tone background to make it visually distinct from the rest
+   of the source string. */
+.natal-rating-warning {
+  display: inline-block;
+  padding: 0.1em 0.45em;
+  border-radius: 0.25em;
+  background: #fff3cd;          /* warm warning yellow */
+  color: #856404;                /* high-contrast amber */
+  border: 1px solid #ffeeba;
+  font-weight: 600;
+  margin-right: 0.35em;
+}
+/* X-rated (time unknown) is the strongest signal — use a red-toned
+   palette so the user understands the Asc / houses are not valid. */
+.natal-rating-warning--x {
+  background: #f8d7da;
+  color: #721c24;
+  border-color: #f5c6cb;
+}
+
 /* Visually-hidden helper (re-declared locally in case .sr-only is not in the base sheet) */
 .sr-only {
   position: absolute;

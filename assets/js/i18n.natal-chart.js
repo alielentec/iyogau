@@ -135,6 +135,7 @@
           placeholder: 'Steve Jobs',
           currentlyShowing: "Currently showing {name}'s chart. Edit any field below and your own chart will appear in the Natal Chart tab.",
           attribution: '{name} birth data: {source}',
+          ratingWarning: 'Time unreliable ({rating}-rated) — chart shown for reference; Ascendant and houses may not be accurate.',
           'steve-jobs': {
             name: 'Steve Jobs',
             placeLabel: 'San Francisco, United States',
@@ -320,6 +321,7 @@
           placeholder: '스티브 잡스',
           currentlyShowing: '현재 {name}의 차트를 표시 중입니다. 아래 항목을 수정하면 베다 차트 탭에 본인의 차트가 표시됩니다.',
           attribution: '{name} 출생 정보: {source}',
+          ratingWarning: '출생 시각 신뢰도 낮음 ({rating}등급) — 참고용 차트입니다. 어센던트 및 하우스 정보가 정확하지 않을 수 있습니다.',
           'steve-jobs': {
             name: '스티브 잡스',
             placeLabel: '샌프란시스코, 미국',
@@ -501,6 +503,7 @@
           placeholder: '史蒂夫·乔布斯',
           currentlyShowing: '当前显示的是 {name} 的星盘。修改下方任意字段，您自己的星盘将出现在"吠陀星盘"标签页。',
           attribution: '{name} 出生数据：{source}',
+          ratingWarning: '出生时间不可靠（{rating}级）— 仅供参考，上升点与宫位可能不准确。',
           'steve-jobs': {
             name: '史蒂夫·乔布斯',
             placeLabel: '旧金山, 美国',

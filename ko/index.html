@@ -66,7 +66,7 @@
 
 <link rel="preload" as="style" href="/assets/css/styles.css" />
 <link rel="stylesheet" href="/assets/css/styles.css" />
-<link rel="stylesheet" href="/assets/css/natal-chart.css?v=13" />
+<link rel="stylesheet" href="/assets/css/natal-chart.css?v=14" />
 
 <!-- Schema.org -->
 <script type="application/ld+json">
@@ -1278,21 +1278,74 @@
                 demoBannerTextEl.textContent =
                   "Currently showing " + lp.name + "'s chart. Edit any field below and your own chart will appear in the Natal Chart tab.";
               }
+              // Extract a Rodden rating from a preset source string.
+              // Returns one of 'AA', 'A', 'B', 'C', 'DD', 'X' or null.
+              // We look for the FIRST unreliable rating token (DD, C, X)
+              // because those are the only ones we surface as warnings;
+              // AA/A/B are reliable and need no badge.
+              function getUnreliableRating(sourceStr) {
+                if (typeof sourceStr !== 'string' || !sourceStr) return null;
+                // Order matters: DD before D, and we want the first match.
+                // Anchor on word-boundary so "AA-rated" doesn't match "A-rated".
+                if (/\bDD[- ]?rated\b/.test(sourceStr)) return 'DD';
+                if (/\bX[- ]?rated\b/.test(sourceStr))  return 'X';
+                // C-rated must NOT be confused with "Cancer rising" or similar.
+                // The "-rated" suffix anchors it.
+                if (/(^|[^A-Z])C[- ]?rated\b/.test(sourceStr)) return 'C';
+                return null;
+              }
+
+              // Localized "Time unreliable" warning text. Falls back to
+              // English. The rating token (DD / C / X) is interpolated
+              // into the {rating} slot.
+              function getRatingWarningText(rating) {
+                try {
+                  var d = window.IYOGAU_I18N && window.IYOGAU_I18N[getActiveLang()];
+                  var tpl = d && d.natal && d.natal.presets
+                         && d.natal.presets.ratingWarning;
+                  if (typeof tpl === 'string' && tpl) {
+                    return tpl.replace('{rating}', rating);
+                  }
+                } catch (e) {}
+                if (rating === 'X') {
+                  return 'Time unknown (X-rated) — chart shown for reference; Ascendant and houses are NOT astrologically valid.';
+                }
+                return 'Time unreliable (' + rating + '-rated) — chart shown for reference; Ascendant and houses may not be accurate.';
+              }
+
               function renderAttribText(preset) {
                 if (!demoAttribEl) return;
                 var lp = localizedPreset(preset);
+
+                // Build the base attribution string ("<name> birth data: <source>").
+                var base = lp.name + ' birth data: ' + lp.source;
                 try {
                   var d = window.IYOGAU_I18N && window.IYOGAU_I18N[getActiveLang()];
                   var tpl = d && d.natal && d.natal.presets
                          && d.natal.presets.attribution;
                   if (typeof tpl === 'string' && tpl) {
-                    demoAttribEl.textContent = tpl
+                    base = tpl
                       .replace('{name}', lp.name)
                       .replace('{source}', lp.source);
-                    return;
                   }
                 } catch (e) {}
-                demoAttribEl.textContent = lp.name + ' birth data: ' + lp.source;
+
+                // Surface DD / C / X rating warnings as a visible badge
+                // before the citation. Use textContent on the inner
+                // nodes to keep escaping safe, then assemble via DOM
+                // (no innerHTML with user-derived strings).
+                var rating = getUnreliableRating(lp.source);
+                while (demoAttribEl.firstChild) {
+                  demoAttribEl.removeChild(demoAttribEl.firstChild);
+                }
+                if (rating) {
+                  var warn = document.createElement('span');
+                  warn.className = 'natal-rating-warning natal-rating-warning--' + rating.toLowerCase();
+                  warn.textContent = getRatingWarningText(rating);
+                  demoAttribEl.appendChild(warn);
+                  demoAttribEl.appendChild(document.createTextNode(' '));
+                }
+                demoAttribEl.appendChild(document.createTextNode(base));
               }
 
               // Match form against EVERY preset and return the first
@@ -1423,90 +1476,61 @@
               //
               // Cross-browser datalist-pick detection is messy: Chrome/Edge
               // fire an InputEvent with inputType='insertReplacementText',
-              // but Safari fires with inputType='' (empty string) or null,
-              // iOS Safari sometimes fires nothing on the input event at all
-              // and only fires 'change' on blur, and keyboard-Enter on a
-              // datalist suggestion is browser-specific too. The earlier
-              // single-signal gate (inputType==='insertReplacementText') was
-              // a Chrome-only assumption that broke Safari and iOS.
+              // but Safari/Firefox don't surface a reliable per-event
+              // datalist signal at all — they often drop the final value
+              // in via the 'change' event on blur, without intermediate
+              // character-level 'input' events.
               //
-              // Multi-signal value-jump detector:
-              //   prev = "S", new = "Steve Jobs"  → jumped by 10 chars → pick
-              //   prev = "Steve Job", new = "Steve Jobs"  → jumped by 1 char,
-              //     can only be a pick if the final keystroke happened to
-              //     land an exact preset match; but that keystroke is
-              //     inputType='insertText' which we ignore for condition (b)
-              //     since it never matches without the buildup. Safe.
+              // Typing-flag detector:
+              //   - On focus, clear `userTypedInName`.
+              //   - Every 'input' event with a non-empty inputType (the
+              //     family of 'insertText', 'deleteContentBackward',
+              //     'insertCompositionText', etc.) sets the flag to true:
+              //     the user is typing characters.
+              //   - On the Chrome-explicit signal ('insertReplacementText')
+              //     we apply the matching preset immediately.
+              //   - On 'change' (blur), if the flag is still false the
+              //     value did not arrive via keystrokes, so a value that
+              //     matches a preset must be a datalist pick from Safari /
+              //     Firefox / keyboard. We apply it.
               //
-              // Conditions for accepting as a pick (ANY one is enough):
-              //   (a) inputType === 'insertReplacementText'  (Chrome/Edge signal)
-              //   (b) inputType is '' or null AND value exactly matches a
-              //       preset name  (Safari path — empty/null inputType is
-              //       Safari's signal for "this value came from the
-              //       datalist", not from a typed char)
-              //   (c) value length jumped by >1 character from the previous
-              //       value AND new value matches a preset  (catches paste-
-              //       of-full-name and any browser path we haven't enumerated)
-              //
-              // Typing letter-by-letter: each keystroke has inputType ===
-              // 'insertText' (NOT empty), value length jumps by exactly 1.
-              // None of (a)/(b)/(c) trigger. Confirmed safe against the
-              // "father named Steve Jobs" regression the original comment
-              // warned about.
-              var prevNameValue = (nameEl && nameEl.value) || '';
+              // This is safe against the prior "Steve-Jobs-as-father" bug:
+              // typing characters always sets the flag, and the change
+              // handler then refuses to auto-apply.
+              var userTypedInName = false;
+              function resetNameTypingFlag() { userTypedInName = false; }
 
               function onNameInputEvent(e) {
                 if (internalUpdate) return;
-                var typed = (nameEl && nameEl.value) || '';
-                var inputType = (e && typeof e.inputType !== 'undefined') ? e.inputType : null;
-                var isPick = false;
-
-                // (a) Chrome / Edge — explicit datalist replacement signal.
-                if (inputType === 'insertReplacementText') {
-                  isPick = true;
+                // Chrome's explicit signal: a datalist row was selected.
+                if (e && e.inputType === 'insertReplacementText') {
+                  var typedCR = (nameEl && nameEl.value) || '';
+                  var matchCR = findPresetByLocalizedName(typedCR);
+                  if (matchCR) { applyPreset(matchCR); resetNameTypingFlag(); return; }
+                  updateCaption();
+                  return;
                 }
-                // (b) Safari — empty / null inputType + exact preset match.
-                //     A character-by-character typed value reaches an exact
-                //     preset name only on the final keystroke, which has
-                //     inputType='insertText' (NOT empty/null), so this
-                //     condition cannot fire from normal typing.
-                if (!isPick && (inputType === '' || inputType == null)) {
-                  if (findPresetByLocalizedName(typed)) isPick = true;
+                // Any other 'input' event with a non-empty inputType
+                // means the user is typing/deleting/composing
+                // characters. Mark the flag so the subsequent 'change'
+                // on blur knows not to treat the field as a datalist
+                // pick.
+                if (e && typeof e.inputType === 'string' && e.inputType !== '') {
+                  userTypedInName = true;
                 }
-                // (c) Universal fallback — value jumped by >1 char and
-                //     the new value matches a preset. Catches paste and
-                //     any browser path that wasn't accounted for above.
-                if (!isPick && (typed.length - prevNameValue.length) > 1) {
-                  if (findPresetByLocalizedName(typed)) isPick = true;
-                }
-
-                prevNameValue = typed;
-
-                if (isPick) {
-                  var match = findPresetByLocalizedName(typed);
-                  if (match) {
-                    applyPreset(match);
-                    return;
-                  }
-                }
-                // Pure typing path: just update the chart title.
                 updateCaption();
               }
 
-              // 'change' fires on blur. If the value matches a preset and we
-              // are NOT already in that preset's DEMO state (i.e. the
-              // 'input' path didn't already apply it — happens on iOS where
-              // the input event is sometimes suppressed for datalist picks),
-              // apply it now. This is the final safety net for any browser /
-              // input modality that doesn't surface the input event correctly.
+              // 'change' fires on blur (and after Safari/Firefox datalist
+              // picks). If the user did NOT type characters between focus
+              // and this change, and the field's value exactly matches a
+              // preset name, treat it as a datalist pick.
               function onNameInputChange() {
                 if (internalUpdate) return;
-                var typed = (nameEl && nameEl.value) || '';
-                prevNameValue = typed;
-                var match = findPresetByLocalizedName(typed);
-                if (match && activePresetId !== match.id) {
-                  applyPreset(match);
-                  return;
+                if (!userTypedInName) {
+                  var typed = (nameEl && nameEl.value) || '';
+                  var match = findPresetByLocalizedName(typed);
+                  if (match) { applyPreset(match); resetNameTypingFlag(); return; }
                 }
                 updateCaption();
               }
@@ -1537,10 +1561,16 @@
               }
 
               if (nameEl) {
-                // 'input' carries the InputEvent (inputType signal); use
-                // the event-aware handler. The 'change' fallback uses
-                // the back-compat wrapper which behaves identically to
-                // a non-datalist input event.
+                // 'focus' resets the typing flag so each fresh entry
+                // into the field starts from a known state. 'input'
+                // carries the InputEvent (inputType signal) — the
+                // event-aware handler sets the typing flag on
+                // character-level events and applies the preset on
+                // Chrome's insertReplacementText. 'change' fires on
+                // blur and is the Safari/Firefox/keyboard fallback:
+                // if the typing flag is still false, the value must
+                // have arrived from a datalist pick.
+                nameEl.addEventListener('focus', resetNameTypingFlag);
                 nameEl.addEventListener('input', onNameInputEvent);
                 nameEl.addEventListener('change', onNameInputChange);
               }
@@ -1929,8 +1959,8 @@
      Bump these on every JS change (same pattern as natal-chart.css?v=N).
      Current version round: i18n.natal-chart.js (adds defaultName key) and
      natal-chart-form.js (other recent edits). -->
-<script src="/assets/js/natal-presets.js?v=2" defer></script>
-<script src="/assets/js/i18n.natal-chart.js?v=10" defer></script>
+<script src="/assets/js/natal-presets.js?v=3" defer></script>
+<script src="/assets/js/i18n.natal-chart.js?v=11" defer></script>
 <script src="/assets/js/natal-chart-wheel.js?v=10" defer></script>
 <script src="/assets/js/natal-chart-tabs.js?v=10" defer></script>
 <script src="/assets/js/natal-chart-form.js?v=10" defer></script>
