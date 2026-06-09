@@ -1066,13 +1066,13 @@
    with internal scroll which fights with the new compact form. Allow
    the Input Data panel to size to its (now smaller) content rather
    than scrolling. ---- */
-#home-panel-input,
-.natal-tabpanel:has(.natal-form-section) {
-  /* No min-height pin for the Input Data panel — let the form drive
-     height. The Natal Chart panel still pins to 620px so tab swaps
-     don't reflow the page. */
-  min-height: 0;
-}
+/* DELETED: the prior block here removed the min-height pin on the Input
+   Data panel, which caused tab swaps to jump by ~360px (form ≈ 540px vs
+   wheel ≈ 900px). The user explicitly asked tabs to align to the wheel
+   height, so we let the v=5 .natal-tabpanel min-height rule apply to
+   ALL panels including Input Data. The form is shorter than the wheel,
+   so the Input Data panel reserves the empty space on the
+   --surface-2 background — that's the intentional alignment. */
 
 /* ---- v=5 patch ----
    (a) Remove the white card around the wheel. The wheel SVG sits

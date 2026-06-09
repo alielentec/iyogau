@@ -66,7 +66,7 @@
 
 <link rel="preload" as="style" href="/assets/css/styles.css" />
 <link rel="stylesheet" href="/assets/css/styles.css" />
-<link rel="stylesheet" href="/assets/css/natal-chart.css?v=5" />
+<link rel="stylesheet" href="/assets/css/natal-chart.css?v=6" />
 
 <!-- Schema.org -->
 <script type="application/ld+json">
@@ -1002,15 +1002,25 @@
                 var prefix  = colonAt >= 0 ? orig.slice(0, colonAt + 1) + ' ' : '';
                 var bits    = [display];
                 if (dateStr) bits.push(dateStr);
-                bits.push(placeStr || 'your chart');
+                // i18n-aware "your chart" fallback when the user has
+                // typed in the birthplace input but hasn't picked from
+                // the autocomplete (data-resolved !== '1'). Sourced
+                // from the natal-chart i18n bundle so ko/zh visitors
+                // get their localized phrase instead of English.
+                var placeFallback = 'your chart';
+                try {
+                  var html = document.documentElement.getAttribute('lang') || 'en';
+                  var lang = html.indexOf('ko') === 0 ? 'ko'
+                          : html.indexOf('zh') === 0 ? 'zh' : 'en';
+                  var d = window.IYOGAU_I18N && window.IYOGAU_I18N[lang];
+                  var loc = d && d.natal && d.natal.results
+                         && d.natal.results.placeFallback;
+                  if (typeof loc === 'string' && loc) placeFallback = loc;
+                } catch (e) {}
+                bits.push(placeStr || placeFallback);
                 captionEl.textContent = prefix + bits.join(' · ');
                 captionEl.hidden = false;
               }
-
-              // Backward-compat alias — earlier code paths may still call
-              // updateName() (e.g. on language switch). Route to the new
-              // caption builder.
-              var updateName = updateCaption;
 
               if (nameEl) {
                 nameEl.addEventListener('input', updateCaption);
@@ -1339,9 +1349,9 @@
      Bump these on every JS change (same pattern as natal-chart.css?v=N).
      Current version round: i18n.natal-chart.js (adds defaultName key) and
      natal-chart-form.js (other recent edits). -->
-<script src="/assets/js/i18n.natal-chart.js?v=3" defer></script>
-<script src="/assets/js/natal-chart-wheel.js?v=3" defer></script>
-<script src="/assets/js/natal-chart-tabs.js?v=3" defer></script>
-<script src="/assets/js/natal-chart-form.js?v=3" defer></script>
+<script src="/assets/js/i18n.natal-chart.js?v=4" defer></script>
+<script src="/assets/js/natal-chart-wheel.js?v=4" defer></script>
+<script src="/assets/js/natal-chart-tabs.js?v=4" defer></script>
+<script src="/assets/js/natal-chart-form.js?v=4" defer></script>
 </body>
 </html>

@@ -87,6 +87,7 @@
           heading: 'Your sidereal natal chart',
           defaultCaption: 'Currently showing: Steve Jobs · 24 Feb 1955 · San Francisco',
           defaultName: 'Steve Jobs',
+          placeFallback: 'your chart',
           steveJobsAttrib: 'Steve Jobs birth data: Astro-Databank, AA-rated.',
           aspectsEmpty: 'No major aspects within standard orbs for this chart.',
           ascendant: 'Ascendant',
@@ -169,6 +170,7 @@
           heading: '당신의 베다 출생 차트',
           defaultCaption: '현재 표시: 스티브 잡스 · 1955년 2월 24일 · 샌프란시스코',
           defaultName: '스티브 잡스',
+          placeFallback: '귀하의 차트',
           steveJobsAttrib: '스티브 잡스 출생 정보: Astro-Databank, AA 등급.',
           aspectsEmpty: '표준 오브 범위 내에 주요 각도가 없습니다.',
           ascendant: '상승궁 (Asc)',
@@ -272,6 +274,7 @@
         results: {
           defaultCaption: '当前显示：史蒂夫·乔布斯 · 1955 年 2 月 24 日 · 旧金山',
           defaultName: '史蒂夫·乔布斯',
+          placeFallback: '您的星盘',
           steveJobsAttrib: '史蒂夫·乔布斯出生数据：Astro-Databank，AA 级。',
           aspectsEmpty: '本星盘在标准容许度内没有主要相位。',
           heading: '您的吐吃师出生星盘',  // TODO native-review

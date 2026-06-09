@@ -444,7 +444,14 @@
     // We still keep the binder mounted on the homepage form for its other
     // responsibilities: city autocomplete, lazy cities load, timezone
     // select population, and selectCity wiring.
-    if (cfg.formId === 'home-natal-form') return;
+    // Defensive preventDefault on the gate path too: if the bootstrap
+    // failed to attach its own submit handler for any reason, this stops
+    // the browser from native-POSTing the form (which would clobber the
+    // SPA state and possibly leak the name field into the URL).
+    if (cfg.formId === 'home-natal-form') {
+      e.preventDefault();
+      return;
+    }
 
     e.preventDefault();
     clearError();
