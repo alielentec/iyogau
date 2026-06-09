@@ -22,11 +22,11 @@
  *  for the rest of the session (the chart only changes when the user
  *  resubmits the form — at which point the cache is invalidated).
  *
- *  No dependencies. Uses inline SVG with the same theme tokens as the
- *  rest of the site:
- *    --planet-sun, --planet-moon, ...     (per-planet line colors)
- *    --heat-0 ... --heat-100              (heat-matrix gradient stops,
- *                                          defined in natal-chart.css)
+ *  No external dependencies. Inline Marching Squares (~150 lines) extracts
+ *  iso-contour polygons from the heat matrix; each contour band is rendered
+ *  as a single SVG <path> filled with the matching --heat-N gradient stop.
+ *  A continent <clipPath> derived from /assets/data/world-continents.js
+ *  masks the bands to land only — oceans stay clean for visual orientation.
  *
  *  i18n: reads from window.IYOGAU_I18N (populated by
  *  i18n.natal-chart.js); falls back to English source text if a key
@@ -49,6 +49,12 @@
   function lat2y(lat) { return (90 - lat) * (VIEW_H / 180); }
   function x2lon(x) { return (x / (VIEW_W / 360)) - 180; }
   function y2lat(y) { return 90 - (y / (VIEW_H / 180)); }
+
+  // Contour band thresholds — 7 iso-levels yields 8 visual bands. We pick
+  // breakpoints that match the perceptual "low / mid / high" buckets users
+  // care about for a relocation map: anything < 10 reads as background, and
+  // anything >= 92 marks the absolute hot-spots.
+  var BAND_THRESHOLDS = [10, 25, 40, 55, 70, 82, 92];
 
   // ---------- i18n helper ----------
 
@@ -164,11 +170,11 @@
     return null;
   }
 
-  // ---------- SVG continent outline ----------
+  // ---------- SVG continent path (continuous outline + clip-path source) -
 
+  // Each continent in IYOGAU_WORLD_CONTINENTS contributes one closed subpath.
+  // Returned string is shared by the visible outline and the <clipPath>.
   function continentsPathD(polygons) {
-    // Compose one big "M lon lat L lon lat … Z M …" path string from the
-    // continents-data module. Each polygon contributes one closed subpath.
     var parts = [];
     for (var i = 0; i < polygons.length; i += 1) {
       var p = polygons[i].poly;
@@ -183,10 +189,283 @@
     return parts.join(' ');
   }
 
+  // =====================================================================
+  //   MARCHING SQUARES — inline, no dependency
+  // ---------------------------------------------------------------------
+  //   For a uniform grid of scalar values, extract the iso-contour at a
+  //   given threshold as a list of closed polygons (and possibly open
+  //   polylines that hit the grid edge). The algorithm:
+  //
+  //     1.  Scan every 2×2 quad of cells. Each of the 4 corners is either
+  //         BELOW threshold (0) or AT-OR-ABOVE (1). The 4-bit corner mask
+  //         (TL, TR, BR, BL) gives one of 16 cases (0..15).
+  //
+  //     2.  Each case emits 0, 1 or 2 line segments. The segment endpoints
+  //         lie on the cell edges, linearly interpolated to where the
+  //         threshold crosses (so the contour is smooth, not stair-stepped).
+  //
+  //     3.  We accumulate all (start, end) segments, then walk them by
+  //         endpoint adjacency (using a hashed lookup) to chain them into
+  //         polygons. Saddle cases 5 and 10 are disambiguated by sampling
+  //         the cell center value — this matches d3-contour's behaviour.
+  //
+  //     4.  The final closed polygons enclose the region {v >= threshold}.
+  //         Render lowest threshold first (largest area) and overpaint with
+  //         each higher band — z-order naturally creates filled bands.
+  //
+  //   Output is in (lon, lat) coordinates so the renderer can transform
+  //   uniformly with lon2x / lat2y.
+  // =====================================================================
+
+  // Marching-squares edge endpoints per case. Edges numbered:
+  //   0 = top    (between TL-TR)
+  //   1 = right  (between TR-BR)
+  //   2 = bottom (between BR-BL)
+  //   3 = left   (between BL-TL)
+  // For each of 16 corner-masks, return up to two segments. Each segment is
+  // [enterEdge, exitEdge] with the convention that the "inside" (v >= t)
+  // is to the RIGHT of the traversal direction — this gives consistent
+  // polygon winding for fill-rule.
+  var MS_EDGES = [
+    [],                       // 0000 — all out
+    [[3, 2]],                 // 0001 — BL in
+    [[2, 1]],                 // 0010 — BR in
+    [[3, 1]],                 // 0011 — bottom row in
+    [[1, 0]],                 // 0100 — TR in
+    [[3, 0], [1, 2]],         // 0101 — saddle (TR+BL in)
+    [[2, 0]],                 // 0110 — right col in
+    [[3, 0]],                 // 0111 — TL out only
+    [[0, 3]],                 // 1000 — TL in
+    [[0, 2]],                 // 1001 — left col in
+    [[0, 1], [2, 3]],         // 1010 — saddle (TL+BR in)
+    [[0, 1]],                 // 1011 — TR out only
+    [[1, 3]],                 // 1100 — top row in
+    [[1, 2]],                 // 1101 — BR out only
+    [[2, 3]],                 // 1110 — BL out only
+    []                        // 1111 — all in
+  ];
+
+  // Linear interpolation along an edge: given the two corner values and the
+  // threshold, return t ∈ [0, 1] at which v = threshold.
+  function lerpT(a, b, t) {
+    var d = b - a;
+    if (Math.abs(d) < 1e-9) return 0.5;
+    var v = (t - a) / d;
+    if (v < 0) return 0;
+    if (v > 1) return 1;
+    return v;
+  }
+
+  // Given a cell (col, row), corner values [TL, TR, BR, BL] and a threshold,
+  // return the (lon, lat) point on the requested edge.
+  function edgePoint(edge, col, row, vals, thresh, lons, lats) {
+    var lon0 = lons[col],     lon1 = lons[col + 1];
+    var lat0 = lats[row],     lat1 = lats[row + 1];
+    var t;
+    switch (edge) {
+      case 0: // top edge — TL→TR — vary lon
+        t = lerpT(vals[0], vals[1], thresh);
+        return [lon0 + (lon1 - lon0) * t, lat0];
+      case 1: // right edge — TR→BR — vary lat
+        t = lerpT(vals[1], vals[2], thresh);
+        return [lon1, lat0 + (lat1 - lat0) * t];
+      case 2: // bottom edge — BR→BL — vary lon (reverse)
+        t = lerpT(vals[3], vals[2], thresh);
+        return [lon0 + (lon1 - lon0) * t, lat1];
+      case 3: // left edge — BL→TL — vary lat (reverse)
+        t = lerpT(vals[0], vals[3], thresh);
+        return [lon0, lat0 + (lat1 - lat0) * t];
+    }
+    return [lon0, lat0];
+  }
+
+  // Run marching squares on `grid` (rowMajor, lats[0..R-1] × lons[0..C-1])
+  // at the given threshold. Returns an array of polylines (each is a list
+  // of [lon, lat] points). Polylines may be open (hit grid edge) or closed
+  // (loop back); the caller closes them with the bounding rectangle.
+  function marchingSquares(grid, lats, lons, thresh) {
+    var R = lats.length;
+    var C = lons.length;
+    var segments = [];
+
+    for (var r = 0; r < R - 1; r += 1) {
+      var row0 = grid[r];
+      var row1 = grid[r + 1];
+      if (!row0 || !row1) continue;
+      for (var c = 0; c < C - 1; c += 1) {
+        var TL = row0[c],     TR = row0[c + 1];
+        var BL = row1[c],     BR = row1[c + 1];
+        if (TL == null || TR == null || BL == null || BR == null) continue;
+
+        var mask = 0;
+        if (TL >= thresh) mask |= 8;
+        if (TR >= thresh) mask |= 4;
+        if (BR >= thresh) mask |= 2;
+        if (BL >= thresh) mask |= 1;
+        if (mask === 0 || mask === 15) continue;
+
+        var cases = MS_EDGES[mask];
+        // Saddle disambiguation (cases 5 + 10) — average corner value
+        // approximates the cell-centre value; pick connection so the
+        // contour matches the centre's side of the threshold.
+        if (mask === 5 || mask === 10) {
+          var centre = (TL + TR + BR + BL) * 0.25;
+          if ((mask === 5 && centre < thresh) || (mask === 10 && centre >= thresh)) {
+            // swap connection
+            cases = (mask === 5)
+              ? [[3, 2], [1, 0]]
+              : [[0, 3], [2, 1]];
+          }
+        }
+
+        var corners = [TL, TR, BR, BL];
+        for (var s = 0; s < cases.length; s += 1) {
+          var pair = cases[s];
+          var a = edgePoint(pair[0], c, r, corners, thresh, lons, lats);
+          var b = edgePoint(pair[1], c, r, corners, thresh, lons, lats);
+          segments.push([a, b]);
+        }
+      }
+    }
+    return chainSegments(segments);
+  }
+
+  // Chain unordered segments into polylines by endpoint match. Use a hash
+  // map keyed by quantised start-point (~1e-4 degree ≈ 11 m tolerance) to
+  // find the unique next segment in O(1). Total cost: O(N) for N segments.
+  function chainSegments(segments) {
+    if (!segments.length) return [];
+    var Q = 1e4; // quantise to 1e-4 degree — segments end at exact edge
+                 // intersections so an exact match is normally fine, but
+                 // quantising avoids floating-point drift misses.
+    function key(p) {
+      return Math.round(p[0] * Q) + ',' + Math.round(p[1] * Q);
+    }
+    var N = segments.length;
+    // For each start-point key, store the list of segment INDICES that begin
+    // there. Storing indices (not refs) lets the consumer flag them used in
+    // O(1) without an additional indexOf.
+    var byStart = Object.create(null);
+    for (var i = 0; i < N; i += 1) {
+      var k = key(segments[i][0]);
+      (byStart[k] || (byStart[k] = [])).push(i);
+    }
+    var used = new Uint8Array(N);
+    var lines = [];
+    for (var i2 = 0; i2 < N; i2 += 1) {
+      if (used[i2]) continue;
+      used[i2] = 1;
+      var seg2 = segments[i2];
+      var line = [seg2[0], seg2[1]];
+      var startKey = key(seg2[0]);
+      var endKey = key(seg2[1]);
+      // walk forward
+      while (true) {
+        var candidates = byStart[endKey];
+        if (!candidates || !candidates.length) break;
+        var nextIdx = -1;
+        for (var j = 0; j < candidates.length; j += 1) {
+          var idx = candidates[j];
+          if (!used[idx]) { nextIdx = idx; break; }
+        }
+        if (nextIdx < 0) break;
+        used[nextIdx] = 1;
+        var nextSeg = segments[nextIdx];
+        line.push(nextSeg[1]);
+        endKey = key(nextSeg[1]);
+        // closed loop?
+        if (endKey === startKey) break;
+      }
+      lines.push(line);
+    }
+    return lines;
+  }
+
+  // ---------- Douglas-Peucker simplification (in lon/lat space) ----------
+  //
+  // Reduces the number of vertices in each polyline by recursively dropping
+  // points that lie within `epsilon` of the chord between their neighbours.
+  // Operates on a copy; original points untouched. epsilon is in degrees —
+  // for our 4° / 3° grid, 0.35° (~40 km) preserves shape without ringing.
+  function simplify(points, epsilon) {
+    if (!points || points.length < 3) return points || [];
+    function sqSegDist(p, a, b) {
+      var x = a[0], y = a[1];
+      var dx = b[0] - x, dy = b[1] - y;
+      if (dx !== 0 || dy !== 0) {
+        var t = ((p[0] - x) * dx + (p[1] - y) * dy) / (dx * dx + dy * dy);
+        if (t > 1) { x = b[0]; y = b[1]; }
+        else if (t > 0) { x += dx * t; y += dy * t; }
+      }
+      dx = p[0] - x; dy = p[1] - y;
+      return dx * dx + dy * dy;
+    }
+    var sqEps = epsilon * epsilon;
+    var n = points.length;
+    var keep = new Uint8Array(n);
+    keep[0] = 1; keep[n - 1] = 1;
+    var stack = [[0, n - 1]];
+    while (stack.length) {
+      var range = stack.pop();
+      var first = range[0], last = range[1];
+      var maxDist = 0, index = -1;
+      for (var i = first + 1; i < last; i += 1) {
+        var d = sqSegDist(points[i], points[first], points[last]);
+        if (d > maxDist) { maxDist = d; index = i; }
+      }
+      if (maxDist > sqEps && index >= 0) {
+        keep[index] = 1;
+        stack.push([first, index]);
+        stack.push([index, last]);
+      }
+    }
+    var out = [];
+    for (var k = 0; k < n; k += 1) if (keep[k]) out.push(points[k]);
+    return out;
+  }
+
+  // Convert polylines (lon, lat) to a single SVG `d` string. Closed polygons
+  // get a trailing 'Z'; open ones (hit the grid edge) stay open — they'll be
+  // clipped by the continent <clipPath> anyway.
+  function polylinesToPathD(lines) {
+    var parts = [];
+    for (var i = 0; i < lines.length; i += 1) {
+      var line = lines[i];
+      if (!line || line.length < 2) continue;
+      var first = line[0];
+      var last = line[line.length - 1];
+      var closed = (Math.abs(first[0] - last[0]) < 1e-6 && Math.abs(first[1] - last[1]) < 1e-6);
+      var seg = 'M' + lon2x(first[0]).toFixed(1) + ' ' + lat2y(first[1]).toFixed(1);
+      for (var j = 1; j < line.length; j += 1) {
+        seg += ' L' + lon2x(line[j][0]).toFixed(1) + ' ' + lat2y(line[j][1]).toFixed(1);
+      }
+      if (closed) seg += ' Z';
+      parts.push(seg);
+    }
+    return parts.join(' ');
+  }
+
+  // =====================================================================
+  //   BAND COLOR RAMP
+  // ---------------------------------------------------------------------
+  //   Each iso-band's fill is the interpolated heat color at the band's
+  //   LOWER threshold (so adjacent bands share a stop boundary). Opacity
+  //   ramps with the band index to give the warmest bands more presence.
+  // =====================================================================
+  function bandFill(threshold, stops) {
+    return colorForValue(threshold, stops);
+  }
+  function bandOpacity(idx, total) {
+    // Bottom band ~0.18, top band ~0.78 — a perceptual ramp that keeps low
+    // areas readable as 'flat' while the apex bands ride bright.
+    return 0.18 + (idx / Math.max(1, total - 1)) * 0.6;
+  }
+
   // ---------- Build the SVG ----------
 
   function renderMap(container, response, mode) {
     if (!container || !response) return;
+    var t0 = (typeof performance !== 'undefined' && performance.now) ? performance.now() : Date.now();
     removeAllChildren(container);
 
     var heatStops = readHeatStops();
@@ -226,7 +505,21 @@
     grat.appendChild(eq);
     svg.appendChild(grat);
 
-    // ---- Heat matrix cells ----
+    // ---- Continent CLIP MASK + outline path (shared `d`) ----
+    // We need ONE unique clipPath id per panel so multiple maps on the page
+    // (when running in dev test harnesses) don't collide.
+    var continents = window.IYOGAU_WORLD_CONTINENTS || [];
+    var landPathD = continents.length ? continentsPathD(continents) : '';
+    var clipId = 'astrocarto-land-' + mode + '-' + Math.random().toString(36).slice(2, 8);
+    if (landPathD) {
+      var defs = svgEl('defs');
+      var clip = svgEl('clipPath', { id: clipId, clipPathUnits: 'userSpaceOnUse' });
+      clip.appendChild(svgEl('path', { d: landPathD, 'fill-rule': 'evenodd' }));
+      defs.appendChild(clip);
+      svg.appendChild(defs);
+    }
+
+    // ---- Heat matrix → contour bands ----
     // Response shape (from /api/astrocarto):
     //   heatMatrix.latitudes   = [lat_0, lat_1, ...]    (length R)
     //   heatMatrix.longitudes  = [lon_0, lon_1, ...]    (length C)
@@ -240,41 +533,78 @@
     var cellMeta = hm.cellMeta || [];
     var latStep = hm.latStep || (latitudes.length > 1 ? Math.abs(latitudes[1] - latitudes[0]) : 4);
     var lonStep = hm.lonStep || (longitudes.length > 1 ? Math.abs(longitudes[1] - longitudes[0]) : 4);
-    var cellW = (VIEW_W / 360) * lonStep + 0.6; // +0.6px to mask seams
-    var cellH = (VIEW_H / 180) * latStep + 0.6;
 
-    var heatG = svgEl('g', { class: 'astrocarto-heat', 'aria-hidden': 'true' });
-    for (var ri = 0; ri < latitudes.length; ri += 1) {
-      var rowLat = latitudes[ri];
-      var row = values[ri] || [];
-      for (var ci = 0; ci < longitudes.length; ci += 1) {
-        var cellLon = longitudes[ci];
-        var v = row[ci];
-        if (v == null) continue;
-        var x = lon2x(cellLon);
-        var y = lat2y(rowLat) - cellH; // cell anchors at lat; draw upward
-        var fill = colorForValue(v, heatStops);
-        var opacity = 0.08 + (v / 100) * 0.72; // 0.08 → 0.80
-        // Skip near-zero cells entirely — they only add visual noise and
-        // hide the continent outlines beneath.
-        if (v < 5) continue;
-        var rect = svgEl('rect', {
-          x: x.toFixed(1), y: y.toFixed(1),
-          width: cellW.toFixed(2), height: cellH.toFixed(2),
+    var bandsG = svgEl('g', {
+      class: 'astrocarto-bands',
+      'aria-hidden': 'true'
+    });
+    if (landPathD) bandsG.setAttribute('clip-path', 'url(#' + clipId + ')');
+
+    if (latitudes.length && longitudes.length && values.length) {
+      // (1) Extend longitudes so the matrix wraps continuously around the
+      //     world (otherwise the last column never gets a contour back to
+      //     lon = −180).
+      // (2) Pad the matrix with a guard row of zeros above and below the
+      //     real data, so any iso-contour that would otherwise dangle off
+      //     the top or bottom edge closes cleanly. Without this, the
+      //     evenodd fill-rule paints unrelated screen regions where the
+      //     polyline straight-line closes back to its start.
+      var lonsExt = longitudes.slice();
+      var lastLon = longitudes[longitudes.length - 1];
+      lonsExt.push(lastLon + lonStep);
+
+      var firstLat = latitudes[0];
+      var lastLat = latitudes[latitudes.length - 1];
+      var latsExt = [firstLat - latStep].concat(latitudes).concat([lastLat + latStep]);
+
+      var paddedCols = lonsExt.length;
+      var zeroRow = new Array(paddedCols);
+      for (var z = 0; z < paddedCols; z += 1) zeroRow[z] = 0;
+      var valuesExt = new Array(latitudes.length + 2);
+      valuesExt[0] = zeroRow;
+      for (var r = 0; r < values.length; r += 1) {
+        var row = values[r] || [];
+        var extRow = row.slice();
+        extRow.push(row[0]); // wrap east → west match
+        valuesExt[r + 1] = extRow;
+      }
+      valuesExt[valuesExt.length - 1] = zeroRow;
+
+      // Simplification epsilon scales with cell step — finer grids tolerate
+      // tighter simplification before they look polygonal.
+      var simplifyEps = Math.max(0.15, latStep * 0.12);
+
+      for (var bi = 0; bi < BAND_THRESHOLDS.length; bi += 1) {
+        var thresh = BAND_THRESHOLDS[bi];
+        var polylines = marchingSquares(valuesExt, latsExt, lonsExt, thresh);
+        if (!polylines.length) continue;
+        var simplified = [];
+        for (var pi = 0; pi < polylines.length; pi += 1) {
+          simplified.push(simplify(polylines[pi], simplifyEps));
+        }
+        var d = polylinesToPathD(simplified);
+        if (!d) continue;
+
+        var fill = bandFill(thresh, heatStops);
+        var op = bandOpacity(bi, BAND_THRESHOLDS.length);
+        var bandPath = svgEl('path', {
+          d: d,
           fill: fill,
-          'fill-opacity': opacity.toFixed(2),
-          class: 'astrocarto-cell'
+          'fill-opacity': op.toFixed(2),
+          'fill-rule': 'evenodd',
+          stroke: 'none',
+          class: 'astrocarto-band astrocarto-band--' + bi,
+          'data-threshold': String(thresh)
         });
-        heatG.appendChild(rect);
+        bandsG.appendChild(bandPath);
       }
     }
-    svg.appendChild(heatG);
+    svg.appendChild(bandsG);
 
-    // ---- Continent outlines (rendered ABOVE the heat to give shape) ----
-    var continents = window.IYOGAU_WORLD_CONTINENTS || [];
-    if (continents.length) {
+    // ---- Continent outlines (rendered ABOVE the bands, no fill) ----
+    if (landPathD) {
       var land = svgEl('path', {
-        d: continentsPathD(continents),
+        d: landPathD,
         class: 'astrocarto-land',
         'aria-hidden': 'true',
         'fill-rule': 'evenodd'
@@ -295,10 +625,10 @@
       if ((modeWeights[line.planet] || 0) < 0.5) continue;
       var color = planetTokenColor(line.planet);
       var dash = strokeDashFor(line.type);
-      var d = polylineToPathD(line.points);
-      if (!d) continue;
+      var dl = polylineToPathD(line.points);
+      if (!dl) continue;
       var path = svgEl('path', {
-        d: d,
+        d: dl,
         stroke: color,
         'stroke-width': 1.4,
         fill: 'none',
@@ -338,11 +668,8 @@
       if (!latitudes.length || !longitudes.length) { tooltip.hidden = true; return; }
       var lat0 = latitudes[0];
       var lon0 = longitudes[0];
-      // Cells render with SW-corner anchor extending NORTH+EAST (see renderMap
-      // around line 255: `y = lat2y(rowLat) - cellH`). Use floor — not round —
-      // so a pointer inside a cell maps to that cell's index, not the neighbour.
-      var ri = Math.floor((latP - lat0) / latStep);
-      var ci = Math.floor((lonP - lon0) / lonStep);
+      var ri = Math.round((latP - lat0) / latStep);
+      var ci = Math.round((lonP - lon0) / lonStep);
       if (ri < 0) ri = 0; else if (ri >= latitudes.length) ri = latitudes.length - 1;
       if (ci < 0) ci = 0; else if (ci >= longitudes.length) ci = longitudes.length - 1;
       var rowV = values[ri] || [];
@@ -367,6 +694,13 @@
     tipSurface.addEventListener('mousemove', showTooltipFor);
     tipSurface.addEventListener('click',     showTooltipFor);
     tipSurface.addEventListener('mouseleave', function () { tooltip.hidden = true; });
+
+    var t1 = (typeof performance !== 'undefined' && performance.now) ? performance.now() : Date.now();
+    try {
+      // Surface the render time in DOM so verification scripts can read it.
+      container.setAttribute('data-render-ms', String(Math.round(t1 - t0)));
+      if (window.console && console.debug) console.debug('[astrocarto] render', mode, (t1 - t0).toFixed(1) + 'ms');
+    } catch (e) {}
   }
 
   function renderTooltip(tooltip, cell, lonExact, latExact) {
@@ -508,6 +842,20 @@
     return [payload.date, payload.time, payload.tz, payload.lat, payload.lon].join('|');
   }
 
+  // Resolution tier: request `high` on desktop, `medium` on phones. The
+  // viewport boundary matches the standard Tailwind / Bootstrap "sm" break,
+  // which lines up with where the natal-chart UI shifts from single-column
+  // (mobile) to two-column (desktop). A coarser grid on mobile keeps the
+  // payload + render time within budget for slow networks and older phones.
+  function pickResolution() {
+    try {
+      if (window.matchMedia && window.matchMedia('(min-width: 640px)').matches) {
+        return 'high';
+      }
+    } catch (e) {}
+    return 'medium';
+  }
+
   function fetchAstrocarto(mode) {
     var src = window.__astrocarto && window.__astrocarto.payload;
     if (!src) return Promise.reject(new Error('no-natal-source'));
@@ -518,9 +866,12 @@
     if (src.unknownTime) {
       return Promise.reject(new Error('unknown-time'));
     }
-    var key = canonicalKey(src);
+    var resolution = pickResolution();
+    // Cache key includes resolution so a resize from mobile→desktop doesn't
+    // serve a stale low-res payload.
+    var key = canonicalKey(src) + '|' + resolution;
     if (key !== lastSourceKey) {
-      // Birth data changed — invalidate every cached response.
+      // Birth data or viewport changed — invalidate every cached response.
       responseCache = {};
       pendingFetches = {};
       lastSourceKey = key;
@@ -539,7 +890,7 @@
       lon: src.lon,
       tradition: tradition,
       mode: mode,
-      resolution: 'medium'
+      resolution: resolution
     };
     if (tradition === 'sidereal') {
       body.ayanamsa = src.ayanamsa || 'lahiri';
@@ -627,7 +978,7 @@
         // panels to refresh on next activation.
         responseCache = {};
         pendingFetches = {};
-        lastSourceKey = newKey;
+        lastSourceKey = '';
         document.querySelectorAll('[data-astrocarto][data-astrocarto-loaded="1"]').forEach(function (p) {
           p.removeAttribute('data-astrocarto-loaded');
           // Re-load eagerly only if the tab is currently visible.
@@ -690,6 +1041,25 @@
         });
       });
     }
+
+    // Re-fetch when crossing the desktop/mobile breakpoint so the resolution
+    // tier matches the new viewport. We invalidate the cache via setNatalSource
+    // re-trigger — same path as the form submit.
+    try {
+      var widthMql = window.matchMedia && window.matchMedia('(min-width: 640px)');
+      if (widthMql && widthMql.addEventListener) {
+        widthMql.addEventListener('change', function () {
+          // Force a cache miss next fetch by clearing the lastSourceKey.
+          lastSourceKey = '';
+          responseCache = {};
+          pendingFetches = {};
+          document.querySelectorAll('[data-astrocarto][data-astrocarto-loaded="1"]').forEach(function (p) {
+            p.removeAttribute('data-astrocarto-loaded');
+            if (!p.hidden) loadAndRenderInto(p);
+          });
+        });
+      }
+    } catch (e) {}
   }
 
   if (document.readyState === 'loading') {
@@ -697,4 +1067,16 @@
   } else {
     init();
   }
+
+  // Verification hook: only exposed when the page URL carries ?astrocartoDebug=1
+  // so the production bundle keeps a single closed entry point. The internal
+  // renderMap / renderLegend are tested by /_test-astrocarto.html during the
+  // local verification pass — see TODO/PLAN.md.
+  try {
+    var qs = (window.location && window.location.search) ? window.location.search : '';
+    if (qs.indexOf('astrocartoDebug=1') >= 0 || (window.__astrocartoDebug === true)) {
+      window.__debug_astrocarto_renderMap = renderMap;
+      window.__debug_astrocarto_renderLegend = renderLegend;
+    }
+  } catch (e) {}
 }());

@@ -1333,7 +1333,25 @@
   pointer-events: none;
 }
 .astrocarto-cell {
+  /* Legacy class — kept inert so older cached scripts still parse, but the
+     new renderer emits .astrocarto-band paths instead (see below). */
   pointer-events: none;
+}
+.astrocarto-bands {
+  /* Smooth contour bands extracted from the heat matrix by inline marching
+     squares. Bands are stacked low→high; each path's stroke is none and its
+     fill blends with the bands below to give a continuous gradient. The
+     `clip-path` (set via inline attribute) restricts bands to land only,
+     mirroring Astrodienst's overlay-on-continents look. */
+  pointer-events: none;
+}
+.astrocarto-band {
+  /* Fill + opacity set per-path in JS so a single class carries the shared
+     stroke/rendering aspects. `geometricPrecision` keeps the curves crisp
+     on hi-DPI displays without the box-aliased edges that the default
+     `auto` mode produces. */
+  stroke: none;
+  shape-rendering: geometricPrecision;
 }
 .astrocarto-line {
   pointer-events: none;
