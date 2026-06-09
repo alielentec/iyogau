@@ -57,27 +57,48 @@ function setCors(res, origin) {
   }
 }
 
-// Resolve the client IP for rate-limit keying. On Vercel, `x-real-ip` and
-// `x-vercel-forwarded-for` are set by the edge to the actual client IP and
-// cannot be spoofed by the caller. `x-forwarded-for` IS attacker-controlled
-// (it gets the caller's value appended with the real client IP), so we never
-// trust its leftmost entry. If we must fall back to XFF, take the RIGHTMOST
-// entry — that is the IP added by the most-recent trusted proxy.
+// Resolve the client IP for rate-limit keying. On Vercel only
+// `x-vercel-forwarded-for` is unspoofable — the edge sets it AFTER stripping
+// any inbound value. `x-real-ip` and `x-forwarded-for` are pass-through
+// attacker-controlled headers in Vercel's serverless runtime (the edge
+// appends the real IP but does NOT remove caller-supplied entries), so
+// trusting them lets an attacker rotate the value per request and bypass
+// rate-limit buckets entirely.
+//
+// Order of preference:
+//   1. `x-vercel-forwarded-for` — the only unspoofable header on Vercel,
+//      always the real client IP. Take the LEFTMOST entry (Vercel sets it
+//      as a single-value header in practice, but split-and-take-first is
+//      defensive against future format changes).
+//   2. `x-forwarded-for` — fallback for non-Vercel runtimes (local dev,
+//      generic Node hosts behind a reverse proxy). Take the RIGHTMOST
+//      entry — that is the IP added by the most-recent trusted proxy.
+//      Never the leftmost (caller-controlled).
+//   3. `x-real-ip` — gated to non-production environments only. This
+//      header is set by nginx and friends but is fully spoofable on
+//      Vercel; we only trust it in local dev (where VERCEL_ENV is unset).
+//   4. socket remoteAddress — direct-connection fallback.
 function clientIp(req) {
-  const realIp = req.headers['x-real-ip'];
-  if (typeof realIp === 'string' && realIp.length > 0 && realIp.length < 64) {
-    return realIp.trim();
-  }
   const vercelXff = req.headers['x-vercel-forwarded-for'];
   if (typeof vercelXff === 'string' && vercelXff.length > 0 && vercelXff.length < 256) {
     const parts = vercelXff.split(',');
-    return parts[parts.length - 1].trim();
+    // Vercel sets this to the immediate client IP, no chain. Leftmost.
+    return parts[0].trim();
   }
   const xff = req.headers['x-forwarded-for'];
   if (typeof xff === 'string' && xff.length > 0 && xff.length < 256) {
     // Rightmost = most-recent trusted hop. Never the leftmost (caller-controlled).
     const parts = xff.split(',');
     return parts[parts.length - 1].trim();
+  }
+  // x-real-ip is spoofable on Vercel — only trust it outside production-
+  // like environments. (VERCEL_ENV is unset locally; set to 'production'
+  // or 'preview' on deployed builds.)
+  if (!process.env.VERCEL_ENV) {
+    const realIp = req.headers['x-real-ip'];
+    if (typeof realIp === 'string' && realIp.length > 0 && realIp.length < 64) {
+      return realIp.trim();
+    }
   }
   return req.socket?.remoteAddress || 'unknown';
 }
@@ -138,9 +159,16 @@ export default async function handler(req, res) {
 
   setCors(res, corsOrigin);
 
-  // Reject cross-origin from disallowed origins. Same-origin (no Origin
-  // header, e.g. server-to-server smoke tests) is allowed.
-  if (reqOrigin && !corsOrigin) {
+  // Origin gate. Require EITHER an allow-listed Origin header, OR a
+  // Sec-Fetch-Site === 'same-origin' marker on requests that legitimately
+  // omit Origin (some browser modes / fetch keepalive paths drop it for
+  // same-origin requests). Server-to-server tools and scrapers send no
+  // Origin and no Sec-Fetch-Site — they get blocked. This closes the
+  // previous bypass where `if (reqOrigin && !corsOrigin)` only fired when
+  // Origin was set, letting null-Origin scrapers through.
+  const secFetchSite = req.headers['sec-fetch-site'];
+  const sameOriginFetch = secFetchSite === 'same-origin';
+  if (!corsOrigin && !sameOriginFetch) {
     res.status(403).json({ error: 'Origin not allowed.' });
     logLine({ t: new Date().toISOString(), ip: anonIp, status: 403, ms: Date.now() - startedAt, reason: 'origin' });
     return;
