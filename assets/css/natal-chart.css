@@ -732,3 +732,91 @@
 /* Hide the legacy "loc-detail" `hidden` attribute behavior — the fieldset
    stays visible whenever the form is shown (pre-populated by default). */
 .natal-loc-detail[hidden] { display: none; }
+
+/* =====================================================================
+ * Visual lift: distinguish the natal-chart section from neighboring
+ * white sections by using the theme's secondary surface tone, matching
+ * the rhythm of the Benefits section a few stops below it.
+ * =================================================================== */
+
+.natal-page--lifted {
+  background: var(--surface-2);
+  border-top: 1px solid var(--outline);
+  border-bottom: 1px solid var(--outline);
+}
+
+/* =====================================================================
+ * Equal-height tabpanels with internal scroll
+ *
+ * Without this, swapping tabs makes the page height jump:
+ *   Input Data  ~ 720px (the form)
+ *   Natal Chart ~ 620px (the SVG wheel)
+ *   Planets     ~ 540px (12 rows + Asc/MC summary)
+ *   Aspects     ~ 720px (20 aspect rows)
+ *
+ * Pin all four to the same min-height and let any overflow scroll
+ * inside the panel. The Natal Chart panel's wheel sets the floor.
+ * =================================================================== */
+
+.natal-tabpanel {
+  min-height: 620px;
+  max-height: 80vh;
+  overflow-y: auto;
+  overflow-x: hidden;
+  /* Tiny inner padding so the scrollbar doesn't touch the wheel/table. */
+  padding-right: 0.25rem;
+  /* Smooth scroll inside the panel. */
+  scroll-behavior: smooth;
+}
+/* On phones the wheel is smaller and the form longer — drop the floor
+   and let the natural content height drive. */
+@media (max-width: 640px) {
+  .natal-tabpanel {
+    min-height: 480px;
+    max-height: none; /* don't trap scroll on small viewports */
+    overflow-y: visible;
+  }
+}
+
+/* Subtler scrollbar in WebKit/Blink to match the theme palette. */
+.natal-tabpanel::-webkit-scrollbar { width: 6px; }
+.natal-tabpanel::-webkit-scrollbar-track { background: transparent; }
+.natal-tabpanel::-webkit-scrollbar-thumb {
+  background: color-mix(in srgb, var(--ink-muted) 30%, transparent);
+  border-radius: 3px;
+}
+.natal-tabpanel::-webkit-scrollbar-thumb:hover {
+  background: color-mix(in srgb, var(--ink-muted) 50%, transparent);
+}
+
+/* =====================================================================
+ * New hero CTA: "Try Free Vedic Natal Chart"
+ * Uses the existing btn-secondary token so it sits visually between
+ * btn-primary (Explore Programs) and btn-ghost (Apply Now).
+ * =================================================================== */
+
+/* Fallback in case the project's styles.css doesn't define btn-secondary
+   yet — give it an outlined-primary look that fits the theme. */
+.btn-secondary {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0.875rem 1.5rem;
+  font-size: 0.9375rem;
+  font-weight: 600;
+  color: var(--primary);
+  background: transparent;
+  border: 1.5px solid var(--primary);
+  border-radius: 9999px;
+  text-decoration: none;
+  transition: background 160ms ease, color 160ms ease, transform 80ms ease;
+}
+.btn-secondary:hover,
+.btn-secondary:focus-visible {
+  background: var(--primary);
+  color: var(--surface);
+  outline: none;
+}
+.btn-secondary:active {
+  transform: translateY(1px);
+}
