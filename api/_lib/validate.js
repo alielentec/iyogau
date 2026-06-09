@@ -66,7 +66,16 @@ function parseOffsetMinutes(tz) {
 //
 // IANA path: iterate twice to converge across DST transitions (the
 // candidate UTC may land in a different offset than the wall-clock instant).
-// Fixed-offset path: single subtraction, no iteration needed.
+// After convergence we VERIFY by re-applying the zone's offset and checking
+// the wall-clock round-trips. On DST "spring-forward" gaps (e.g. America/
+// New_York 2024-03-10 02:30 — clocks skip from 01:59 to 03:00, so 02:30
+// does not exist), the round-trip will mismatch and we throw with a
+// human-readable error rather than silently absorbing the input. On DST
+// "fall-back" ambiguity (e.g. 01:30 happens twice), we pick the EARLIER
+// occurrence (standard astrology-software convention) and surface a
+// warning via the returned object's __ambiguous flag if the caller wants
+// to log it.
+// Fixed-offset path: single subtraction, no iteration needed, no DST risk.
 export function localToUTC(dateStr, timeStr, tz) {
   const [y, mo, d] = dateStr.split('-').map(Number);
   const [hh, mm] = timeStr.split(':').map(Number);
@@ -74,11 +83,49 @@ export function localToUTC(dateStr, timeStr, tz) {
   if (fixedOffset !== null) {
     return new Date(Date.UTC(y, mo - 1, d, hh, mm, 0) - fixedOffset * 60_000);
   }
+  const wallUtc = Date.UTC(y, mo - 1, d, hh, mm, 0);
   // First guess: treat input as if it were UTC.
-  let utcGuess = Date.UTC(y, mo - 1, d, hh, mm, 0);
+  let utcGuess = wallUtc;
   for (let i = 0; i < 2; i++) {
     const offsetMin = offsetMinutesAt(utcGuess, tz);
-    utcGuess = Date.UTC(y, mo - 1, d, hh, mm, 0) - offsetMin * 60_000;
+    utcGuess = wallUtc - offsetMin * 60_000;
+  }
+  // Verification pass: take the candidate UTC, look up the zone's offset
+  // at that instant, derive the wall-clock the zone would display, and
+  // compare to the wall-clock the user supplied. On a DST gap the iteration
+  // converges to an instant whose wall-clock is on the OTHER side of the
+  // discontinuity, so the round-trip fails.
+  const finalOffsetMin = offsetMinutesAt(utcGuess, tz);
+  const roundTripWall = utcGuess + finalOffsetMin * 60_000;
+  if (roundTripWall !== wallUtc) {
+    throw new ValidationError(
+      'The supplied wall-clock time does not exist in the given timezone on that date (likely a DST spring-forward gap — clocks skipped through that time).'
+    );
+  }
+  // Ambiguity detection (DST fall-back): if the wall-clock falls inside
+  // a fall-back hour, there are TWO valid UTC instants 1 hour apart. The
+  // two-pass iteration above converges to ONE of them (typically the
+  // earlier — the iteration starts from the wall-clock-as-UTC guess and
+  // applies the offset, finding the EDT-side instant first). We probe
+  // BOTH neighbours (±1h); if either has the same wall-clock as our
+  // candidate, the input is ambiguous. We then keep the EARLIER UTC
+  // instant (standard astrology-software convention) and tag for warning.
+  const probe = (deltaMin) => {
+    const cand = utcGuess + deltaMin * 60_000;
+    const off = offsetMinutesAt(cand, tz);
+    return { cand, wall: cand + off * 60_000 };
+  };
+  const earlier = probe(-60);
+  const later = probe(60);
+  if (earlier.wall === wallUtc || later.wall === wallUtc) {
+    // Pick the EARLIER of (utcGuess, the matching neighbour).
+    const candidates = [utcGuess];
+    if (earlier.wall === wallUtc) candidates.push(earlier.cand);
+    if (later.wall === wallUtc)   candidates.push(later.cand);
+    const chosen = Math.min(...candidates);
+    const out = new Date(chosen);
+    out.__ambiguous = true;
+    return out;
   }
   return new Date(utcGuess);
 }
@@ -100,9 +147,26 @@ function offsetMinutesAt(utcMs, tz) {
   return Math.round((asUtc - utcMs) / 60_000);
 }
 
+// Allow-list for body fields. Any key outside this set is rejected with
+// a descriptive 400 — catches typos like `unknowTime` (missing `n`) and
+// bogus pass-through keys like `houseSystem` that today get silently
+// dropped, leaving the user wondering why their requested option had no
+// effect. Keep this list synced with the destructure below.
+const ALLOWED_BODY_FIELDS = new Set([
+  'date', 'time', 'tz', 'lat', 'lon',
+  'tradition', 'ayanamsa', 'unknownTime',
+]);
+
 export function validateInput(body) {
   if (!body || typeof body !== 'object' || Array.isArray(body)) {
     throw new ValidationError('Request body must be a JSON object.');
+  }
+
+  // Unknown-field gate — fail FAST before any expensive math runs.
+  for (const k of Object.keys(body)) {
+    if (!ALLOWED_BODY_FIELDS.has(k)) {
+      throw new ValidationError(`Unknown field: \`${k}\`. Allowed: ${Array.from(ALLOWED_BODY_FIELDS).join(', ')}.`);
+    }
   }
 
   const { date, time, tz, lat, lon, tradition, ayanamsa, unknownTime } = body;
@@ -154,8 +218,12 @@ export function validateInput(body) {
   // Reject polar latitudes where the ecliptic-rising-point formula is
   // mathematically singular and the chart concept is poorly defined.
   // Standard astrology software (Swiss Ephemeris) warns at this boundary.
-  if (lat > 66.5 || lat < -66.5) {
-    throw new ValidationError('Births above the Arctic or below the Antarctic Circle (lat outside ±66.5°) are not currently supported — the ascendant is mathematically undefined in those regions.');
+  // Bound = obliquity of the ecliptic ≈ 23.437° → Arctic Circle ≈ 66.563°.
+  // Previous bound 66.5° was an approximation that rejected real
+  // settlements at Icelandic latitudes 66.51–66.56°N (e.g. Grímsey,
+  // Siglufjörður).
+  if (lat > 66.563 || lat < -66.563) {
+    throw new ValidationError('Births above the Arctic or below the Antarctic Circle (lat outside ±66.563°) are not currently supported — the ascendant is mathematically undefined in those regions.');
   }
 
   let traditionFinal = tradition === undefined ? 'sidereal' : tradition;
@@ -170,6 +238,12 @@ export function validateInput(body) {
       throw new ValidationError('`ayanamsa` must be "lahiri" (the only supported value in v1).');
     }
   } else {
+    // tropical — ayanamsa is meaningless. Reject explicit values rather
+    // than silently dropping them; the user almost certainly intended to
+    // request sidereal Lahiri.
+    if (ayanamsa !== undefined) {
+      throw new ValidationError('`ayanamsa` is not valid for tropical tradition. Omit `ayanamsa` for tropical, or set `tradition: "sidereal"` to use Lahiri.');
+    }
     ayanamsaFinal = null;
   }
 

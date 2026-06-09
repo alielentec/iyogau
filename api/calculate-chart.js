@@ -242,8 +242,14 @@ export default async function handler(req, res) {
   try {
     dateUTC = localToUTC(input.date, input.time, input.tz);
     if (Number.isNaN(dateUTC.getTime())) throw new Error('invalid date');
-  } catch {
-    res.status(400).json({ error: 'Could not resolve birth date/time in the given timezone.' });
+  } catch (e) {
+    // DST-gap and similar wall-clock-doesn't-exist errors throw a
+    // descriptive ValidationError — surface its message verbatim. Other
+    // errors get the generic message (and we don't leak internals).
+    const msg = (e instanceof ValidationError)
+      ? e.message
+      : 'Could not resolve birth date/time in the given timezone.';
+    res.status(400).json({ error: msg });
     logLine({ t: new Date().toISOString(), ip: anonIp, status: 400, ms: Date.now() - startedAt, reason: 'tz' });
     return;
   }
@@ -267,6 +273,9 @@ export default async function handler(req, res) {
 function buildChart(input, dateUTC) {
   const warnings = [];
   if (input.unknownTime) warnings.push('approximate ascendant due to unknown birth time');
+  if (dateUTC && dateUTC.__ambiguous) {
+    warnings.push('birth time fell inside a DST fall-back hour and was ambiguous; the earlier occurrence was used (standard convention)');
+  }
 
   const ayanamsaValue = input.tradition === 'sidereal' ? lahiriAyanamsa(dateUTC) : 0;
   const adjust = (lonDeg) => input.tradition === 'sidereal'
