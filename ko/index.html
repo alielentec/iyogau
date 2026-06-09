@@ -66,7 +66,7 @@
 
 <link rel="preload" as="style" href="/assets/css/styles.css" />
 <link rel="stylesheet" href="/assets/css/styles.css" />
-<link rel="stylesheet" href="/assets/css/natal-chart.css?v=3" />
+<link rel="stylesheet" href="/assets/css/natal-chart.css?v=4" />
 
 <!-- Schema.org -->
 <script type="application/ld+json">
@@ -436,6 +436,20 @@
 
       <!-- ----- Tabpanel 1: Input Data ----- -->
       <div role="tabpanel" id="home-panel-input" aria-labelledby="home-tab-input" class="natal-tabpanel" hidden>
+
+        <!-- Inline attention banner: explains that the page is currently
+             showing Steve Jobs's chart as a demo, and that editing the
+             form replaces it with the user's own. Subtle primary-tinted
+             background so it reads as informational, not alarming. -->
+        <aside class="natal-banner" role="note" aria-label="Demo chart notice">
+          <svg class="natal-banner__icon" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+            <circle cx="12" cy="12" r="10"></circle>
+            <line x1="12" y1="8" x2="12" y2="12"></line>
+            <line x1="12" y1="16" x2="12.01" y2="16"></line>
+          </svg>
+          <span data-i18n="natal.form.steveJobsNote">Currently showing Steve Jobs&rsquo;s chart. Edit any field below and your own chart will appear in the Natal Chart tab.</span>
+        </aside>
+
         <section class="natal-form-section" aria-labelledby="home-natal-form-heading">
           <h3 id="home-natal-form-heading" class="sr-only" data-i18n="natal.form.heading">Birth details</h3>
 
@@ -451,9 +465,11 @@
                 novalidate
                 data-default-tz="America/Los_Angeles">
 
-            <div class="natal-field">
+            <div class="natal-field natal-field--name">
               <label for="home-nf-name" data-i18n="natal.form.name">Your name (optional)</label>
-              <input id="home-nf-name" name="name" type="text" maxlength="60" autocomplete="given-name" inputmode="text" />
+              <input id="home-nf-name" name="name" type="text" maxlength="60"
+                     autocomplete="given-name" inputmode="text"
+                     placeholder="Steve Jobs" />
               <small class="help" data-i18n="natal.form.name.help">For your reference only &mdash; not sent to our server.</small>
             </div>
 
@@ -575,6 +591,7 @@
           aria-busy="false"
         >
           <h2 id="home-natal-results-heading" class="sr-only" data-i18n="natal.results.heading">Your sidereal natal chart</h2>
+          <p class="natal-chart-title" id="home-natal-chart-title">Steve Jobs</p>
           <p class="natal-default-caption" id="home-natal-default-caption" data-i18n="natal.results.defaultCaption">Currently showing: Steve Jobs &middot; 24 Feb 1955 &middot; San Francisco</p>
 
           <div class="natal-wheel-wrap">
@@ -889,6 +906,49 @@
                 input.addEventListener('change', recalculateDebounced);
                 input.addEventListener('input', recalculateDebounced);
               });
+
+              // ---- 4b. Name field is LOCAL ONLY (never sent to the API
+              //          — see buildPayload() above which deliberately
+              //          omits it). Reflect typed name into the chart
+              //          title above the wheel and into the caption.
+              //          On blank, fall back to "Steve Jobs" / the
+              //          i18n default caption so the demo state stays
+              //          self-explanatory.
+              //
+              //          Snapshot the caption AFTER i18n has had a chance
+              //          to translate it — by reading it lazily on first
+              //          updateName() call, then caching. The data-orig
+              //          attribute below is preserved across language
+              //          switches by re-snapshotting whenever the active
+              //          name field is empty.
+              var nameEl    = $('home-nf-name');
+              var titleEl   = $('home-natal-chart-title');
+              var captionEl = $('home-natal-default-caption');
+              var defaultName = 'Steve Jobs';
+              function updateName() {
+                if (!nameEl) return;
+                var typed = (nameEl.value || '').trim();
+                var display = typed || defaultName;
+                if (titleEl) titleEl.textContent = display;
+                if (captionEl) {
+                  // Cache the i18n-resolved default caption the first
+                  // time we see the field empty so re-empty restores it.
+                  if (!captionEl.dataset.origCaption && !typed) {
+                    captionEl.dataset.origCaption = captionEl.textContent;
+                  }
+                  var orig = captionEl.dataset.origCaption || captionEl.textContent;
+                  captionEl.textContent = typed
+                    ? orig.replace(defaultName, typed)
+                    : orig;
+                }
+              }
+              if (nameEl) {
+                nameEl.addEventListener('input', updateName);
+                nameEl.addEventListener('change', updateName);
+                // Prime the cache so the very first keystroke has an
+                // i18n-resolved fallback to swap against.
+                updateName();
+              }
 
               // ---- 5. Submit button → immediate recalc (no debounce).
               //         Also unlocks even if consent isn't toggled — we
