@@ -185,7 +185,7 @@
     centralDisc:  22.28,               // central aspect disc
     signGlyphR:   47.58,               // rim sign glyphs
     signGlyphScale:       0.0484 * 0.55,
-    planetGlyphR: 39.5,               // user directive 2026-06-09 (v2): SINGLE constant ring for ALL planet glyphs. No per-planet radial offset of any kind — the radial stagger comb introduced in 13aa292 was removed. Cluster separation is handled entirely by the angular fan in layoutPlanets() — at 10–11° per planet and R=39.5, neighbors are ~7 SVG units of arc-length apart, comfortably larger than the ~3.97-unit glyph diameter. Leader is a single straight radial stick from L.field inward to (planetGlyphR − 0.946), color-matched to the planet.
+    planetGlyphR: 39.5,               // user directive 2026-06-09 (v3): SINGLE constant ring for ALL planet glyphs. The radialSlot offset from 13aa292 is reverted — every glyph lands at exactly L.planetGlyphR regardless of cluster membership. Cluster separation is handled by (a) the angular fan in layoutPlanets and (b) a per-cluster-index stagger of the LEADER ARC RADIUS (see the leader-geometry block below). The RED outer-segment touching the degree-tick is constant length for every planet so every degree-tick anchor reads identically; the GREEN inner-segment length absorbs the cluster stagger.
     planetGlyphScale:     0.0484 * 0.821,
     degreeR:      35.34,
     signGlyphInR: 32.22,
@@ -195,28 +195,24 @@
   };
 
   /* -----------------------------------------------------------------
-   * Leader-path geometry (user directive 2026-06-09 v2).
+   * Leader-path geometry (user directive 2026-06-09).
    *
-   * Shape: outer radial (R_OUT → R_MID at exact longitude) → connecting
-   * arc at R_MID (sweeps from exact longitude to fanned label angle) →
-   * inner radial (R_MID → R_IN at fanned angle). The arc traces the fan
-   * offset back to the planet's true degree on the outer ring, so the
-   * leader visibly anchors at the exact-longitude tick.
+   * Each leader is a two-90°-elbow path: outer radial → arc → inner
+   * radial. The arc sits at R_MID. For multi-planet clusters every
+   * cluster member's R_MID is staggered inward by exactly one
+   * LEADER_STROKE_WIDTH per cluster slot, producing a fan of nested
+   * concentric arcs (a "tight comb"). The inner radial (R_MID → R_IN)
+   * is a constant short stub equal to LEADER_STROKE_WIDTH so every
+   * planet's pointy "nub" is identical.
    *
-   * What changed in v2: R_MID is now a SINGLE constant for every planet
-   * (= L.field − 0.946). The per-cluster-member "comb" stagger from
-   * 13aa292 is removed entirely — all glyphs sit at L.planetGlyphR and
-   * every leader has identical radial segment lengths.
-   *
-   * Cluster separation is handled entirely by the angular fan (see
-   * layoutPlanets). Neighbors in a stellium are spaced 10–11° apart in
-   * label-angle, which at R=39.5 corresponds to ~7 SVG units of arc-
-   * length between glyph centers — comfortably more than the ~3.97-unit
-   * glyph diameter. At current spread values there is no realistic
-   * cluster size where the fan alone fails to separate glyphs, so the
-   * comb stagger was solving a non-existent problem.
+   * The sum of the two radial-segment lengths varies only by
+   * (clusterIndex) * LEADER_STROKE_WIDTH — visually invariant — so
+   * glyphs all sit at the SAME constant planetGlyphR while the arcs
+   * splay inward to disambiguate dense stelliums.
    * ----------------------------------------------------------------- */
-  var LEADER_STROKE_WIDTH = 0.08;               // matches CSS .luna-leader stroke-width (kept for parity in case future tuning re-introduces a tier-N gated stagger)
+  var R_OUT               = L.field;            // 44.28 — outer anchor at field-ring edge
+  var R_MID_BASE          = L.field - 0.946;    // 43.334 — base elbow radius (solo planets / cluster slot 0)
+  var LEADER_STROKE_WIDTH = 0.08;               // matches CSS .luna-leader stroke-width
 
   /* -----------------------------------------------------------------
    * Trig helpers — verbatim from ast/src/components/ChartWheel.jsx.
@@ -609,12 +605,15 @@
       var isBoundary = (deg % 30) === 0;
       var isFive = (deg % 5) === 0;
       var tOuter = L.zodiacBand;
-      // User directive 2026-06-09 (v2): every tick stops at or outside
-      // L.field (44.28) so no tick ever pierces into the planet-glyph
-      // annulus. The Sun glyph at the cusp sat directly under a 30°
-      // boundary tick under the old 1.6-unit length; this cleared it.
-      // Margins: boundary 0.30 (≥ field), fives 0.45, regular 0.55.
-      var tInner = L.zodiacBand - (isBoundary ? 0.88 : isFive ? 0.50 : 0.30);
+      // User directive 2026-06-09 (v3): degree-tick inner endpoints sit
+      // OUTSIDE the planet-glyph ring (and outside L.field for most),
+      // so the Sun glyph at a sign cusp never collides with a tick.
+      // Boundary ticks stop at R_OUT − 0.3 = 43.98 (just inside L.field
+      // = 44.28); five-ticks and 1° ticks are progressively shorter so
+      // they stop comfortably outside the field ring.
+      var tInner = isBoundary
+        ? (R_OUT - 0.3)                      // boundary (30°) — stops 0.3 above R_OUT
+        : (L.zodiacBand - (isFive ? 0.80 : 0.55));
       var tp1 = polar(c, tOuter, ang);
       var tp2 = polar(c, tInner, ang);
       var cls = 'luna-tick' +
