@@ -751,9 +751,14 @@
       //   connector : (R_MID_BASE, exact)   → (arcRadius_i, exact)        — empty when i = 0
       //   ARC       : (arcRadius_i, exact)  → (arcRadius_i, fanned)       — at the staggered radius
       //   GREEN     : (arcRadius_i, fanned) → (planetGlyphR, fanned)      — length varies by i
-      var clusterIndex = (planet.clusterSize > 1 && Number.isFinite(planet.clusterIndex))
-        ? planet.clusterIndex : 0;
-      var arcRadius = R_MID_BASE - clusterIndex * LEADER_STROKE_WIDTH;
+      // User directive 2026-06-09 (audit-driven, supersedes v3): no per-
+      // cluster stagger of any kind. The angular fan in layoutPlanets()
+      // gives 1.7-1.9x the glyph-touch threshold at every realistic
+      // cluster size (spread 10-11° vs threshold 5.76°), so radial-
+      // comb stagger was solving a non-existent problem. The user's
+      // exact words: "this handling is wrong because there is not
+      // interference of any of them."
+      var arcRadius = R_MID_BASE;
 
       var pRedOuter = polar(c, R_OUT,        exactAngle);  // start of RED (exact-degree tick anchor)
       var pRedInner = polar(c, R_MID_BASE,   exactAngle);  // end of RED / start of connector
