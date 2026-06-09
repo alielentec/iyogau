@@ -820,3 +820,256 @@
 .btn-secondary:active {
   transform: translateY(1px);
 }
+
+/* =====================================================================
+ * v=4 (June 2026) — Form redesign pass.
+ *
+ * Goals:
+ *   1) Fix the offset-input row that was stacking vertically (the
+ *      `.natal-field input[type="number"] { width: 100% }` rule earlier
+ *      in this file was winning on equal specificity for the
+ *      ±HH / MM inputs nested in `.natal-field.tz-offset-row`).
+ *   2) Tighter, more professional form hierarchy on desktop/tablet/phone.
+ *   3) Inline attention banner (Steve Jobs demo notice) styled subtly.
+ *   4) Prominent chart title above the wheel that reads as the name
+ *      of the person whose chart is shown.
+ *   5) Two-column layout on tablet+ for date/time pairs so the form is
+ *      shorter and reads as a single visual block.
+ *
+ * All rules appended here win the cascade over earlier sections; no
+ * earlier rule was removed. The selectors are minimally narrowed
+ * (mostly increased specificity via `.natal-form-section …` or
+ * `:where()` to keep weight low when needed). Designed to be a
+ * drop-in append-only patch.
+ * =================================================================== */
+
+/* ---- 1) Inline attention banner (Input Data tab) ---- */
+.natal-banner {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.625rem;
+  margin: 0 0 1rem;
+  padding: 0.625rem 0.875rem;
+  background: color-mix(in srgb, var(--primary) 7%, var(--surface));
+  border: 1px solid color-mix(in srgb, var(--primary) 22%, var(--outline));
+  border-left: 3px solid var(--primary);
+  border-radius: 8px;
+  font-size: 0.8125rem;
+  line-height: 1.45;
+  color: var(--ink);
+}
+.natal-banner__icon {
+  flex: 0 0 auto;
+  margin-top: 0.0625rem;
+  color: var(--primary);
+}
+
+/* ---- 2) Chart title above the wheel (name of the charted person) ---- */
+.natal-chart-title {
+  margin: 0 0 0.125rem;
+  font-family: "Noto Serif", serif;
+  font-size: clamp(1.25rem, 0.9rem + 1vw, 1.75rem);
+  font-weight: 600;
+  letter-spacing: 0.005em;
+  color: var(--primary);
+  text-align: center;
+  line-height: 1.2;
+}
+.natal-chart-title:empty { display: none; }
+
+/* Tighten the default-caption underneath the (now larger) title. */
+.natal-default-caption {
+  margin-top: 0;
+  margin-bottom: 0.875rem;
+}
+
+/* ---- 3) Form section: cleaner outer shell + tighter rhythm ---- */
+.natal-form-section {
+  /* Use the page surface so the form sits cleanly on the lifted
+     section background, instead of repeating surface-2 (which made
+     it blend into the section bg and lose definition). */
+  background: var(--surface);
+  border: 1px solid var(--outline);
+  border-radius: 12px;
+  padding: clamp(0.875rem, 1.5vw, 1.25rem) clamp(1rem, 2vw, 1.5rem);
+}
+
+/* On desktop+, group the four short fields (name / date / time
+   / place) into two columns to compress vertical height. The
+   location fieldset, consent block and submit row already span both
+   columns via the earlier `grid-column: 1 / -1` rules. */
+@media (min-width: 720px) {
+  .natal-form {
+    grid-template-columns: 1fr 1fr;
+    column-gap: 1.25rem;
+    row-gap: 0.875rem;
+  }
+  /* Name + place stay full-width — they're the longest text inputs
+     and need room. Date + time pair up as two narrow columns. */
+  .natal-field--name,
+  .natal-field--combo {
+    grid-column: 1 / -1;
+  }
+}
+
+/* Date/time inputs on desktop are narrower — the native picker UI
+   only needs ~10ch of width. Allow the natural shrink without
+   stretching across the column. */
+@media (min-width: 720px) {
+  #home-nf-date,
+  #home-nf-time,
+  #nf-date,
+  #nf-time {
+    max-width: 14rem;
+  }
+}
+
+/* ---- 4) Fine-tune location fieldset ----
+   Make it visually quieter (it's optional) and tighter inside. */
+.natal-loc-detail {
+  background: var(--surface-2);
+  border: 1px solid var(--outline);
+  border-radius: 10px;
+  padding: 0.75rem 0.875rem 0.625rem;
+}
+.natal-loc-detail > legend {
+  padding: 0 0.4375rem;
+  margin-left: 0.25rem;
+  font-size: 0.75rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--ink-muted);
+}
+.natal-loc-detail .help {
+  margin-top: 0.5rem;
+}
+
+/* ---- 5) Custom UTC offset: visually fuse the checkbox + input row
+   so they read as ONE control, not three stacked sub-sections. ---- */
+.tz-offset-row {
+  margin-top: 0.625rem;
+  padding-top: 0.625rem;
+  border-top: 1px dashed var(--outline);
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.5rem 0.875rem;
+}
+.tz-offset-row > .inline-check {
+  flex: 0 0 auto;
+}
+
+/* ---- 6) CRITICAL FIX for the offset-input row stacking vertically.
+   The earlier rule `.natal-field input[type="number"] { width: 100% }`
+   was matching the offset hours/minutes inputs because they sit inside
+   a `.natal-field.tz-offset-row` wrapper. Higher-specificity selectors
+   here force inline sizing. The `!important` on width is justified
+   because the entire row's layout depends on it and overriding by
+   selector specificity alone is fragile when third-party CSS lands
+   in the cascade. ---- */
+.tz-offset-input-row {
+  display: inline-flex !important;
+  flex: 0 0 auto;
+  align-items: center;
+  gap: 0.375rem;
+  margin-top: 0;
+  flex-wrap: nowrap;
+}
+.tz-offset-input-row[hidden] { display: none !important; }
+
+.natal-field.tz-offset-row .tz-offset-input-row > select,
+.natal-field.tz-offset-row .tz-offset-input-row > input[type="number"],
+#home-nf-loc-detail .tz-offset-input-row > select,
+#home-nf-loc-detail .tz-offset-input-row > input[type="number"],
+#nf-loc-detail .tz-offset-input-row > select,
+#nf-loc-detail .tz-offset-input-row > input[type="number"] {
+  width: auto !important;
+  flex: 0 0 auto;
+  min-width: 0;
+  padding: 0.3125rem 0.4375rem;
+  font-size: 0.875rem;
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+  min-height: 32px;
+  text-align: center;
+}
+
+/* Sign select: just `+` or `−`, 2.25rem is plenty. */
+#home-nf-loc-detail .tz-offset-input-row > select#home-nf-tz-offset-sign,
+#nf-loc-detail .tz-offset-input-row > select#nf-tz-offset-sign {
+  width: 2.75rem !important;
+}
+
+/* Hours / minutes: ~3rem each fits two digits comfortably. */
+#home-nf-loc-detail .tz-offset-input-row > input#home-nf-tz-offset-hours,
+#home-nf-loc-detail .tz-offset-input-row > input#home-nf-tz-offset-minutes,
+#nf-loc-detail .tz-offset-input-row > input#nf-tz-offset-hours,
+#nf-loc-detail .tz-offset-input-row > input#nf-tz-offset-minutes {
+  width: 3rem !important;
+}
+
+.tz-offset-sign-label {
+  font-size: 0.8125rem;
+  font-weight: 600;
+  color: var(--ink-muted);
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+.tz-offset-colon {
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+  font-size: 1rem;
+  font-weight: 600;
+  color: var(--ink);
+  padding: 0 0.0625rem;
+}
+
+/* Phone: allow the offset row to wrap below its checkbox label but
+   each spinner stays on a single inline line. */
+@media (max-width: 520px) {
+  .tz-offset-row {
+    gap: 0.5rem 0.625rem;
+  }
+  .tz-offset-input-row {
+    width: 100%;
+  }
+}
+
+/* ---- 7) Consent block — quieter so it feels procedural, not a wall. */
+.natal-form .consent {
+  padding: 0.625rem 0.75rem;
+  background: var(--surface-2);
+  border: 1px solid var(--outline);
+  border-radius: 8px;
+  font-size: 0.8125rem;
+}
+.natal-form .consent .inline-check {
+  font-size: 0.8125rem;
+}
+
+/* ---- 8) Submit row — left-aligned button, comfortable click target. */
+.natal-field--submit {
+  align-items: flex-start;
+}
+.natal-field--submit .btn {
+  min-width: 13rem;
+  padding: 0.5625rem 1.25rem;
+  font-size: 0.9375rem;
+}
+@media (max-width: 520px) {
+  .natal-field--submit .btn {
+    width: 100%;
+    min-width: 0;
+  }
+}
+
+/* ---- 9) Tabpanel padding nudge — the panel had a min-height of 620px
+   with internal scroll which fights with the new compact form. Allow
+   the Input Data panel to size to its (now smaller) content rather
+   than scrolling. ---- */
+#home-panel-input,
+.natal-tabpanel:has(.natal-form-section) {
+  /* No min-height pin for the Input Data panel — let the form drive
+     height. The Natal Chart panel still pins to 620px so tab swaps
+     don't reflow the page. */
+  min-height: 0;
+}

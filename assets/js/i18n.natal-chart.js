@@ -51,6 +51,7 @@
           heading: 'Birth details',
           name: 'Your name (optional)',
           'name.help': 'For your reference only — not sent to our server.',
+          steveJobsNote: 'Currently showing Steve Jobs’s chart. Edit any field below and your own chart will appear in the Natal Chart tab.',
           date: 'Birth date',
           time: 'Birth time',
           'time.unknown': 'I don’t know my birth time',
@@ -61,6 +62,8 @@
           'tz.adjust': 'adjust',
           lat: 'Latitude',
           lon: 'Longitude',
+          'tz.offset.enable': 'Use custom UTC offset instead',
+          'tz.offset': 'UTC offset (±HH:MM)',
           adjust: {
             legend: 'Fine-tune location (optional)',
             help: 'Auto-filled from the city you picked. Adjust if needed.'
@@ -129,6 +132,7 @@
           heading: '출생 정보',
           name: '이름 (선택)',
           'name.help': '참고용입니다 — 서버로 전송되지 않습니다.',
+          steveJobsNote: '현재 스티브 잡스의 차트를 표시 중입니다. 아래 항목을 수정하면 베다 차트 탭에 본인의 차트가 표시됩니다.',
           date: '출생일',
           time: '출생 시각',
           'time.unknown': '출생 시각을 모릅니다',
@@ -139,6 +143,8 @@
           'tz.adjust': '수정',
           lat: '위도',
           lon: '경도',
+          'tz.offset.enable': '사용자 지정 UTC 오프셋 사용',
+          'tz.offset': 'UTC 오프셋 (±HH:MM)',
           adjust: {
             legend: '위치 세부 조정 (선택 사항)',
             help: '선택하신 도시를 기반으로 자동 입력됩니다. 필요하면 직접 조정하세요.'
@@ -229,6 +235,7 @@
           heading: '出生资料',
           name: '姓名（选填）',
           'name.help': '仅供您参考 — 不会发送到我们的服务器。',
+          steveJobsNote: '当前显示的是史蒂夫·乔布斯的星盘。修改下面任意字段后，您自己的星盘将出现在"吠陀星盘"标签页。',
           date: '出生日期',
           time: '出生时间',
           'time.unknown': '我不知道自己的出生时间',
@@ -239,6 +246,8 @@
           'tz.adjust': '调整',
           lat: '纬度',
           lon: '经度',
+          'tz.offset.enable': '改用自定义 UTC 偏移',
+          'tz.offset': 'UTC 偏移 (±HH:MM)',
           adjust: {
             legend: '微调位置（可选）',
             help: '根据您选择的城市自动填充。如需调整请修改。'
