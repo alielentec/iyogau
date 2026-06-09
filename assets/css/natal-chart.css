@@ -498,12 +498,12 @@
 .luna-axis-line     { stroke: var(--gold-hover); stroke-width: 0.35; }
 .luna-axis-line-mc  { stroke: var(--gold);       stroke-width: 0.35; stroke-dasharray: 0.6 0.4; }
 
-/* Planet leader (single straight radial line, ring → inner stack)
+/* Planet leader: outer radial → constant-R connecting arc → inner radial.
  * Stroke color is set inline per-planet by natal-chart-wheel.js using the
  * --planet-<name> token, so each leader matches its glyph hue. Stroke width
- * and opacity remain centralised here. The numeric value MUST stay in sync
- * with INNER_STAGGER_STEP in natal-chart-wheel.js (the inward stagger step
- * for tight clusters is exactly one stroke-width). */
+ * and opacity remain centralised here. Numeric value matches the JS
+ * LEADER_STROKE_WIDTH constant (kept in parity for any future tier-N gated
+ * stagger reintroduction). */
 .luna-leader {
   stroke-width: 0.08;
   fill: none;

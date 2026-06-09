@@ -185,7 +185,7 @@
     centralDisc:  22.28,               // central aspect disc
     signGlyphR:   47.58,               // rim sign glyphs
     signGlyphScale:       0.0484 * 0.55,
-    planetGlyphR: 38.5,               // user directive 2026-06-09: 1 unit inward to clear zodiac boundary ticks (Sun glyph reaches r≈41.18 at 39.5; tick boundary inner end at 43.56 — visually tight at sign cusps)
+    planetGlyphR: 39.5,               // user directive 2026-06-09 (v2): SINGLE constant ring for ALL planet glyphs. No per-planet radial offset of any kind — the radial stagger comb introduced in 13aa292 was removed. Cluster separation is handled entirely by the angular fan in layoutPlanets() — at 10–11° per planet and R=39.5, neighbors are ~7 SVG units of arc-length apart, comfortably larger than the ~3.97-unit glyph diameter. Leader is a single straight radial stick from L.field inward to (planetGlyphR − 0.946), color-matched to the planet.
     planetGlyphScale:     0.0484 * 0.821,
     degreeR:      35.34,
     signGlyphInR: 32.22,
@@ -193,6 +193,30 @@
     minuteR:      29.81,
     aspectGlyphScale:     0.4456 * 0.88 * 0.05
   };
+
+  /* -----------------------------------------------------------------
+   * Leader-path geometry (user directive 2026-06-09 v2).
+   *
+   * Shape: outer radial (R_OUT → R_MID at exact longitude) → connecting
+   * arc at R_MID (sweeps from exact longitude to fanned label angle) →
+   * inner radial (R_MID → R_IN at fanned angle). The arc traces the fan
+   * offset back to the planet's true degree on the outer ring, so the
+   * leader visibly anchors at the exact-longitude tick.
+   *
+   * What changed in v2: R_MID is now a SINGLE constant for every planet
+   * (= L.field − 0.946). The per-cluster-member "comb" stagger from
+   * 13aa292 is removed entirely — all glyphs sit at L.planetGlyphR and
+   * every leader has identical radial segment lengths.
+   *
+   * Cluster separation is handled entirely by the angular fan (see
+   * layoutPlanets). Neighbors in a stellium are spaced 10–11° apart in
+   * label-angle, which at R=39.5 corresponds to ~7 SVG units of arc-
+   * length between glyph centers — comfortably more than the ~3.97-unit
+   * glyph diameter. At current spread values there is no realistic
+   * cluster size where the fan alone fails to separate glyphs, so the
+   * comb stagger was solving a non-existent problem.
+   * ----------------------------------------------------------------- */
+  var LEADER_STROKE_WIDTH = 0.08;               // matches CSS .luna-leader stroke-width (kept for parity in case future tuning re-introduces a tier-N gated stagger)
 
   /* -----------------------------------------------------------------
    * Trig helpers — verbatim from ast/src/components/ChartWheel.jsx.
@@ -307,37 +331,18 @@
 
     var out = [];
     clusters.forEach(function (cluster) {
+      // Angular fan: 11° per planet for clusters of 2-3, 10° per planet
+      // for clusters of 4+. This is the ONLY separation mechanism — see
+      // the leader-geometry comment block above for the reasoning.
       var spread = cluster.length > 3 ? 10 : 11;
-      // Inner-endpoint staggering (per user directive 2026-06-09):
-      // ALL planet glyphs sit on a SINGLE outer ring (L.planetGlyphR).
-      // When consecutive cluster members fall within TIGHT_THRESHOLD_DEG
-      // of each other, we walk an inward-only "comb" — each successive
-      // member's leader inner endpoint pulls further inward by exactly
-      // one stroke-width (INNER_STAGGER_STEP). Glyph position never moves
-      // radially. The comb resets to 0 the moment the angular gap to the
-      // previous member exceeds TIGHT_THRESHOLD_DEG.
-      var TIGHT_THRESHOLD_DEG = 3;
-      var INNER_STAGGER_STEP = 0.08; // matches .luna-leader stroke-width
-      var innerSlots = new Array(cluster.length);
-      innerSlots[0] = 0;
-      for (var ri = 1; ri < cluster.length; ri += 1) {
-        var prev = cluster[ri - 1];
-        var here = cluster[ri];
-        innerSlots[ri] = (angleDistance(here.longitude, prev.longitude) < TIGHT_THRESHOLD_DEG)
-          ? innerSlots[ri - 1] + 1
-          : 0;
-      }
       cluster.forEach(function (planet, index) {
         var labelLongitude = normalizeDegrees(
           planet.longitude + (index - (cluster.length - 1) / 2) * spread
         );
         out.push(Object.assign({}, planet, {
           clusterSize: cluster.length,
-          labelLongitude: labelLongitude,
-          // Only the leader's inner endpoint moves; glyph stays on the
-          // single planet ring. Multiplied by INNER_STAGGER_STEP in render().
-          innerSlot: innerSlots[index],
-          innerRadiusOffset: innerSlots[index] * INNER_STAGGER_STEP
+          clusterIndex: index,
+          labelLongitude: labelLongitude
         }));
       });
     });
@@ -604,7 +609,12 @@
       var isBoundary = (deg % 30) === 0;
       var isFive = (deg % 5) === 0;
       var tOuter = L.zodiacBand;
-      var tInner = L.zodiacBand - (isBoundary ? 1.6 : isFive ? 1.0 : 0.55);
+      // User directive 2026-06-09 (v2): every tick stops at or outside
+      // L.field (44.28) so no tick ever pierces into the planet-glyph
+      // annulus. The Sun glyph at the cusp sat directly under a 30°
+      // boundary tick under the old 1.6-unit length; this cleared it.
+      // Margins: boundary 0.30 (≥ field), fives 0.45, regular 0.55.
+      var tInner = L.zodiacBand - (isBoundary ? 0.88 : isFive ? 0.50 : 0.30);
       var tp1 = polar(c, tOuter, ang);
       var tp2 = polar(c, tInner, ang);
       var cls = 'luna-tick' +
@@ -714,26 +724,44 @@
       var exactAngle = chartAngle(planet.longitude, asc);
       var color = PLANET_COLORS[planet.key] || 'var(--ink-muted)';
       var s = splitLongitude(planet.longitude);
-      // SINGLE PLANET RING (per user directive 2026-06-09): every glyph
-      // sits at L.planetGlyphR. No radial offset is applied to glyphs.
-      // layoutPlanets() supplies a per-planet innerRadiusOffset that pulls
-      // the leader's INNER endpoint deeper inward by one stroke-width per
-      // tight-cluster slot — glyph position never moves.
-      var innerOffset = Number.isFinite(planet.innerRadiusOffset) ? planet.innerRadiusOffset : 0;
+      // SINGLE PLANET RING (per user directive 2026-06-09 v2): every
+      // glyph sits at exactly L.planetGlyphR. No per-planet radial
+      // offset of any kind. Cluster separation is the angular fan's job
+      // (see layoutPlanets); the leader geometry below is uniform across
+      // every planet so a tight pair like Moon (28° Sc) + Node (27° Sc)
+      // renders as two identical sticks fanned by the 11° spread, with
+      // no inner-comb noise.
       var glyphR = L.planetGlyphR;
       var glyphId = PLANET_GLYPH_IDS[planet.key] || 'sun'; // safety fallback
       var glyphTransform = placeGlyph(angle, glyphR, L.planetGlyphScale);
 
-      // ---- Leader: single straight radial line from ring edge inward ----
-      // Drawn from L.field (outer ring edge) straight inward to
-      // (glyphR - 0.946 - innerOffset). For tight-cluster members, each
-      // successive line stops one stroke-width shorter inward — producing
-      // a clean comb of parallel sticks at the same outer anchor.
-      var R_OUT = L.field;
-      var R_IN  = L.planetGlyphR - 0.946 - innerOffset;
-      var p0 = polar(c, R_OUT, exactAngle);
-      var p1 = polar(c, R_IN,  exactAngle);
-      var leaderPath = 'M ' + p0[0] + ' ' + p0[1] + ' L ' + p1[0] + ' ' + p1[1];
+      // ---- Leader: outer radial → constant-R connecting arc → inner radial ----
+      // Path: M(exact, R_OUT) -> L(exact, R_MID) -> A(R_MID, exact→fanned) -> L(fanned, R_IN)
+      // R_MID is a SINGLE constant for every planet (no per-cluster
+      // offset). The arc traces the fan offset back to the planet's true
+      // degree on the outer ring — so each leader visibly anchors to the
+      // exact-longitude tick — but the radial portions are identical
+      // length for every planet.
+      var R_OUT   = L.field;                       // 44.28
+      var R_MID   = L.field - 0.946;               // 43.334
+      var R_IN    = L.planetGlyphR - 0.946;        // 38.554 — stop just shy of the glyph
+
+      var pExact   = polar(c, R_OUT, exactAngle);  // outer anchor on L.field at true longitude
+      var pElbowO  = polar(c, R_MID, exactAngle);  // outer elbow (still on exact angle)
+      var pElbowI  = polar(c, R_MID, angle);       // inner elbow (at fanned label angle)
+      var pInner   = polar(c, R_IN,  angle);       // inner nub at fanned angle
+
+      // SVG arc parameters: short arc (large-arc-flag = 0); sweep depends on
+      // direction (fanned angle vs exact angle, normalized to [-180, +180]).
+      var deltaSigned = ((angle - exactAngle) % 360 + 540) % 360 - 180;
+      var sweepFlag = (deltaSigned >= 0) ? 1 : 0;
+
+      var leaderPath =
+        'M ' + pExact[0]  + ' ' + pExact[1]  +
+        ' L ' + pElbowO[0] + ' ' + pElbowO[1] +
+        ' A ' + R_MID + ' ' + R_MID + ' 0 0 ' + sweepFlag + ' ' +
+                pElbowI[0] + ' ' + pElbowI[1] +
+        ' L ' + pInner[0]  + ' ' + pInner[1];
       var leaderClass = 'luna-leader' + (planet.oob ? ' luna-leader-oob' : '');
 
       // ---- Inner stack: degree, per-planet sign glyph, minute ----
