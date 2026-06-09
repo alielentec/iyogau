@@ -1277,9 +1277,13 @@
      form's `t()` helper looks up labels (sign / planet / aspect /
      error / "Calculating…" strings) — otherwise ko/zh visitors get
      English fallbacks for everything below the section heading. -->
-<script src="/assets/js/i18n.natal-chart.js" defer></script>
-<script src="/assets/js/natal-chart-wheel.js" defer></script>
-<script src="/assets/js/natal-chart-tabs.js" defer></script>
-<script src="/assets/js/natal-chart-form.js" defer></script>
+<!-- ?v=N cache-bust on each JS file to evict Vercel's immutable cache.
+     Bump these on every JS change (same pattern as natal-chart.css?v=N).
+     Current version round: i18n.natal-chart.js (adds defaultName key) and
+     natal-chart-form.js (other recent edits). -->
+<script src="/assets/js/i18n.natal-chart.js?v=2" defer></script>
+<script src="/assets/js/natal-chart-wheel.js?v=2" defer></script>
+<script src="/assets/js/natal-chart-tabs.js?v=2" defer></script>
+<script src="/assets/js/natal-chart-form.js?v=2" defer></script>
 </body>
 </html>
