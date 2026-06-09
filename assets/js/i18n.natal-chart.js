@@ -99,7 +99,8 @@
             planets: 'Planets',
             lines: 'Lines',
             heat: 'Heat scale',
-            heatLabels: 'Lower ▸ Higher'
+            heatLabels: 'Lower ▸ Higher',
+            smoothingCaption: 'Heat field smoothed via Gaussian blur (σ = {sigma}° lat/lon).'
           },
           lineTypes: {
             mc: 'MC', ic: 'IC', ac: 'AC', dc: 'DC',
@@ -301,7 +302,8 @@
             planets: '행성',
             lines: '라인',
             heat: '강도 척도',
-            heatLabels: '낮음 ▸ 높음'
+            heatLabels: '낮음 ▸ 높음',
+            smoothingCaption: '히트 필드는 가우시안 블러로 부드럽게 처리됨 (σ = {sigma}°).'
           },
           lineTypes: {
             mc: 'MC', ic: 'IC', ac: 'AC', dc: 'DC',
@@ -521,7 +523,8 @@
             planets: '行星',
             lines: '线条',
             heat: '强度刻度',
-            heatLabels: '低 ▸ 高'
+            heatLabels: '低 ▸ 高',
+            smoothingCaption: '热力图通过高斯模糊平滑（σ = {sigma}°）。'
           },
           lineTypes: {
             mc: 'MC', ic: 'IC', ac: 'AC', dc: 'DC',

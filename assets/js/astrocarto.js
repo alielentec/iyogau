@@ -396,10 +396,23 @@
     var hm = response.heatMatrix || {};
     var latitudes = hm.latitudes || [];
     var longitudes = hm.longitudes || [];
-    var values = hm.values || [];
+    var rawValues = hm.values || [];
     var cellMeta = hm.cellMeta || [];
     var latStep = hm.latStep || (latitudes.length > 1 ? Math.abs(latitudes[1] - latitudes[0]) : 4);
     var lonStep = hm.lonStep || (longitudes.length > 1 ? Math.abs(longitudes[1] - longitudes[0]) : 4);
+
+    // ---- Gaussian smoothing of the score field ----
+    // We blur the score matrix (NOT the per-cell metadata) so the rendered
+    // gradient looks continuous instead of stair-stepped. The tooltip still
+    // reports the RAW per-cell value and contributing lines, so the user
+    // sees honest data on hover even though the visual is smoothed.
+    var sigmaCells = GAUSSIAN_SIGMA_CELLS;
+    var values = gaussianBlur2D(rawValues, sigmaCells);
+    var sigmaDegrees = sigmaCells * latStep;
+    // Surface σ in the DOM so the legend caption and verification scripts
+    // can read the exact smoothing amount applied to this render.
+    container.setAttribute('data-astrocarto-sigma-cells', sigmaCells.toFixed(2));
+    container.setAttribute('data-astrocarto-sigma-degrees', sigmaDegrees.toFixed(2));
 
     var heatG = svgEl('g', {
       class: 'astrocarto-heat',
@@ -509,12 +522,17 @@
       var ci = Math.round((lonP - lon0) / lonStep);
       if (ri < 0) ri = 0; else if (ri >= latitudes.length) ri = latitudes.length - 1;
       if (ci < 0) ci = 0; else if (ci >= longitudes.length) ci = longitudes.length - 1;
-      var rowV = values[ri] || [];
+      // Tooltip reports the RAW per-cell score and contributing lines
+      // (not the smoothed value), so the user sees honest data on hover even
+      // though the visual gradient is Gaussian-smoothed for readability.
+      var rowVRaw = rawValues[ri] || [];
+      var rowVSmooth = values[ri] || [];
       var rowM = cellMeta[ri] || [];
       var match = {
         lat: latitudes[ri],
         lon: longitudes[ci],
-        value: rowV[ci],
+        value: rowVRaw[ci],
+        smoothed: rowVSmooth[ci],
         top: rowM[ci] || []
       };
       if (match.value == null) { tooltip.hidden = true; return; }
@@ -663,6 +681,24 @@
     heatWrap.appendChild(htmlEl('span', { class: 'astrocarto-legend__heatlabels' },
       tr('natal.astrocarto.legend.heatLabels', 'Lower ▸ Higher')));
     container.appendChild(heatWrap);
+
+    // Gaussian smoothing caption — exposes σ so the user knows exactly how
+    // much the visual gradient was smoothed. The number is purely cosmetic
+    // (the tooltip continues to report RAW per-cell scores), but it must be
+    // visible so the smoothing isn't mistaken for new information.
+    var hm = (response && response.heatMatrix) || {};
+    var latStep = hm.latStep ||
+      (hm.latitudes && hm.latitudes.length > 1 ? Math.abs(hm.latitudes[1] - hm.latitudes[0]) : 4);
+    var sigmaDeg = (GAUSSIAN_SIGMA_CELLS * latStep).toFixed(1);
+    var sigmaTemplate = tr(
+      'natal.astrocarto.legend.smoothingCaption',
+      'Heat field smoothed via Gaussian blur (σ = {sigma}° lat/lon).'
+    );
+    var smoothWrap = htmlEl('div', { class: 'astrocarto-legend__smoothing' });
+    smoothWrap.appendChild(document.createTextNode(
+      sigmaTemplate.replace('{sigma}', sigmaDeg)
+    ));
+    container.appendChild(smoothWrap);
   }
 
   // ---------- Tab-driven loader ----------
@@ -854,6 +890,16 @@
   }
 
   function init() {
+    // Projection round-trip self-check (only when ?astrocartoDebug=1) — fails
+    // loudly via console.assert if the equirectangular forward/inverse pair
+    // ever drifts (e.g. somebody changes VIEW_W without updating the inverse).
+    try {
+      var qsInit = (window.location && window.location.search) ? window.location.search : '';
+      if (qsInit.indexOf('astrocartoDebug=1') >= 0 || window.__astrocartoDebug === true) {
+        runProjectionSelfCheck();
+      }
+    } catch (e) {}
+
     // The natal bootstrap may have already rendered the default chart
     // before this deferred script attached. It stashes the chart's input
     // payload on window.__astrocartoPending; pick it up so the first tab
@@ -914,6 +960,20 @@
     if (qs.indexOf('astrocartoDebug=1') >= 0 || (window.__astrocartoDebug === true)) {
       window.__debug_astrocarto_renderMap = renderMap;
       window.__debug_astrocarto_renderLegend = renderLegend;
+      // Projection + smoothing helpers, exposed for the in-browser
+      // verification pass. Read-only — callers can compose their own tests.
+      window.__debug_astrocarto_projection = {
+        xOfLon: xOfLon, yOfLat: yOfLat,
+        lonOfX: lonOfX, latOfY: latOfY,
+        VIEW_W: VIEW_W, VIEW_H: VIEW_H,
+        runSelfCheck: runProjectionSelfCheck
+      };
+      window.__debug_astrocarto_smoothing = {
+        sigmaCells: GAUSSIAN_SIGMA_CELLS,
+        gaussianKernel: gaussianKernel,
+        gaussian1D: gaussian1D,
+        gaussianBlur2D: gaussianBlur2D
+      };
     }
   } catch (e) {}
 }());
