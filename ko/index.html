@@ -66,7 +66,7 @@
 
 <link rel="preload" as="style" href="/assets/css/styles.css" />
 <link rel="stylesheet" href="/assets/css/styles.css" />
-<link rel="stylesheet" href="/assets/css/natal-chart.css?v=15" />
+<link rel="stylesheet" href="/assets/css/natal-chart.css?v=16" />
 
 <!-- Schema.org -->
 <script type="application/ld+json">
@@ -1344,26 +1344,32 @@
                   "Currently showing " + lp.name + "'s chart. Edit any field below and your own chart will appear in the Natal Chart tab.";
               }
               // Extract a Rodden rating from a preset source string.
-              // Returns one of 'AA', 'A', 'B', 'C', 'DD', 'X' or null.
-              // We look for the FIRST unreliable rating token (DD, C, X)
-              // because those are the only ones we surface as warnings;
-              // AA/A are reliable and need no badge. B is included because
-              // Maradona's preset is B-rated with explicit "time disputed"
-              // caveat in the source field — beta evaluator flagged that
-              // B was falling through with no badge.
+              // Returns one of 'B', 'C', 'DD', 'X' or null.
+              // AA and A are reliable and need no badge — any other Rodden
+              // rating surfaces a UI warning so users know the chart's
+              // Ascendant + houses may not be canonical. B is included
+              // because some presets (e.g. Maradona) carry an explicit
+              // "time disputed" caveat in the source field.
+              //
+              // Adding a rating: append a row to RATING_PATTERNS below.
+              // The table makes the regex-anchor choice visible side-by-side
+              // so a future contributor can't miss the difference:
+              //   DD/X use \b…\b (two-letter or X is unambiguous)
+              //   C/B  use (^|[^A-Z])…\b (must guard against a preceding
+              //                            A — e.g. "AA-rated" or "AB-rated")
+              var RATING_PATTERNS = [
+                ['DD', /\bDD[- ]?rated\b/],
+                ['X',  /\bX[- ]?rated\b/],
+                ['C',  /(^|[^A-Z])C[- ]?rated\b/],
+                ['B',  /(^|[^A-Z])B[- ]?rated\b/]
+              ];
               function getUnreliableRating(sourceStr) {
                 if (typeof sourceStr !== 'string' || !sourceStr) return null;
-                // Order matters: DD before D, and we want the first match.
-                // Anchor on word-boundary so "AA-rated" doesn't match "A-rated".
-                if (/\bDD[- ]?rated\b/.test(sourceStr)) return 'DD';
-                if (/\bX[- ]?rated\b/.test(sourceStr))  return 'X';
-                // C-rated must NOT be confused with "Cancer rising" or similar.
-                // The "-rated" suffix anchors it.
-                if (/(^|[^A-Z])C[- ]?rated\b/.test(sourceStr)) return 'C';
-                // B-rated: time disputed (e.g. multiple conflicting cites).
-                // Surfaced as a badge so users know the Ascendant/houses
-                // shown may differ from canonical published charts.
-                if (/(^|[^A-Z])B[- ]?rated\b/.test(sourceStr)) return 'B';
+                for (var ri = 0; ri < RATING_PATTERNS.length; ri++) {
+                  if (RATING_PATTERNS[ri][1].test(sourceStr)) {
+                    return RATING_PATTERNS[ri][0];
+                  }
+                }
                 return null;
               }
 
@@ -2165,6 +2171,6 @@
 <script src="/assets/js/i18n.natal-chart.js?v=12" defer></script>
 <script src="/assets/js/natal-chart-wheel.js?v=10" defer></script>
 <script src="/assets/js/natal-chart-tabs.js?v=10" defer></script>
-<script src="/assets/js/natal-chart-form.js?v=12" defer></script>
+<script src="/assets/js/natal-chart-form.js?v=13" defer></script>
 </body>
 </html>
