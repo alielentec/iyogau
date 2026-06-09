@@ -25,3 +25,7 @@ node_modules/
 # Stray local downloads / scratch files unrelated to iyogau
 Fast Flow Rate Estimation*
 *.html.local
+
+# debug screenshots
+natal-calc-section.png
+*.debug.png
