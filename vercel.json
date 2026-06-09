@@ -5,6 +5,13 @@
   "framework": null,
   "cleanUrls": true,
   "trailingSlash": true,
+  "functions": {
+    "api/*.js": {
+      "runtime": "nodejs22.x",
+      "maxDuration": 10,
+      "memory": 256
+    }
+  },
   "headers": [
     {
       "source": "/(.*)",
@@ -49,9 +56,6 @@
         }
       ]
     }
-  ],
-  "rewrites": [
-    { "source": "/api/(.*)", "destination": "/api/$1" }
   ],
   "redirects": [
     { "source": "/index.html", "destination": "/", "permanent": true }
