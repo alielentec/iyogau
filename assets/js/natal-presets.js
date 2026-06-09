@@ -136,7 +136,7 @@
       lat: 32.6669,
       lon: -16.9241,
       tz: 'Atlantic/Madeira',
-      source: 'Astro-Databank A-rated (from him via Hello! magazine interview)',
+      source: 'Astro-Databank A-rated (Treindl via Astro.com — Portuguese astrologer from Funchal reporting 05:25 from birth certificate)',
       blurb: 'Portuguese footballer; five-time Ballon d’Or winner; all-time top international goal-scorer'
     },
     {
@@ -160,7 +160,7 @@
       lat: -34.7035,
       lon: -58.4124,
       tz: 'America/Argentina/Buenos_Aires',
-      source: 'Astro-Databank AA-rated (Jimmy Burns biography, citing his mother Doña Tota; 07:05 local)',
+      source: 'Astro-Databank B-rated; 07:05 from Levinsky biography Maradona: Rebelde con Causa (2003); his mother Doña Tota separately cited 06:40 to the Buenos Aires Astrological Centre in 1990. Time disputed — Ascendant and houses may not be accurate',
       blurb: 'Argentine footballer; 1986 World Cup winner; widely regarded as one of the greatest of all time'
     },
     {
