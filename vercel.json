@@ -7,7 +7,6 @@
   "trailingSlash": true,
   "functions": {
     "api/*.js": {
-      "runtime": "nodejs22.x",
       "maxDuration": 10,
       "memory": 256
     }

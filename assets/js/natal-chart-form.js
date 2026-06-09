@@ -415,7 +415,13 @@
     submitBtn.disabled = true;
     resultsEl.setAttribute('aria-busy', 'true');
 
-    fetch('/api/calculate-chart', {
+    // Trailing slash matches vercel.json's trailingSlash: true. Without it,
+    // Vercel issues a 308 redirect and most fetch implementations drop the
+    // POST body on redirect — the function receives an empty body and
+    // returns 400. Same call shape works against the dev-server (which
+    // routes /api/calculate-chart and /api/calculate-chart/ to the same
+    // handler).
+    fetch('/api/calculate-chart/', {
       method: 'POST',
       headers: { 'content-type': 'application/json', 'accept': 'application/json' },
       body: JSON.stringify(payload)
