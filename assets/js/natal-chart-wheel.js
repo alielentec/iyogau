@@ -195,36 +195,49 @@
   };
 
   /* -----------------------------------------------------------------
-   * Leader-path geometry — user directive 2026-06-09 (v3).
+   * Leader-path geometry — user directive 2026-06-09 (latest revision).
    *
    * Up to four sub-segments per leader. The RED outer segment is a
    * CONSTANT length for every planet; the GREEN inner segment absorbs
-   * the per-cluster stagger; the glyph sits at L.planetGlyphR exactly.
+   * the per-cluster stagger; the glyph sits at L.planetGlyphR exactly,
+   * but GREEN stops GLYPH_STANDOFF units OUTSIDE the glyph centre so
+   * the leader stroke does not crash through the glyph artwork.
    *
-   *     ● R_OUT, exactDegree                  (outer anchor on L.field)
+   *     ● R_OUT, exactDegree                          (outer anchor on L.field)
    *     |  RED   (constant length = RED_LENGTH for every planet)
-   *     ● R_MID_BASE, exactDegree             (corner 1)
-   *     |  connector  (length = i × LEADER_STROKE_WIDTH; empty when i=0)
-   *     ● arcRadius_i, exactDegree            (corner 2)
+   *     ● R_MID_BASE, exactDegree                     (corner 1)
+   *     |  connector  (length = i × STAGGER_STEP; empty when i=0)
+   *     ● arcRadius_i, exactDegree                    (corner 2)
    *     ↳ arc along arcRadius_i, exactDegree → fannedDegree
-   *     ● arcRadius_i, fannedDegree           (corner 3)
-   *     |  GREEN (length = arcRadius_i − planetGlyphR; varies by cluster)
-   *     ● planetGlyphR, fannedDegree          (glyph centre)
+   *     ● arcRadius_i, fannedDegree                   (corner 3)
+   *     |  GREEN (length = arcRadius_i − (planetGlyphR + GLYPH_STANDOFF))
+   *     ● planetGlyphR + GLYPH_STANDOFF, fannedDegree (GREEN endpoint, gap above glyph)
+   *     ·· (GLYPH_STANDOFF gap — leader stops here)
+   *     ● planetGlyphR, fannedDegree                  (glyph centre, no stroke)
    *
    * Spec:
    *   - RED (R_OUT → R_MID_BASE at exact longitude) is identical for
    *     every planet → every degree-tick anchor reads the same.
-   *   - The arc radius walks inward by exactly LEADER_STROKE_WIDTH per
-   *     cluster slot, so a 5-planet stellium produces 5 nested arcs
-   *     instead of 5 overlapping ones (the "comb" effect lives on the
-   *     arc layer, not the glyph layer).
-   *   - GREEN length therefore varies only by i × LEADER_STROKE_WIDTH.
-   *   - All glyphs land at L.planetGlyphR exactly — single ring.
+   *   - The arc radius walks inward by exactly STAGGER_STEP per cluster
+   *     slot, where STAGGER_STEP = 2 × LEADER_STROKE_WIDTH. The 2×
+   *     spacing means adjacent staggered arcs are separated by exactly
+   *     one stroke-width of background — a 0.08-wide line, then a
+   *     0.08-wide background gap, then the next 0.08-wide line — so a
+   *     5-planet stellium produces 5 visually distinct nested arcs.
+   *   - GREEN length therefore varies only by i × STAGGER_STEP.
+   *   - All glyphs are centred on L.planetGlyphR exactly — single ring.
+   *   - GREEN's inner endpoint is at (planetGlyphR + GLYPH_STANDOFF),
+   *     leaving ~GLYPH_STANDOFF viewBox units of visible gap between
+   *     the leader and the glyph artwork. Total radial reach of the
+   *     visible leader: R_OUT − (planetGlyphR + GLYPH_STANDOFF) −
+   *     i × STAGGER_STEP.
    * ----------------------------------------------------------------- */
   var R_OUT               = L.field;             // 44.28 — outer anchor at field-ring edge
   var RED_LENGTH          = 0.946;               // CONSTANT length of the RED outer segment for EVERY planet
   var R_MID_BASE          = R_OUT - RED_LENGTH;  // 43.334 — base arc radius (solo planets / cluster slot 0)
-  var LEADER_STROKE_WIDTH = 0.08;                // matches CSS .luna-leader stroke-width — per-cluster-index radial step
+  var LEADER_STROKE_WIDTH = 0.08;                // matches CSS .luna-leader stroke-width
+  var STAGGER_STEP        = 2 * LEADER_STROKE_WIDTH; // 0.16 — per-cluster-slot radial step (2× = 1 line + 1 background-gap between adjacent lines)
+  var GLYPH_STANDOFF      = 2.0;                 // viewBox units; leader GREEN segment stops this far ABOVE planetGlyphR so glyph artwork is not crossed
 
   /* -----------------------------------------------------------------
    * Trig helpers — verbatim from ast/src/components/ChartWheel.jsx.
@@ -751,20 +764,23 @@
       //   connector : (R_MID_BASE, exact)   → (arcRadius_i, exact)        — empty when i = 0
       //   ARC       : (arcRadius_i, exact)  → (arcRadius_i, fanned)       — at the staggered radius
       //   GREEN     : (arcRadius_i, fanned) → (planetGlyphR, fanned)      — length varies by i
-      // User directive 2026-06-09 (audit-driven, supersedes v3): no per-
-      // cluster stagger of any kind. The angular fan in layoutPlanets()
-      // gives 1.7-1.9x the glyph-touch threshold at every realistic
-      // cluster size (spread 10-11° vs threshold 5.76°), so radial-
-      // comb stagger was solving a non-existent problem. The user's
-      // exact words: "this handling is wrong because there is not
-      // interference of any of them."
-      var arcRadius = R_MID_BASE;
+      // User directive 2026-06-09 (latest revision, supersedes audit-revert):
+      // re-enable per-cluster stagger at TWICE the stroke width per slot, so
+      // adjacent staggered arcs sit with one full stroke-width of background
+      // colour between them (visible gap, not abutting lines). Exact user
+      // phrasing: "make 2* thickness instead of 1*thickness which means we
+      // have 1 thickness background color between lines".
+      var arcRadius = R_MID_BASE - (planet.clusterIndex || 0) * STAGGER_STEP;
 
       var pRedOuter = polar(c, R_OUT,        exactAngle);  // start of RED (exact-degree tick anchor)
       var pRedInner = polar(c, R_MID_BASE,   exactAngle);  // end of RED / start of connector
       var pArcOuter = polar(c, arcRadius,    exactAngle);  // end of connector / start of ARC
       var pArcInner = polar(c, arcRadius,    angle);       // end of ARC / start of GREEN
-      var pGreenIn  = polar(c, L.planetGlyphR, angle);     // end of GREEN — at the glyph
+      // GREEN ends GLYPH_STANDOFF units OUTSIDE the glyph centre, leaving
+      // a visible gap so the stroke does not crash through the glyph art.
+      // User directive 2026-06-09: "current path interfere the planet make
+      // it a bit shorter as distance given using red arrow".
+      var pGreenIn  = polar(c, L.planetGlyphR + GLYPH_STANDOFF, angle); // end of GREEN — stops above glyph
 
       // SVG arc params: short arc (large-arc-flag = 0); sweep direction
       // tracks the fan offset (signed, normalised to [-180, +180]).
