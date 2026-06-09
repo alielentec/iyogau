@@ -671,6 +671,19 @@
     });
   }
 
+  // Pre-population hook. When the markup ships with a pre-resolved
+  // birthplace (data-resolved="1") and a default timezone hint on the
+  // form (data-default-tz="…"), treat it as if the user had just picked
+  // a city — populate the tz <select>, select the right zone, reveal the
+  // location-detail fieldset, and re-run validation. This lets the
+  // landing page render Steve Jobs's chart with a form that's already
+  // populated and one-click-from-valid (user only has to tick consent).
+  if (placeEl && placeEl.dataset && placeEl.dataset.resolved === '1') {
+    var defaultTz = form.getAttribute('data-default-tz');
+    if (defaultTz) setTimezone(defaultTz);
+    if (locDetail) locDetail.hidden = false;
+  }
+
   // Initial state
   revalidate();
 

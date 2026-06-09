@@ -191,11 +191,18 @@ window.I18N = {
 
     "natal.section.eyebrow": "Vedic Natal Chart",
     "natal.section.heading": "Try it with your own birth details",
-    "natal.section.intro": "Enter the date, time, and place you were born. The calculator runs sidereal Vedic math on our server — your details are not stored, sold, or sent anywhere else. Results appear on screen within seconds.",
+    "natal.section.intro": "The chart below is computed for Steve Jobs (24 Feb 1955, San Francisco). Open the Input Data tab to enter your own birth details — the calculator runs sidereal Vedic math on our server and your details are never stored, sold, or sent anywhere else.",
     "natal.form.lat": "Latitude",
     "natal.form.lon": "Longitude",
     "natal.form.adjust.legend": "Fine-tune location (optional)",
-    "natal.form.adjust.help": "Auto-filled from the city you picked. Adjust if needed."
+    "natal.form.adjust.help": "Auto-filled from the city you picked. Adjust if needed.",
+    "natal.tabs.input": "Input Data",
+    "natal.tabs.chart": "Natal Chart",
+    "natal.tabs.planets": "Planet Positions",
+    "natal.tabs.aspects": "Major Aspects",
+    "natal.results.defaultCaption": "Currently showing: Steve Jobs · 24 Feb 1955 · San Francisco",
+    "natal.results.steveJobsAttrib": "Steve Jobs birth data: Astro-Databank, AA-rated.",
+    "natal.results.aspectsEmpty": "No major aspects within standard orbs for this chart."
   },
 
   ko: {
@@ -388,11 +395,18 @@ window.I18N = {
 
     "natal.section.eyebrow": "베다 천궁도",
     "natal.section.heading": "당신의 출생 정보로 직접 확인해보세요",
-    "natal.section.intro": "출생일, 출생 시간, 출생 장소를 입력하세요. 계산은 시데레알(베다) 방식으로 서버에서 수행되며, 입력하신 정보는 저장·판매·전송되지 않습니다. 결과는 몇 초 안에 화면에 표시됩니다.",
+    "natal.section.intro": "아래 차트는 스티브 잡스(1955년 2월 24일, 샌프란시스코)의 베다 출생 차트입니다. 입력 데이터 탭에서 당신의 출생 정보를 입력하세요. 계산은 시데레알(베다) 방식으로 서버에서 수행되며, 입력하신 정보는 저장·판매·전송되지 않습니다.",
     "natal.form.lat": "위도",
     "natal.form.lon": "경도",
     "natal.form.adjust.legend": "위치 세부 조정 (선택 사항)",
-    "natal.form.adjust.help": "선택하신 도시를 기반으로 자동 입력됩니다. 필요하면 직접 조정하세요."
+    "natal.form.adjust.help": "선택하신 도시를 기반으로 자동 입력됩니다. 필요하면 직접 조정하세요.",
+    "natal.tabs.input": "입력 데이터",
+    "natal.tabs.chart": "베다 차트",
+    "natal.tabs.planets": "행성 위치",
+    "natal.tabs.aspects": "주요 각도",
+    "natal.results.defaultCaption": "현재 표시: 스티브 잡스 · 1955년 2월 24일 · 샌프란시스코",
+    "natal.results.steveJobsAttrib": "스티브 잡스 출생 정보: Astro-Databank, AA 등급.",
+    "natal.results.aspectsEmpty": "표준 오브 범위 내에 주요 각도가 없습니다."
   },
 
   zh: {
@@ -585,10 +599,17 @@ window.I18N = {
 
     "natal.section.eyebrow": "吠陀本命星盘",
     "natal.section.heading": "用您自己的出生信息亲自试一下",
-    "natal.section.intro": "请输入您的出生日期、时间和地点。计算采用恒星黄道（吠陀）方法，在我们的服务器上完成。您输入的信息不会被保存、出售或转发给任何第三方。结果将在几秒内显示在屏幕上。",
+    "natal.section.intro": "下方星盘以史蒂夫·乔布斯（1955 年 2 月 24 日，旧金山）的出生数据计算。在「输入数据」标签中输入您自己的出生信息即可。计算采用恒星黄道（吠陀）方法在我们服务器上完成，您输入的信息不会被保存、出售或转发给任何第三方。",
     "natal.form.lat": "纬度",
     "natal.form.lon": "经度",
     "natal.form.adjust.legend": "微调位置（可选）",
-    "natal.form.adjust.help": "根据您选择的城市自动填充。如需调整请修改。"
+    "natal.form.adjust.help": "根据您选择的城市自动填充。如需调整请修改。",
+    "natal.tabs.input": "输入数据",
+    "natal.tabs.chart": "吠陀星盘",
+    "natal.tabs.planets": "行星位置",
+    "natal.tabs.aspects": "主要相位",
+    "natal.results.defaultCaption": "当前显示：史蒂夫·乔布斯 · 1955 年 2 月 24 日 · 旧金山",
+    "natal.results.steveJobsAttrib": "史蒂夫·乔布斯出生数据：Astro-Databank，AA 级。",
+    "natal.results.aspectsEmpty": "本星盘在标准容许度内没有主要相位。"
   }
 };

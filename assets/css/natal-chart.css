@@ -528,3 +528,150 @@
 .natal-loc-detail .help {
   margin-top: 0.5rem;
 }
+
+/* =====================================================================
+ * Tabs (Input Data | Natal Chart | Planet Positions | Major Aspects)
+ *
+ * Generic styles — works on the homepage embed and the dedicated page.
+ * Visual style: pill-shaped buttons in a horizontal scroll on phones,
+ * full row on tablet+. Active tab uses the theme primary as its
+ * border-bottom (underline-style indicator, common in modern UI).
+ * =================================================================== */
+
+.natal-tabs {
+  display: flex;
+  flex-wrap: nowrap;
+  gap: 0.25rem;
+  margin: 0 0 1.25rem;
+  padding: 0 0 0.125rem;
+  border-bottom: 1px solid var(--outline);
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+  scrollbar-width: none;
+}
+.natal-tabs::-webkit-scrollbar { display: none; }
+
+.natal-tab {
+  flex: 0 0 auto;
+  padding: 0.625rem 1rem;
+  font-family: inherit;
+  font-size: 0.875rem;
+  font-weight: 500;
+  color: var(--ink-muted);
+  background: transparent;
+  border: none;
+  border-bottom: 2px solid transparent;
+  border-radius: 0;
+  cursor: pointer;
+  white-space: nowrap;
+  transition: color 120ms ease, border-color 120ms ease, background 120ms ease;
+  margin-bottom: -1px; /* overlap the tablist's bottom border */
+}
+.natal-tab:hover {
+  color: var(--ink);
+  background: color-mix(in srgb, var(--primary) 8%, transparent);
+}
+.natal-tab:focus-visible {
+  outline: none;
+  box-shadow: 0 0 0 3px var(--primary-faint);
+  border-radius: 6px 6px 0 0;
+}
+.natal-tab.is-active,
+.natal-tab[aria-selected="true"] {
+  color: var(--primary);
+  border-bottom-color: var(--primary);
+  font-weight: 600;
+}
+
+.natal-tabpanel {
+  display: block;
+  padding-block: 0.5rem;
+  outline: none;
+}
+.natal-tabpanel[hidden] { display: none; }
+
+/* Default chart caption above the wheel — small attribution-style text */
+.natal-default-caption {
+  margin: 0 0 0.75rem;
+  font-size: 0.8125rem;
+  color: var(--ink-muted);
+  text-align: center;
+  font-style: italic;
+}
+
+/* Empty-state for the Aspects tab when none surface */
+.natal-empty {
+  padding: 2rem 1rem;
+  font-size: 0.9375rem;
+  color: var(--ink-muted);
+  text-align: center;
+  font-style: italic;
+  background: color-mix(in srgb, var(--surface) 50%, transparent);
+  border: 1px dashed var(--outline);
+  border-radius: 10px;
+}
+
+/* =====================================================================
+ * Compactness pass (CSS only — per user preference, no fields hidden).
+ *
+ * Applies progressively-tighter spacing/typography over the existing
+ * rules. Defined LAST in the file so its declarations win the cascade
+ * regardless of specificity. Goal: roughly -30% vertical footprint on
+ * the form without making any control feel cramped at 14-inch laptop.
+ * =================================================================== */
+
+.natal-form-section {
+  padding: clamp(0.875rem, 1.5vw, 1.25rem);
+  border-radius: 12px;
+}
+.natal-form {
+  gap: 0.75rem;
+}
+@media (min-width: 640px) {
+  .natal-form {
+    gap: 0.75rem 1rem;
+  }
+}
+.natal-field {
+  gap: 0.25rem;
+}
+.natal-field > label,
+.natal-field > .label-text {
+  font-size: 0.8125rem;
+}
+.natal-field input[type="text"],
+.natal-field input[type="date"],
+.natal-field input[type="time"],
+.natal-field input[type="number"],
+.natal-field select {
+  padding: 0.4375rem 0.5625rem;
+  font-size: 0.875rem;
+  min-height: 36px;
+}
+.natal-field .help {
+  font-size: 0.75rem;
+}
+.natal-loc-detail {
+  padding: 0.625rem 0.75rem;
+}
+.natal-loc-detail > legend {
+  font-size: 0.75rem;
+}
+.natal-loc-grid {
+  gap: 0.5rem;
+}
+@media (min-width: 560px) {
+  .natal-loc-grid {
+    gap: 0.625rem;
+  }
+}
+.natal-form .consent {
+  padding: 0.625rem 0.75rem;
+}
+.inline-check {
+  font-size: 0.8125rem;
+}
+.natal-field--submit .btn {
+  min-width: 12rem;
+  padding: 0.5rem 1rem;
+}

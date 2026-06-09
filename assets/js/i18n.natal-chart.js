@@ -74,8 +74,17 @@
             api: 'Sorry — we could not compute your chart. Please check your details and try again.'
           }
         },
+        tabs: {
+          input: 'Input Data',
+          chart: 'Natal Chart',
+          planets: 'Planet Positions',
+          aspects: 'Major Aspects'
+        },
         results: {
           heading: 'Your sidereal natal chart',
+          defaultCaption: 'Currently showing: Steve Jobs · 24 Feb 1955 · San Francisco',
+          steveJobsAttrib: 'Steve Jobs birth data: Astro-Databank, AA-rated.',
+          aspectsEmpty: 'No major aspects within standard orbs for this chart.',
           ascendant: 'Ascendant',
           midheaven: 'Midheaven',
           planets: 'Planet positions',
@@ -143,8 +152,17 @@
             api: '죄송합니다. 차트를 계산할 수 없었습니다. 입력 정보를 확인하고 다시 시도해 주세요.'
           }
         },
+        tabs: {
+          input: '입력 데이터',
+          chart: '베다 차트',
+          planets: '행성 위치',
+          aspects: '주요 각도'
+        },
         results: {
           heading: '당신의 베다 출생 차트',
+          defaultCaption: '현재 표시: 스티브 잡스 · 1955년 2월 24일 · 샌프란시스코',
+          steveJobsAttrib: '스티브 잡스 출생 정보: Astro-Databank, AA 등급.',
+          aspectsEmpty: '표준 오브 범위 내에 주요 각도가 없습니다.',
           ascendant: '상승궁 (Asc)',
           midheaven: '천정 (MC)',
           planets: '행성 위치',
@@ -234,7 +252,16 @@
             api: '抱歉 — 无法计算您的星盘。请检查资料后重试。'
           }
         },
+        tabs: {
+          input: '输入数据',
+          chart: '吠陀星盘',
+          planets: '行星位置',
+          aspects: '主要相位'
+        },
         results: {
+          defaultCaption: '当前显示：史蒂夫·乔布斯 · 1955 年 2 月 24 日 · 旧金山',
+          steveJobsAttrib: '史蒂夫·乔布斯出生数据：Astro-Databank，AA 级。',
+          aspectsEmpty: '本星盘在标准容许度内没有主要相位。',
           heading: '您的吐吃师出生星盘',  // TODO native-review
           ascendant: '上升点 (Asc)',
           midheaven: '天顶 (MC)',
