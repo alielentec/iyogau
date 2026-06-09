@@ -431,10 +431,10 @@
     // lat/lon are now user-editable, so validate numeric range too
     var lat = parseFloat(latEl.value);
     var lon = parseFloat(lonEl.value);
-    if (!isFinite(lat) || lat < -66.5 || lat > 66.5) return false;
+    if (!isFinite(lat) || lat < -66.563 || lat > 66.563) return false;
     if (!isFinite(lon) || lon < -180 || lon > 180) return false;
     var tz = currentTz();
-    if (!tz || !/[A-Za-z]+\/[A-Za-z_]+/.test(tz)) return false;
+    if (!tz || !(/^[+-]\d{1,2}:\d{2}$/.test(tz) || /[A-Za-z]+\/[A-Za-z_]+/.test(tz))) return false;
     if (!consentEl.checked) return false;
     return true;
   }
