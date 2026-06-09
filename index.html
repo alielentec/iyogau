@@ -66,7 +66,7 @@
 
 <link rel="preload" as="style" href="/assets/css/styles.css" />
 <link rel="stylesheet" href="/assets/css/styles.css" />
-<link rel="stylesheet" href="/assets/css/natal-chart.css?v=7" />
+<link rel="stylesheet" href="/assets/css/natal-chart.css?v=8" />
 
 <!-- Schema.org -->
 <script type="application/ld+json">
@@ -420,7 +420,7 @@
       <div class="section-head">
         <span class="eyebrow" data-i18n="natal.section.eyebrow">Vedic Natal Chart</span>
         <h2 id="natal-calc-heading" data-i18n="natal.section.heading">Try it with your own birth details</h2>
-        <p class="natal-intro" data-i18n="natal.section.intro">Enter the date, time, and place you were born. The calculator runs sidereal Vedic math on our server &mdash; your details are not stored, sold, or sent anywhere else. Results appear on screen within seconds.</p>
+        <p class="natal-intro" id="home-natal-section-intro" data-i18n="natal.section.intro">Enter the date, time, and place you were born. The calculator runs sidereal Vedic math on our server &mdash; your details are not stored, sold, or sent anywhere else. Results appear on screen within seconds.</p>
       </div>
 
       <!-- Tablist: 4 tabs. Default-active = Natal Chart (so landing
@@ -441,7 +441,7 @@
              showing Steve Jobs's chart as a demo, and that editing the
              form replaces it with the user's own. Subtle primary-tinted
              background so it reads as informational, not alarming. -->
-        <aside class="natal-banner" role="note" aria-label="Demo chart notice">
+        <aside class="natal-banner" id="home-natal-demo-banner" role="note" aria-label="Demo chart notice">
           <svg class="natal-banner__icon" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
             <circle cx="12" cy="12" r="10"></circle>
             <line x1="12" y1="8" x2="12" y2="12"></line>
@@ -625,7 +625,7 @@
         <small>
           City data &copy; <a href="https://www.geonames.org/" rel="noopener" target="_blank">GeoNames</a>,
           <a href="https://creativecommons.org/licenses/by/4.0/" rel="noopener license" target="_blank">CC&nbsp;BY&nbsp;4.0</a>.
-          <span data-i18n="natal.results.steveJobsAttrib">Steve Jobs birth data: Astro-Databank, AA-rated.</span>
+          <span id="home-natal-steve-jobs-attrib" data-i18n="natal.results.steveJobsAttrib">Steve Jobs birth data: Astro-Databank, AA-rated.</span>
         </small>
       </p>
 
@@ -1022,21 +1022,108 @@
                 captionEl.hidden = false;
               }
 
+              // ---- 4c. Hide the three Steve-Jobs callouts (banner above
+              //          the form, intro paragraph in the section header,
+              //          attribution at the bottom) once the user has
+              //          edited ANY field that affects the default chart.
+              //          When the form is reset back to Steve Jobs's
+              //          defaults, the callouts reappear so the demo
+              //          context is restored. Without this, "Steve Jobs"
+              //          leaks into the UI even after the user typed
+              //          their own data — confusing.
+              var demoBannerEl = $('home-natal-demo-banner');
+              var demoIntroEl  = $('home-natal-section-intro');
+              var demoAttribEl = $('home-natal-steve-jobs-attrib');
+              // Snapshot the default intro text once so we can restore it
+              // verbatim if the user clears the form. The i18n applier
+              // may translate this after init; we capture AFTER the
+              // setTimeout(0) priming so the cached value is locale-aware.
+              var demoIntroCached = demoIntroEl ? demoIntroEl.textContent : '';
+
+              // Defaults snapshot — Steve Jobs's input values. If ANY
+              // of the user-editable fields differs from these, we treat
+              // the form as user-modified.
+              var DEMO_DEFAULTS = {
+                name: '',
+                date: '1955-02-24',
+                lat:  '37.7749',
+                lon:  '-122.4194',
+                tz:   'America/Los_Angeles'
+              };
+
+              function isDemoState() {
+                if (nameEl && (nameEl.value || '').trim() !== DEMO_DEFAULTS.name) return false;
+                if (dateElCap && dateElCap.value !== DEMO_DEFAULTS.date) return false;
+                if (latEl && latEl.value !== DEMO_DEFAULTS.lat) return false;
+                if (lonEl && lonEl.value !== DEMO_DEFAULTS.lon) return false;
+                var tzSelLocal = $('home-nf-tz-select');
+                if (tzSelLocal && tzSelLocal.value !== DEMO_DEFAULTS.tz) return false;
+                return true;
+              }
+
+              // Generic intro text shown after the user has edited. We
+              // try the i18n bundle first; fallback to a sensible
+              // English string. ko/zh visitors get their localized
+              // version via the i18n bundle key (added below).
+              function getEditedIntro() {
+                try {
+                  var html = document.documentElement.getAttribute('lang') || 'en';
+                  var lang = html.indexOf('ko') === 0 ? 'ko'
+                          : html.indexOf('zh') === 0 ? 'zh' : 'en';
+                  var d = window.IYOGAU_I18N && window.IYOGAU_I18N[lang];
+                  var loc = d && d.natal && d.natal.section
+                         && d.natal.section.editedIntro;
+                  if (typeof loc === 'string' && loc) return loc;
+                } catch (e) {}
+                return 'The chart below is computed from your birth details. The calculator runs sidereal Vedic math on our server and your details are never stored, sold, or sent anywhere else.';
+              }
+
+              function updateDemoState() {
+                var demo = isDemoState();
+                if (demoBannerEl) demoBannerEl.hidden = !demo;
+                if (demoAttribEl) demoAttribEl.hidden = !demo;
+                if (demoIntroEl) {
+                  demoIntroEl.textContent = demo ? demoIntroCached : getEditedIntro();
+                }
+              }
+
+              // Wire updateCaption + updateDemoState to all the relevant
+              // fields. The user has many ways to "edit" the form;
+              // listening on input AND change events catches every path
+              // (typing, paste, autocomplete-select, picker).
+              function bothUpdates() { updateCaption(); updateDemoState(); }
+
               if (nameEl) {
-                nameEl.addEventListener('input', updateCaption);
-                nameEl.addEventListener('change', updateCaption);
+                nameEl.addEventListener('input', bothUpdates);
+                nameEl.addEventListener('change', bothUpdates);
               }
               if (dateElCap) {
-                dateElCap.addEventListener('input', updateCaption);
-                dateElCap.addEventListener('change', updateCaption);
+                dateElCap.addEventListener('input', bothUpdates);
+                dateElCap.addEventListener('change', bothUpdates);
               }
               if (placeElCap) {
-                placeElCap.addEventListener('input', updateCaption);
-                placeElCap.addEventListener('change', updateCaption);
+                placeElCap.addEventListener('input', bothUpdates);
+                placeElCap.addEventListener('change', bothUpdates);
               }
+              if (latEl) {
+                latEl.addEventListener('input', updateDemoState);
+                latEl.addEventListener('change', updateDemoState);
+              }
+              if (lonEl) {
+                lonEl.addEventListener('input', updateDemoState);
+                lonEl.addEventListener('change', updateDemoState);
+              }
+              var tzSelectEarly = $('home-nf-tz-select');
+              if (tzSelectEarly) {
+                tzSelectEarly.addEventListener('change', updateDemoState);
+              }
+
               // Prime the cache so the first keystroke has an i18n-resolved
-              // original to fall back to.
+              // original to fall back to. Recapture the intro AFTER the
+              // i18n applier has had a chance to translate it.
               updateCaption();
+              if (demoIntroEl) demoIntroCached = demoIntroEl.textContent;
+              updateDemoState();
 
               // ---- 5. Submit button → immediate recalc (no debounce).
               //         Also unlocks even if consent isn't toggled — we
@@ -1349,9 +1436,9 @@
      Bump these on every JS change (same pattern as natal-chart.css?v=N).
      Current version round: i18n.natal-chart.js (adds defaultName key) and
      natal-chart-form.js (other recent edits). -->
-<script src="/assets/js/i18n.natal-chart.js?v=4" defer></script>
-<script src="/assets/js/natal-chart-wheel.js?v=4" defer></script>
-<script src="/assets/js/natal-chart-tabs.js?v=4" defer></script>
-<script src="/assets/js/natal-chart-form.js?v=4" defer></script>
+<script src="/assets/js/i18n.natal-chart.js?v=5" defer></script>
+<script src="/assets/js/natal-chart-wheel.js?v=5" defer></script>
+<script src="/assets/js/natal-chart-tabs.js?v=5" defer></script>
+<script src="/assets/js/natal-chart-form.js?v=5" defer></script>
 </body>
 </html>

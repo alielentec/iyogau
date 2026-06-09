@@ -83,6 +83,9 @@
           planets: 'Planet Positions',
           aspects: 'Major Aspects'
         },
+        section: {
+          editedIntro: 'The chart below is computed from your birth details. The calculator runs sidereal Vedic math on our server and your details are never stored, sold, or sent anywhere else.'
+        },
         results: {
           heading: 'Your sidereal natal chart',
           defaultCaption: 'Currently showing: Steve Jobs · 24 Feb 1955 · San Francisco',
@@ -165,6 +168,9 @@
           chart: '베다 차트',
           planets: '행성 위치',
           aspects: '주요 각도'
+        },
+        section: {
+          editedIntro: '아래 차트는 입력하신 출생 정보로 계산되었습니다. 계산은 시데레알(베다) 방식으로 서버에서 수행되며, 입력하신 정보는 저장·판매·전송되지 않습니다.'
         },
         results: {
           heading: '당신의 베다 출생 차트',
@@ -270,6 +276,9 @@
           chart: '吠陀星盘',
           planets: '行星位置',
           aspects: '主要相位'
+        },
+        section: {
+          editedIntro: '下方星盘是根据您输入的出生信息计算的。计算采用恒星黄道（吠陀）方法在我们服务器上完成，您输入的信息不会被保存、出售或转发给任何第三方。'
         },
         results: {
           defaultCaption: '当前显示：史蒂夫·乔布斯 · 1955 年 2 月 24 日 · 旧金山',
