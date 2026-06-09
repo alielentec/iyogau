@@ -64,7 +64,7 @@
       lat: -25.7461,
       lon: 28.1881,
       tz: 'Africa/Johannesburg',
-      source: 'Astro-Databank DD-rated (dirty data; time disputed). 07:30 SAST is the most-cited figure but Musk himself has on occasion said the time is unknown — flag for review',
+      source: 'Astro-Databank DD-rated; time disputed. 07:30 SAST is the most-cited figure but Musk himself has publicly disputed this time. Ascendant and house cusps may not be accurate — flag for review',
       blurb: 'Tesla / SpaceX founder; CEO of X; one of the most-followed figures in modern technology'
     },
     {
@@ -88,7 +88,7 @@
       lat: 41.0340,
       lon: -73.7629,
       tz: 'America/New_York',
-      source: 'Astro-Databank C-rated (uncertain; 14:30 is the widely-cited figure but no birth-certificate time has been published) — flag for review',
+      source: 'Astro-Databank C-rated; widely-cited 14:30 has no birth-certificate support. Ascendant and house cusps may not be accurate — flag for review',
       blurb: 'Meta (Facebook) co-founder and CEO; computer programmer and businessman'
     },
     {
@@ -155,12 +155,12 @@
       id: 'diego-maradona',
       name: 'Diego Maradona',
       birthDate: '1960-10-30',
-      birthTime: '06:25',
+      birthTime: '07:05',
       placeLabel: 'Lanús, Buenos Aires, Argentina',
       lat: -34.7035,
       lon: -58.4124,
       tz: 'America/Argentina/Buenos_Aires',
-      source: 'Astro-Databank A-rated (from his mother)',
+      source: 'Astro-Databank AA-rated (Jimmy Burns biography, citing his mother Doña Tota; 07:05 local)',
       blurb: 'Argentine footballer; 1986 World Cup winner; widely regarded as one of the greatest of all time'
     },
     {
@@ -172,7 +172,7 @@
       lat: -22.2089,
       lon: -49.6553,
       tz: 'America/Sao_Paulo',
-      source: 'Astro-Databank X-rated (time unknown; noon used as a conventional placeholder — Ascendant and house cusps are NOT reliable for this chart)',
+      source: 'Astro-Databank X-rated (time unknown); noon placeholder — Ascendant and houses are NOT astrologically valid',
       blurb: 'Brazilian footballer; 2002 World Cup winner; legendary left-back famous for his free-kick technique'
     },
     {
@@ -183,8 +183,8 @@
       placeLabel: 'Ulm, Germany',
       lat: 48.3984,
       lon: 9.9916,
-      tz: 'Europe/Berlin',
-      source: 'Astro-Databank AA-rated (birth certificate). Note: Ulm is NOT in the iyogau cities gazetteer; picker bypasses the city lookup and writes lat/lon/tz directly',
+      tz: '+00:40',
+      source: 'Astro-Databank AA-rated (birth certificate). Note: 1879 is pre-CET (Germany adopted CET on 1 April 1893); the literal Ulm Local Mean Time (UTC+00:40, ≈9.9916°E ⇒ +00:39:57) is used. Ulm is NOT in the iyogau cities gazetteer; picker bypasses the city lookup',
       blurb: 'Theoretical physicist; deep interest in Spinoza, Indian philosophy, and the unity of natural law'
     },
     {
@@ -195,8 +195,8 @@
       placeLabel: 'Milan, Ohio, United States',
       lat: 41.2961,
       lon: -82.6024,
-      tz: 'America/New_York',
-      source: 'Astro-Databank C-rated (uncertain time; 03:00 is the widely-cited value but no birth-certificate time exists). Note: 1847 is pre-standard-time in the US (railroad time zones adopted 1883); the IANA zone America/New_York is used for consistency with the engine but the local clock at Milan, Ohio in 1847 ran on local mean time — flag for review',
+      tz: '-05:30',
+      source: 'Astro-Databank C-rated; 03:00 is widely cited but no birth-certificate time exists. Note: 1847 is pre-US-standard-time (railroad zones adopted 18 November 1883); the literal Milan-OH Local Mean Time (UTC-05:30, ≈-82.6024°W ⇒ -05:30:25) is used. Ascendant and house cusps shown for reference — flag for review',
       blurb: 'American inventor and businessman; phonograph, motion-picture camera, practical incandescent light bulb'
     }
   ];
