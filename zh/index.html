@@ -66,7 +66,7 @@
 
 <link rel="preload" as="style" href="/assets/css/styles.css" />
 <link rel="stylesheet" href="/assets/css/styles.css" />
-<link rel="stylesheet" href="/assets/css/natal-chart.css?v=11" />
+<link rel="stylesheet" href="/assets/css/natal-chart.css?v=12" />
 
 <!-- Schema.org -->
 <script type="application/ld+json">
@@ -828,13 +828,33 @@
 
         var inFlight = false;
         var pending = false;
+        // Serialised snapshot of the last payload that was successfully
+        // rendered. Initialised from the embedded default-data so the
+        // first user keystroke (which may not change anything material)
+        // does not fire a redundant request to the server. Updated on
+        // every successful render.
+        var lastPayloadJson = '';
 
-        // ---- Fetch a chart for the current form and re-render. Coalesces:
-        // if a request is already in flight, queue exactly one follow-up.
+        // ---- Fetch a chart for the current form and re-render. Two
+        // levels of coalescing:
+        //   (1) If a request is already in flight, queue exactly one
+        //       follow-up; further calls collapse onto it.
+        //   (2) If the new payload is byte-for-byte identical to the
+        //       last successfully-rendered one, skip the fetch entirely.
+        //       Saves API calls when the user clicks Calculate without
+        //       having changed anything, or when input/change events
+        //       fire (e.g. autocomplete listener) without the value
+        //       actually moving.
         function recalculate() {
           if (inFlight) { pending = true; return; }
           var payload = buildPayload();
           if (!validPayload(payload)) return;
+
+          var payloadJson = JSON.stringify(payload);
+          if (payloadJson === lastPayloadJson) {
+            // No-op: the chart already reflects this payload.
+            return;
+          }
 
           inFlight = true;
           fetch('/api/calculate-chart/', {
@@ -846,7 +866,12 @@
               if (!r.ok) return r.text().then(function (t) { throw new Error('API ' + r.status + ': ' + t.slice(0, 200)); });
               return r.json();
             })
-            .then(renderModel)
+            .then(function (model) {
+              renderModel(model);
+              // Stamp the successful payload only AFTER render succeeds,
+              // so a transient API error doesn't poison the dedup cache.
+              lastPayloadJson = payloadJson;
+            })
             .catch(function (err) {
               if (window.console && console.warn) console.warn('[natal] recalc', err);
             })
@@ -879,6 +904,16 @@
               if (dataEl && dataEl.textContent) {
                 var defaultModel = JSON.parse(dataEl.textContent);
                 renderModel(defaultModel);
+                // Seed the dedupe cache with the default chart's input
+                // payload so the first user-triggered recalc only
+                // fires if the form values actually differ from
+                // Steve Jobs's defaults. Without this, the very first
+                // input event (e.g. autocomplete-listener side effect)
+                // would fire a redundant /api/calculate-chart/ POST
+                // for data the page is already rendering.
+                if (defaultModel.input) {
+                  lastPayloadJson = JSON.stringify(defaultModel.input);
+                }
               }
 
               // ---- 2. Populate the IANA timezone select.
@@ -1837,9 +1872,9 @@
      Current version round: i18n.natal-chart.js (adds defaultName key) and
      natal-chart-form.js (other recent edits). -->
 <script src="/assets/js/natal-presets.js?v=1" defer></script>
-<script src="/assets/js/i18n.natal-chart.js?v=7" defer></script>
-<script src="/assets/js/natal-chart-wheel.js?v=7" defer></script>
-<script src="/assets/js/natal-chart-tabs.js?v=7" defer></script>
-<script src="/assets/js/natal-chart-form.js?v=7" defer></script>
+<script src="/assets/js/i18n.natal-chart.js?v=8" defer></script>
+<script src="/assets/js/natal-chart-wheel.js?v=8" defer></script>
+<script src="/assets/js/natal-chart-tabs.js?v=8" defer></script>
+<script src="/assets/js/natal-chart-form.js?v=8" defer></script>
 </body>
 </html>
