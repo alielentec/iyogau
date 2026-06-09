@@ -108,19 +108,24 @@
     Water: 'var(--primary)'         // ast: #464fff
   };
 
+  /* Per-planet hues. Values live in natal-chart.css as --planet-<name>
+   * custom properties so themes can override them via :root or
+   * [data-theme=...]. The same color is applied to the glyph fill AND
+   * the radial degree-line stroke (see render() below), so each leader
+   * is visually traceable back to its planet. */
   var PLANET_COLORS = {
-    Sun:     'var(--gold)',           // ast: #fd7e14
-    Moon:    'var(--primary)',        // ast: #464fff
-    Mercury: 'var(--primary-soft)',   // ast: #0bb5c3
-    Venus:   'var(--gold-soft)',      // ast: #038da1
-    Mars:    'var(--primary-hover)',  // ast: #e52a6f
-    Jupiter: '#9374b8',               // lighter amethyst, distinct from Moon
-    Saturn:  'var(--gold-hover)',     // ast: #984680
-    Uranus:  'var(--primary-soft)',   // iyogau-only
-    Neptune: 'var(--primary)',        // iyogau-only
-    Pluto:   'var(--gold-hover)',     // iyogau-only
-    Rahu:    'var(--ink-muted)',      // lunar-node grey, Vedic convention
-    Ketu:    'var(--ink-muted)'       // descending node — same family as Rahu
+    Sun:     'var(--planet-sun)',
+    Moon:    'var(--planet-moon)',
+    Mercury: 'var(--planet-mercury)',
+    Venus:   'var(--planet-venus)',
+    Mars:    'var(--planet-mars)',
+    Jupiter: 'var(--planet-jupiter)',
+    Saturn:  'var(--planet-saturn)',
+    Uranus:  'var(--planet-uranus)',
+    Neptune: 'var(--planet-neptune)',
+    Pluto:   'var(--planet-pluto)',
+    Rahu:    'var(--planet-rahu)',
+    Ketu:    'var(--planet-ketu)'
   };
 
   // Map iyogau planet names → Luna symbol ids.
@@ -303,13 +308,44 @@
     var out = [];
     clusters.forEach(function (cluster) {
       var spread = cluster.length > 3 ? 10 : 11;
+      // Radial staggering: when consecutive planets in the cluster are
+      // within ~3° their angular fan alone is not enough to clear glyph
+      // overlap, so we also offset them radially (alternating inner/outer
+      // rings). The leader's R_OUT rides with the glyph, so each planet's
+      // tick ends at its own radius — producing a readable "comb".
+      // Offset is in viewBox units; 1.6 ≈ half a glyph diameter at the
+      // current planetGlyphScale, enough to clear adjacent glyphs.
+      var STAGGER_STEP = 1.6;
+      var TIGHT_THRESHOLD = 3;
+      var radialSlots = new Array(cluster.length);
+      radialSlots[0] = 0;
+      var nextSlot = 0;
+      for (var ri = 1; ri < cluster.length; ri += 1) {
+        var prev = cluster[ri - 1];
+        var here = cluster[ri];
+        if (angleDistance(here.longitude, prev.longitude) < TIGHT_THRESHOLD) {
+          // Walk the comb: 0, +1, -1, +2, -2, ... so the cluster grows
+          // outward symmetrically rather than drifting to one side.
+          if (nextSlot >= 0) nextSlot = -(nextSlot + 1);
+          else nextSlot = -nextSlot;
+          radialSlots[ri] = nextSlot;
+        } else {
+          // Wide enough — reset the comb to the base ring.
+          nextSlot = 0;
+          radialSlots[ri] = 0;
+        }
+      }
       cluster.forEach(function (planet, index) {
         var labelLongitude = normalizeDegrees(
           planet.longitude + (index - (cluster.length - 1) / 2) * spread
         );
         out.push(Object.assign({}, planet, {
           clusterSize: cluster.length,
-          labelLongitude: labelLongitude
+          labelLongitude: labelLongitude,
+          // Positive = pushed outward (longer leader), negative = pushed
+          // inward (shorter leader). render() multiplies by STAGGER_STEP.
+          radialSlot: radialSlots[index],
+          radialOffset: radialSlots[index] * STAGGER_STEP
         }));
       });
     });
@@ -686,13 +722,23 @@
       var exactAngle = chartAngle(planet.longitude, asc);
       var color = PLANET_COLORS[planet.key] || 'var(--ink-muted)';
       var s = splitLongitude(planet.longitude);
-      var glyphR = L.planetGlyphR;
+      // Radial staggering: layoutPlanets() assigns a per-planet radialOffset
+      // (viewBox units, positive = outward, negative = inward) when two
+      // planets sit within ~3° of each other. The glyph rides on this
+      // offset; the leader's outer anchor stays at L.field so leaders end
+      // at different inner radii, producing a comb of staggered lines.
+      var radialOffset = Number.isFinite(planet.radialOffset) ? planet.radialOffset : 0;
+      var glyphR = L.planetGlyphR + radialOffset;
       var glyphId = PLANET_GLYPH_IDS[planet.key] || 'sun'; // safety fallback
       var glyphTransform = placeGlyph(angle, glyphR, L.planetGlyphScale);
 
       // ---- Leader: radial tick at true degree → arc to fanned glyph → inner nub ----
+      // R_OUT anchors at the wheel field for ALL planets (constant outer
+      // edge on the ring). The inner endpoints follow the staggered glyph
+      // radius — so inner-pushed planets have longer leaders, outer-pushed
+      // shorter ones.
       var R_OUT = L.field;
-      var R_ARC = L.field - 0.946;
+      var R_ARC = L.field - 0.946 + radialOffset;
       var R_IN  = R_ARC - 0.946;
       var p0 = polar(c, R_OUT, exactAngle);
       var p1 = polar(c, R_ARC, exactAngle);
@@ -719,7 +765,16 @@
       var signColor = ELEMENT_COLORS[SIGNS[signIdx].element];
 
       var pg = el('g', null);
-      pg.appendChild(el('path', { d: leaderPath, fill: 'none', 'class': leaderClass }));
+      // Leader stroke is set inline to the planet's color so each radial
+      // tick visually matches its glyph. The CSS .luna-leader rule
+      // (no stroke declared) supplies width / opacity only. The OOB
+      // variant overrides via class — see .luna-leader-oob in CSS.
+      pg.appendChild(el('path', {
+        d: leaderPath,
+        fill: 'none',
+        stroke: color,
+        'class': leaderClass
+      }));
 
       var glyphUse = el('use', {
         'data-glyph': 'planet',

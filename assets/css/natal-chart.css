@@ -4,6 +4,32 @@
  *  (appended; preserves all existing rules above)
  * ===================================================================== */
 
+/* ---------------------------------------------------------------------
+ * Per-planet color tokens — used by BOTH the glyph fill and the radial
+ * degree-line stroke so each planet's leader is visually traceable back
+ * to the ring tick at its exact degree.
+ *
+ * Palette designed for WCAG AA contrast on the amethyst-theme light
+ * surface (#f3ecf6) — see audit report for per-hue rationale.
+ *
+ * Override per theme:
+ *   :root[data-theme="myTheme"] { --planet-sun: #...; ... }
+ * ------------------------------------------------------------------- */
+:root {
+  --planet-sun:     #8C6A1A;   /* desaturated traditional gold */
+  --planet-moon:    #5C6B7A;   /* cool slate-silver */
+  --planet-mercury: #1F7A5A;   /* hermetic forest green */
+  --planet-venus:   #B23A6B;   /* rose-magenta */
+  --planet-mars:    #B0231C;   /* classic Mars red */
+  --planet-jupiter: #B25A12;   /* saffron / burnt orange */
+  --planet-saturn:  #2C2A33;   /* lead with violet undertone */
+  --planet-uranus:  #0E6FB5;   /* electric blue */
+  --planet-neptune: #1F4FA8;   /* deep sea-blue */
+  --planet-pluto:   #6A1530;   /* underworld maroon */
+  --planet-rahu:    #4A2B7A;   /* dark indigo-purple */
+  --planet-ketu:    #6B4423;   /* earth brown */
+}
+
 /* --- Interior-page header variant ---------------------------------- */
 .site-header--interior .site-header__inner {
   display: flex;
@@ -472,18 +498,20 @@
 .luna-axis-line     { stroke: var(--gold-hover); stroke-width: 0.35; }
 .luna-axis-line-mc  { stroke: var(--gold);       stroke-width: 0.35; stroke-dasharray: 0.6 0.4; }
 
-/* Planet leader (radial tick + arc + nub) */
+/* Planet leader (radial tick + arc + nub)
+ * Stroke color is set inline per-planet by natal-chart-wheel.js using the
+ * --planet-<name> token, so each leader matches its glyph hue. Stroke width
+ * and opacity remain centralised here. */
 .luna-leader {
-  stroke: var(--ink-muted);
-  stroke-width: 0.08;
+  stroke-width: 0.12;
   fill: none;
-  opacity: 0.7;
+  opacity: 0.85;
 }
 /* OOB modifier — declared AFTER .luna-leader so it wins the equal-specificity
    stroke cascade. Keep this order if you reorder rules. */
 .luna-leader-oob {
   stroke: var(--gold);
-  stroke-width: 0.08;
+  stroke-width: 0.12;
   fill: none;
 }
 
