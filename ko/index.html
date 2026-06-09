@@ -66,6 +66,7 @@
 
 <link rel="preload" as="style" href="/assets/css/styles.css" />
 <link rel="stylesheet" href="/assets/css/styles.css" />
+<link rel="stylesheet" href="/assets/css/natal-chart.css" />
 
 <!-- Schema.org -->
 <script type="application/ld+json">
@@ -275,7 +276,7 @@
         <h3 data-i18n="concept.p4.title">Natal Chart</h3>
         <p data-i18n="concept.p4.body">Vedic astrology adds another layer of personalization.</p>
         <p style="margin-top:0.5rem;margin-bottom:0;font-size:0.875rem;">
-          <a href="/natal-chart/" style="color:var(--primary);text-decoration:underline;text-underline-offset:2px;" data-i18n="concept.p4.cta">Try a free Vedic natal chart →</a>
+          <a href="#natal-calc" style="color:var(--primary);text-decoration:underline;text-underline-offset:2px;" data-i18n="concept.p4.cta">Try a free Vedic natal chart →</a>
         </p>
       </div>
     </div>
@@ -395,6 +396,152 @@
           <span class="mode-pill online" data-i18n="mode.online">Online</span>
         </div>
       </article>
+    </div>
+  </div>
+</section>
+
+<!-- ========== INLINE NATAL-CHART CALCULATOR ==========
+     Mounts a second copy of the natal-chart form + wheel here on the
+     homepage so visitors can try the tool without leaving the page.
+     All IDs are prefixed `home-nf-` / `home-natal-` to avoid collision
+     with the dedicated /natal-chart/ page (which still exists for
+     deep-linking and SEO). The shared natal-chart-form.js binder
+     auto-detects this form by its `home-natal-form` id and binds the
+     same logic as the dedicated page. -->
+<section id="natal-calc" class="natal-page" aria-labelledby="natal-calc-heading">
+  <div class="container">
+    <div class="natal-page__inner">
+
+      <div class="section-head">
+        <span class="eyebrow" data-i18n="natal.section.eyebrow">Vedic Natal Chart</span>
+        <h2 id="natal-calc-heading" data-i18n="natal.section.heading">Try it with your own birth details</h2>
+        <p class="natal-intro" data-i18n="natal.section.intro">Enter the date, time, and place you were born. The calculator runs sidereal Vedic math on our server &mdash; your details are not stored, sold, or sent anywhere else. Results appear on screen within seconds.</p>
+      </div>
+
+      <section class="natal-form-section" aria-labelledby="home-natal-form-heading">
+        <h3 id="home-natal-form-heading" class="sr-only" data-i18n="natal.form.heading">Birth details</h3>
+
+        <form id="home-natal-form" class="natal-form" novalidate>
+
+          <div class="natal-field">
+            <label for="home-nf-name" data-i18n="natal.form.name">Your name (optional)</label>
+            <input id="home-nf-name" name="name" type="text" maxlength="60" autocomplete="given-name" inputmode="text" />
+            <small class="help" data-i18n="natal.form.name.help">For your reference only &mdash; not sent to our server.</small>
+          </div>
+
+          <div class="natal-field">
+            <label for="home-nf-date" data-i18n="natal.form.date">Birth date</label>
+            <input id="home-nf-date" name="date" type="date" min="1900-01-01" required aria-required="true" />
+          </div>
+
+          <div class="natal-field">
+            <label for="home-nf-time" data-i18n="natal.form.time">Birth time</label>
+            <input id="home-nf-time" name="time" type="time" required aria-required="true" />
+            <label class="inline-check">
+              <input id="home-nf-time-unknown" type="checkbox" />
+              <span data-i18n="natal.form.time.unknown">I don&rsquo;t know my birth time</span>
+            </label>
+          </div>
+
+          <div class="natal-field natal-field--combo">
+            <label for="home-nf-place" data-i18n="natal.form.place">Birthplace</label>
+            <div class="combo">
+              <input
+                id="home-nf-place"
+                name="place"
+                type="text"
+                autocomplete="off"
+                autocorrect="off"
+                spellcheck="false"
+                role="combobox"
+                aria-autocomplete="list"
+                aria-expanded="false"
+                aria-controls="home-nf-place-listbox"
+                aria-activedescendant=""
+                required
+                aria-required="true"
+              />
+              <ul id="home-nf-place-listbox" class="combo-listbox" role="listbox" hidden></ul>
+            </div>
+            <small class="help" data-i18n="natal.form.place.help">Type a city name. We match against a built-in gazetteer &mdash; no third-party lookup.</small>
+            <small class="help help--empty" id="home-nf-place-empty" hidden data-i18n="natal.form.place.empty">No matches. Try a larger nearby city.</small>
+          </div>
+
+          <fieldset class="natal-loc-detail" id="home-nf-loc-detail" hidden>
+            <legend data-i18n="natal.form.adjust.legend">Fine-tune location (optional)</legend>
+            <div class="natal-loc-grid">
+              <div class="natal-field">
+                <label for="home-nf-lat" data-i18n="natal.form.lat">Latitude</label>
+                <input id="home-nf-lat" name="lat" type="number" step="0.0001" min="-66.5" max="66.5" inputmode="decimal" required aria-required="true" />
+              </div>
+              <div class="natal-field">
+                <label for="home-nf-lon" data-i18n="natal.form.lon">Longitude</label>
+                <input id="home-nf-lon" name="lon" type="number" step="0.0001" min="-180" max="180" inputmode="decimal" required aria-required="true" />
+              </div>
+              <div class="natal-field">
+                <label for="home-nf-tz-select" data-i18n="natal.form.tz">Timezone</label>
+                <select id="home-nf-tz-select" name="tz" aria-label="IANA timezone"></select>
+                <span id="home-nf-tz-display" hidden aria-live="polite"></span>
+                <button type="button" id="home-nf-tz-adjust" hidden></button>
+              </div>
+            </div>
+            <small class="help" data-i18n="natal.form.adjust.help">Auto-filled from the city you picked. Adjust if needed.</small>
+          </fieldset>
+
+          <div class="natal-field consent">
+            <label class="inline-check">
+              <input id="home-nf-consent" type="checkbox" required aria-required="true" />
+              <span>
+                <span data-i18n="natal.form.consent">I consent to processing my birth details (date, time, place) for this natal chart calculation.</span>
+                <a id="home-nf-privacy-link" href="/privacy/california/#sensitive" data-i18n="natal.form.consent.link">See our Privacy Policy.</a>
+              </span>
+            </label>
+          </div>
+
+          <div class="natal-field natal-field--submit">
+            <button type="submit" id="home-nf-submit" class="btn btn-primary" disabled>
+              <span data-i18n="natal.form.submit">Calculate Natal Chart</span>
+            </button>
+            <p class="natal-error" id="home-nf-error" role="alert" hidden></p>
+          </div>
+
+        </form>
+      </section>
+
+      <section
+        class="natal-results"
+        id="home-natal-results"
+        aria-labelledby="home-natal-results-heading"
+        aria-live="polite"
+        aria-busy="false"
+        hidden
+      >
+        <h2 id="home-natal-results-heading" data-i18n="natal.results.heading">Your sidereal natal chart</h2>
+
+        <div class="natal-wheel-wrap">
+          <svg
+            id="home-natal-wheel"
+            viewBox="0 0 800 800"
+            role="img"
+            aria-labelledby="home-natal-wheel-title home-natal-wheel-desc"
+            xmlns="http://www.w3.org/2000/svg"
+          >
+            <title id="home-natal-wheel-title" data-i18n="natal.results.heading">Sidereal natal chart</title>
+            <desc id="home-natal-wheel-desc">Astrological wheel showing twelve zodiac signs, twelve houses, planetary positions, and major aspects.</desc>
+          </svg>
+        </div>
+
+        <div class="natal-meta" id="home-natal-meta"></div>
+        <div class="natal-table-wrap" id="home-natal-tables"></div>
+      </section>
+
+      <p class="natal-attribution">
+        <small>
+          City data &copy; <a href="https://www.geonames.org/" rel="noopener" target="_blank">GeoNames</a>,
+          <a href="https://creativecommons.org/licenses/by/4.0/" rel="noopener license" target="_blank">CC&nbsp;BY&nbsp;4.0</a>.
+        </small>
+      </p>
+
     </div>
   </div>
 </section>
@@ -668,5 +815,10 @@
 <script src="/assets/js/i18n.js" defer></script>
 <script src="/assets/js/currency.js" defer></script>
 <script src="/assets/js/app.js" defer></script>
+<!-- Inline natal-chart calculator. Loads on every homepage view; the
+     binder auto-skips if it can't find #home-natal-form, so adding
+     these scripts to other pages is harmless. -->
+<script src="/assets/js/natal-chart-wheel.js" defer></script>
+<script src="/assets/js/natal-chart-form.js" defer></script>
 </body>
 </html>
