@@ -31,8 +31,23 @@
   // markup unique IDs, and you're done — no other code changes.
 
   var MOUNTS = [
-    { formId: 'natal-form',      inputPrefix: 'nf',      resultPrefix: 'natal' },
-    { formId: 'home-natal-form', inputPrefix: 'home-nf', resultPrefix: 'home-natal' },
+    {
+      formId: 'natal-form',
+      inputPrefix: 'nf',
+      resultPrefix: 'natal',
+      // Tab containers — when present, planets and aspects render into
+      // these dedicated nodes; when absent, both render into the legacy
+      // -tables container (back-compat).
+      planetsContainerId: 'natal-planets',
+      aspectsContainerId: 'natal-aspects',
+    },
+    {
+      formId: 'home-natal-form',
+      inputPrefix: 'home-nf',
+      resultPrefix: 'home-natal',
+      planetsContainerId: 'home-natal-planets',
+      aspectsContainerId: 'home-natal-aspects',
+    },
   ];
 
   for (var __mi = 0; __mi < MOUNTS.length; __mi++) {
@@ -59,16 +74,21 @@
   var locDetail   = $in('-loc-detail'); // fieldset wrapping lat/lon/tz; hidden until city selected
   var latEl       = $in('-lat');
   var lonEl       = $in('-lon');
-  var tzDisplay   = $in('-tz-display');   // legacy aria-live span (hidden); kept for back-compat
-  var tzAdjust    = $in('-tz-adjust');    // legacy "adjust" link (hidden); kept for back-compat
   var tzSelect    = $in('-tz-select');
   var consentEl   = $in('-consent');
   var submitBtn   = $in('-submit');
   var errorEl     = $in('-error');
   var resultsEl   = $rs('-results');
   var wheelEl     = $rs('-wheel');
-  var tablesEl    = $rs('-tables');
   var metaEl      = $rs('-meta');
+  // Legacy combined results container (planets + aspects together). Used as
+  // a fallback when the new tabbed containers below aren't in the markup.
+  var tablesEl    = $rs('-tables');
+  // Tabbed containers (preferred). When the page renders tabs, planets go
+  // here and aspects go separately. Either may be null if the mount uses
+  // the legacy combined `tablesEl`.
+  var planetsEl   = cfg.planetsContainerId ? document.getElementById(cfg.planetsContainerId) : null;
+  var aspectsEl   = cfg.aspectsContainerId ? document.getElementById(cfg.aspectsContainerId) : null;
   var privacyLink = $in('-privacy-link');
 
   // ---------- date defaults ----------
@@ -373,29 +393,13 @@
       if (!found) tzSelect.appendChild(elt('option', { value: tz }, tz));
       tzSelect.value = tz;
     }
-    if (tzDisplay) tzDisplay.textContent = tz;
     revalidate();
-  }
-
-  if (tzAdjust) {
-    tzAdjust.addEventListener('click', function () {
-      populateTzSelect();
-      tzSelect.hidden = false;
-      tzSelect.focus();
-    });
-  }
-  if (tzSelect) {
-    tzSelect.addEventListener('change', function () {
-      tzDisplay.textContent = tzSelect.value;
-    });
   }
 
   // ---------- validation ----------
 
   function currentTz() {
-    if (tzSelect && tzSelect.value) return tzSelect.value;
-    if (tzDisplay && tzDisplay.textContent) return tzDisplay.textContent.trim();
-    return '';
+    return (tzSelect && tzSelect.value) || '';
   }
 
   function isValid() {
@@ -568,10 +572,19 @@
     }
     metaEl.appendChild(elt('p', { 'class': 'natal-meta__line' }, pieces.join(' · ')));
 
-    // Tables
-    tablesEl.textContent = '';
+    // Tables — choose targets. The new tabbed UI provides separate
+    // `planetsEl` and `aspectsEl` containers (one tab per table). The
+    // legacy combined `tablesEl` is used when the markup doesn't have
+    // the split — e.g. older external embeds.
+    var planetsTarget = planetsEl || tablesEl;
+    var aspectsTarget = aspectsEl || tablesEl;
+    if (tablesEl && tablesEl !== planetsTarget) tablesEl.textContent = '';
+    if (planetsEl) planetsEl.textContent = '';
+    if (aspectsEl) aspectsEl.textContent = '';
 
-    // Asc / MC summary
+    // Asc / MC summary — render once into the planets tab (or the legacy
+    // combined container). They are angular points, so it would be
+    // misleading to put them under "aspects".
     if (model.ascendant || model.midheaven) {
       var axesP = elt('p', { 'class': 'natal-axes-summary' });
       if (model.ascendant) {
@@ -589,11 +602,11 @@
           signLabel(model.midheaven.sign) + ' ' + degMin(model.midheaven)
         ));
       }
-      tablesEl.appendChild(axesP);
+      planetsTarget.appendChild(axesP);
     }
 
     // Planets table
-    tablesEl.appendChild(elt('h3', null, t('natal.results.planets', 'Planet positions')));
+    planetsTarget.appendChild(elt('h3', null, t('natal.results.planets', 'Planet positions')));
     var planetRows = (model.planets || []).map(function (p) {
       return [
         planetLabel(p.name, p.retrograde),
@@ -602,7 +615,7 @@
         (p.house != null ? String(p.house) : '—')
       ];
     });
-    appendTable(tablesEl, [
+    appendTable(planetsTarget, [
       t('natal.results.planetCol', 'Planet'),
       t('natal.results.signCol', 'Sign'),
       t('natal.results.degreeCol', 'Degree'),
@@ -611,7 +624,7 @@
 
     // Aspects
     if (Array.isArray(model.aspects) && model.aspects.length) {
-      tablesEl.appendChild(elt('h3', null, t('natal.results.aspects', 'Major aspects')));
+      aspectsTarget.appendChild(elt('h3', null, t('natal.results.aspects', 'Major aspects')));
       var aspectRows = model.aspects.map(function (a) {
         return [
           planetLabel(a.from, false),
@@ -620,17 +633,29 @@
           (a.orb != null ? a.orb.toFixed(1) + '°' : '—')
         ];
       });
-      appendTable(tablesEl, [
+      appendTable(aspectsTarget, [
         t('natal.results.aspectFrom', 'From'),
         t('natal.results.aspectType', 'Aspect'),
         t('natal.results.aspectTo', 'To'),
         t('natal.results.aspectOrb', 'Orb')
       ], aspectRows);
+    } else if (aspectsEl) {
+      // Empty-state for the aspects tab when nothing surfaced — better
+      // than showing an empty panel and confusing visitors.
+      aspectsEl.appendChild(elt('p', { 'class': 'natal-empty' },
+        t('natal.results.aspectsEmpty', 'No major aspects within standard orbs for this chart.')));
     }
 
     // Reveal & focus
     resultsEl.hidden = false;
     resultsEl.setAttribute('aria-busy', 'false');
+
+    // The initial-render path (default-chart auto-render on page load)
+    // sets a flag so we skip the scroll-into-view + heading focus. The
+    // submit path does NOT set the flag, so it scrolls + focuses as
+    // before.
+    if (resultsEl.dataset.initialRender === '1') return;
+
     var raf = (typeof window.requestAnimationFrame === 'function')
       ? window.requestAnimationFrame
       : function (fn) { return setTimeout(fn, 16); };
@@ -648,5 +673,33 @@
 
   // Initial state
   revalidate();
+
+  // Default-chart auto-render. When the markup includes a
+  // <script id="${resultPrefix}-default-data" type="application/json">
+  // block, we parse it and render the wheel + tables straight away so
+  // landing visitors see a real chart before they touch the form. The
+  // form is expected to be pre-populated with the same input values
+  // (date/time/place) so editing-from-the-default lands at the user's
+  // own chart on the next submit.
+  //
+  // We deliberately skip the smooth scroll + focus jump that happens
+  // after a real submit — on initial render the user hasn't engaged
+  // yet and scrolling them anywhere is wrong.
+  try {
+    var defaultDataEl = document.getElementById(cfg.resultPrefix + '-default-data');
+    if (defaultDataEl && defaultDataEl.textContent) {
+      var defaultModel = JSON.parse(defaultDataEl.textContent);
+      // Mark the results section as not the result of a submit, so the
+      // post-render code skips the scroll-into-view.
+      resultsEl.dataset.initialRender = '1';
+      renderResults(defaultModel);
+      delete resultsEl.dataset.initialRender;
+    }
+  } catch (err) {
+    if (window.console && console.warn) {
+      console.warn('[natal] default-data render failed:', err);
+    }
+  }
+
   } // end initNatalForm
 }());

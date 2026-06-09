@@ -17,3 +17,11 @@ Thumbs.db
 # Logs
 *.log
 .vercel
+
+# Node — installed by npm/Vercel during build. Lockfile (package-lock.json)
+# IS tracked so installs are reproducible; the unpacked tree is not.
+node_modules/
+
+# Stray local downloads / scratch files unrelated to iyogau
+Fast Flow Rate Estimation*
+*.html.local
