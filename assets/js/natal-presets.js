@@ -100,7 +100,7 @@
       lat: 41.5934,
       lon: -87.3464,
       tz: 'America/Chicago',
-      source: 'Astro-Databank AA-rated (from his mother Katherine Jackson, hospital records)',
+      source: 'Astro-Databank A-rated (family-reported via nephew Taj Jackson; downgraded from AA pending birth-certificate confirmation)',
       blurb: 'King of Pop; singer, songwriter, dancer; cultural icon of the late 20th century'
     },
     {
@@ -124,7 +124,7 @@
       lat: 40.3354,
       lon: -75.9521,
       tz: 'America/New_York',
-      source: 'Astro-Databank AA-rated (birth certificate)',
+      source: 'Astro-Databank DD-rated; 05:17 from the 2015 fan biography "TAY" by Jill Parker — no birth-certificate confirmation, time disputed',
       blurb: 'Singer-songwriter; 14-time Grammy winner; defining pop / country crossover artist'
     },
     {
