@@ -1127,7 +1127,11 @@
      180px overhead. The wheel + 180 ≈ 900 on desktop; on phones the
      wheel is `100vw - 2rem` and overhead drops a hair (no extra
      attribution line in the panel itself), so ~ +120 is enough. */
-  min-height: min(900px, 100vw - 2rem + 180px);
+  /* Wrap the viewport arithmetic in explicit calc() — older mobile
+     browsers (Safari iOS <14, Samsung Internet) are stricter about
+     mixing units inside min() without a calc(); without it the rule
+     can be dropped entirely on those engines. */
+  min-height: min(900px, calc(100vw - 2rem + 180px));
   max-height: none;
   overflow: visible;
 }
