@@ -66,7 +66,7 @@
 
 <link rel="preload" as="style" href="/assets/css/styles.css" />
 <link rel="stylesheet" href="/assets/css/styles.css" />
-<link rel="stylesheet" href="/assets/css/natal-chart.css?v=9" />
+<link rel="stylesheet" href="/assets/css/natal-chart.css?v=10" />
 
 <!-- Schema.org -->
 <script type="application/ld+json">
@@ -447,7 +447,12 @@
             <line x1="12" y1="8" x2="12" y2="12"></line>
             <line x1="12" y1="16" x2="12.01" y2="16"></line>
           </svg>
-          <span data-i18n="natal.form.steveJobsNote">Currently showing Steve Jobs&rsquo;s chart. Edit any field below and your own chart will appear in the Natal Chart tab.</span>
+          <!-- Text is rewritten by the bootstrap whenever the active
+               preset changes — interpolates the localized preset name
+               into natal.presets.currentlyShowing. The data-i18n key
+               is kept so the i18n applier (re)translates on language
+               switch; the bootstrap re-runs after that. -->
+          <span id="home-natal-demo-banner-text" data-i18n="natal.form.steveJobsNote">Currently showing Steve Jobs&rsquo;s chart. Edit any field below and your own chart will appear in the Natal Chart tab.</span>
         </aside>
 
         <section class="natal-form-section" aria-labelledby="home-natal-form-heading">
@@ -465,11 +470,28 @@
                 novalidate
                 data-default-tz="America/Los_Angeles">
 
+            <!-- Name input is wired as a combobox backed by a <datalist>
+                 of famous-person presets. Typing in the field updates
+                 only the wheel TITLE — picking a list entry overwrites
+                 the birth fields (date/time/place/lat/lon/tz) with that
+                 person's birth-data snapshot from
+                 /assets/js/natal-presets.js. The picker decides which
+                 path was taken by checking whether the typed text
+                 matches a preset's localized name (see the bootstrap
+                 below — onNameInputChange). -->
             <div class="natal-field natal-field--name">
               <label for="home-nf-name" data-i18n="natal.form.name">Your name (optional)</label>
               <input id="home-nf-name" name="name" type="text" maxlength="60"
-                     autocomplete="given-name" inputmode="text"
-                     placeholder="Steve Jobs" />
+                     autocomplete="off" inputmode="text"
+                     list="home-nf-name-presets"
+                     placeholder="Steve Jobs"
+                     data-i18n-attr="placeholder:natal.presets.placeholder" />
+              <datalist id="home-nf-name-presets">
+                <!-- Options are injected on init by the bootstrap so
+                     each <option value="..."> carries the LOCALIZED
+                     preset name. Browsers render the option `label`
+                     (place + blurb) next to the value. -->
+              </datalist>
               <small class="help" data-i18n="natal.form.name.help">For your reference only &mdash; not sent to our server.</small>
             </div>
 
@@ -928,24 +950,41 @@
               var placeElCap = $('home-nf-place');
 
               // Look up the LOCALIZED default name from the i18n bundle.
-              // Without this, ko/zh visitors would type a name and see
-              // their TITLE update but the CAPTION stay frozen, because
-              // the caption was localized to "스티브 잡스" or "史蒂夫·乔布斯"
-              // and `replace("Steve Jobs", typed)` would find nothing to
-              // replace.
+              // When a famous-people preset is active, prefer its
+              // localized name over the legacy i18n.results.defaultName
+              // key — that key is fixed to Steve Jobs and was the only
+              // option before the picker existed. Now that we have
+              // 8 presets, we route the title through the active
+              // preset's i18n entry. Falls back to the legacy key for
+              // backward compatibility (e.g. if the i18n bundle hasn't
+              // loaded yet on a slow connection).
               function getDefaultName() {
+                // Closure over activePresetId / window.IYOGAU_NATAL_PRESETS
+                // — both are declared below this function in source
+                // order but the closure is evaluated lazily on each
+                // call (only fires from inside event handlers, by
+                // which time everything is wired up).
                 try {
                   var html = document.documentElement.getAttribute('lang') || 'en';
                   var lang = html.indexOf('ko') === 0 ? 'ko'
                           : html.indexOf('zh') === 0 ? 'zh' : 'en';
                   var dict = window.IYOGAU_I18N && window.IYOGAU_I18N[lang];
+                  if (typeof activePresetId === 'string' && activePresetId) {
+                    var pi = dict && dict.natal && dict.natal.presets
+                          && dict.natal.presets[activePresetId];
+                    if (pi && pi.name) return pi.name;
+                    // Fall back to the English name from the JS module.
+                    var presets = window.IYOGAU_NATAL_PRESETS || [];
+                    for (var i = 0; i < presets.length; i++) {
+                      if (presets[i].id === activePresetId) return presets[i].name;
+                    }
+                  }
                   var localized = dict && dict.natal && dict.natal.results
                                 && dict.natal.results.defaultName;
                   if (typeof localized === 'string' && localized) return localized;
                 } catch (e) {}
                 return 'Steve Jobs';
               }
-              var defaultName = getDefaultName();
 
               // Format an <input type="date"> value (YYYY-MM-DD) as
               // "DD Mon YYYY" (e.g. "22 Jan 1948"). Returns '' on
@@ -966,7 +1005,11 @@
               function updateCaption() {
                 if (!nameEl) return;
                 var typed   = (nameEl.value || '').trim();
-                var display = typed || defaultName;
+                // Lazy-resolve the localized default-name on every call
+                // so language switches reflect immediately and the
+                // strict-mode ReferenceError on the missing `defaultName`
+                // var (beta evaluator finding) goes away.
+                var display = typed || getDefaultName();
                 if (titleEl) titleEl.textContent = display;
                 if (!captionEl) return;
 
@@ -1022,63 +1065,142 @@
                 captionEl.hidden = false;
               }
 
-              // ---- 4c. Hide the three Steve-Jobs callouts (banner above
-              //          the form, intro paragraph in the section header,
-              //          attribution at the bottom) once the user has
-              //          edited ANY field that affects the default chart.
-              //          When the form is reset back to Steve Jobs's
-              //          defaults, the callouts reappear so the demo
-              //          context is restored. Without this, "Steve Jobs"
-              //          leaks into the UI even after the user typed
-              //          their own data — confusing.
-              var demoBannerEl = $('home-natal-demo-banner');
-              var demoIntroEl  = $('home-natal-section-intro');
-              var demoAttribEl = $('home-natal-steve-jobs-attrib');
+              // ---- 4c. DEMO / CUSTOM state machine.
+              //
+              // States:
+              //   DEMO(p)  — activePresetId === p.id. Birth fields equal
+              //              p's snapshot; banner / generic intro /
+              //              attribution all render with p's name + source.
+              //              The name input may be the localized preset
+              //              name (vanity-default) OR any free-text typed
+              //              by the user (purely a wheel-title label).
+              //   CUSTOM   — activePresetId === null. None of the demo
+              //              callouts render; intro switches to
+              //              natal.section.editedIntro.
+              //
+              // Transitions:
+              //   init → DEMO('steve-jobs')   (page-load default)
+              //   DEMO(p) -- user types in name input only --> DEMO(p)
+              //   DEMO(p) -- user picks preset q from datalist --> DEMO(q)
+              //   DEMO(p) -- user edits date/time/lat/lon/tz/place --> CUSTOM
+              //   CUSTOM  -- user picks preset q --> DEMO(q)
+              //   CUSTOM  -- user types anything --> CUSTOM
+              //
+              // The chart math depends on date/time/lat/lon/tz (place
+              // drives lat/lon/tz via the gazetteer). Typing a custom
+              // NAME never demotes DEMO→CUSTOM because the chart math
+              // doesn't read the name.
+              //
+              // HARD auto-clear: when a chart-math field is edited,
+              // we wipe the name input, hide the banner / attribution,
+              // and swap the intro paragraph. No snap-back on undo.
+              var PRESETS = (window.IYOGAU_NATAL_PRESETS || []).slice();
+              var demoBannerEl     = $('home-natal-demo-banner');
+              var demoBannerTextEl = $('home-natal-demo-banner-text');
+              var demoIntroEl      = $('home-natal-section-intro');
+              var demoAttribEl     = $('home-natal-steve-jobs-attrib');
+              var timeElCap        = $('home-nf-time');
+              var timeUnkElCap     = $('home-nf-time-unknown');
               // Demo-state check needs lat/lon/tz references. The
               // bootstrap's own buildPayload() declares them inside its
-              // closure; isDemoState() runs OUTSIDE that closure so we
-              // re-lookup here. (Earlier this was undefined-ed, causing
-              // every isDemoState call to throw ReferenceError and
-              // updateDemoState to silently fail.)
+              // closure; the state machine runs OUTSIDE that closure so
+              // we re-lookup here.
               var latEl    = $('home-nf-lat');
               var lonEl    = $('home-nf-lon');
               var tzSelEl  = $('home-nf-tz-select');
               // Snapshot the default intro text once so we can restore it
-              // verbatim if the user clears the form. The i18n applier
-              // may translate this after init; we capture AFTER the
+              // verbatim when DEMO is active. The i18n applier may
+              // translate this after init; we capture AFTER the
               // setTimeout(0) priming so the cached value is locale-aware.
               var demoIntroCached = demoIntroEl ? demoIntroEl.textContent : '';
 
-              // Defaults snapshot — Steve Jobs's input values. If ANY
-              // of the user-editable fields differs from these, we treat
-              // the form as user-modified.
-              var DEMO_DEFAULTS = {
-                name: '',
-                date: '1955-02-24',
-                lat:  '37.7749',
-                lon:  '-122.4194',
-                tz:   'America/Los_Angeles'
-              };
+              // Session-only state. activePresetId is the source of
+              // truth — language switches preserve it; only chart-math
+              // edits clear it. Persisted only in memory (no
+              // localStorage / sessionStorage — these are demo
+              // overlays, not user data).
+              var activePresetId = 'steve-jobs';
+              // Internal-update guard: set true while the picker
+              // programmatically mutates the form so the change
+              // listeners DON'T treat our own writes as user edits
+              // (and demote DEMO→CUSTOM).
+              var internalUpdate = false;
 
-              function isDemoState() {
-                if (nameEl && (nameEl.value || '').trim() !== DEMO_DEFAULTS.name) return false;
-                if (dateElCap && dateElCap.value !== DEMO_DEFAULTS.date) return false;
-                if (latEl && latEl.value !== DEMO_DEFAULTS.lat) return false;
-                if (lonEl && lonEl.value !== DEMO_DEFAULTS.lon) return false;
-                if (tzSelEl && tzSelEl.value !== DEMO_DEFAULTS.tz) return false;
-                return true;
-              }
-
-              // Generic intro text shown after the user has edited. We
-              // try the i18n bundle first; fallback to a sensible
-              // English string. ko/zh visitors get their localized
-              // version via the i18n bundle key (added below).
-              function getEditedIntro() {
+              // Look up the localized i18n entry for a preset id.
+              // Falls back to the preset's English fields if a
+              // language-specific entry is missing (matches the
+              // deepMerge behavior in i18n.natal-chart.js).
+              function getActiveLang() {
                 try {
                   var html = document.documentElement.getAttribute('lang') || 'en';
-                  var lang = html.indexOf('ko') === 0 ? 'ko'
-                          : html.indexOf('zh') === 0 ? 'zh' : 'en';
-                  var d = window.IYOGAU_I18N && window.IYOGAU_I18N[lang];
+                  if (html.indexOf('ko') === 0) return 'ko';
+                  if (html.indexOf('zh') === 0) return 'zh';
+                } catch (e) {}
+                return 'en';
+              }
+              function localizedPreset(preset) {
+                if (!preset) return null;
+                var lang = getActiveLang();
+                var dict = window.IYOGAU_I18N && window.IYOGAU_I18N[lang];
+                var pi   = dict && dict.natal && dict.natal.presets
+                        && dict.natal.presets[preset.id];
+                return {
+                  id: preset.id,
+                  name: (pi && pi.name) || preset.name,
+                  placeLabel: (pi && pi.placeLabel) || preset.placeLabel,
+                  blurb: (pi && pi.blurb) || preset.blurb,
+                  source: preset.source
+                };
+              }
+              function getPresetById(id) {
+                for (var i = 0; i < PRESETS.length; i++) {
+                  if (PRESETS[i].id === id) return PRESETS[i];
+                }
+                return null;
+              }
+              // Match a localized name back to a preset id. The
+              // datalist option `value` attributes are the localized
+              // names, so when the user picks a row the name input's
+              // value is exactly one of these strings.
+              function findPresetByLocalizedName(typed) {
+                if (!typed) return null;
+                var trimmed = String(typed).trim();
+                if (!trimmed) return null;
+                for (var i = 0; i < PRESETS.length; i++) {
+                  var lp = localizedPreset(PRESETS[i]);
+                  if (lp.name === trimmed) return PRESETS[i];
+                  // Also accept the English name (typed manually or
+                  // pasted) so e.g. ko visitors typing "Steve Jobs"
+                  // still hit the preset.
+                  if (PRESETS[i].name === trimmed) return PRESETS[i];
+                }
+                return null;
+              }
+
+              // (Re)populate the <datalist> options with the localized
+              // names. Called on init and on language switch.
+              function rebuildPresetDatalist() {
+                var dl = $('home-nf-name-presets');
+                if (!dl) return;
+                dl.textContent = '';
+                var frag = document.createDocumentFragment();
+                PRESETS.forEach(function (p) {
+                  var lp = localizedPreset(p);
+                  var opt = document.createElement('option');
+                  opt.value = lp.name;
+                  // The `label` shows next to the value in supporting
+                  // browsers (Chrome / Firefox / Safari render it as
+                  // dim secondary text). Place + brief blurb makes
+                  // the choice scannable without opening a modal.
+                  opt.label = lp.placeLabel + ' — ' + lp.blurb;
+                  frag.appendChild(opt);
+                });
+                dl.appendChild(frag);
+              }
+
+              function getEditedIntro() {
+                try {
+                  var d = window.IYOGAU_I18N && window.IYOGAU_I18N[getActiveLang()];
                   var loc = d && d.natal && d.natal.section
                          && d.natal.section.editedIntro;
                   if (typeof loc === 'string' && loc) return loc;
@@ -1086,52 +1208,306 @@
                 return 'The chart below is computed from your birth details. The calculator runs sidereal Vedic math on our server and your details are never stored, sold, or sent anywhere else.';
               }
 
-              function updateDemoState() {
-                var demo = isDemoState();
-                if (demoBannerEl) demoBannerEl.hidden = !demo;
-                if (demoAttribEl) demoAttribEl.hidden = !demo;
-                if (demoIntroEl) {
-                  demoIntroEl.textContent = demo ? demoIntroCached : getEditedIntro();
-                }
+              // Build the banner text "Currently showing {name}'s chart…"
+              // by interpolating the localized preset name into the
+              // i18n template. Falls back to the original Steve Jobs
+              // English copy if either key is missing.
+              function renderBannerText(preset) {
+                if (!demoBannerTextEl) return;
+                var lp = localizedPreset(preset);
+                try {
+                  var d = window.IYOGAU_I18N && window.IYOGAU_I18N[getActiveLang()];
+                  var tpl = d && d.natal && d.natal.presets
+                         && d.natal.presets.currentlyShowing;
+                  if (typeof tpl === 'string' && tpl) {
+                    demoBannerTextEl.textContent = tpl.replace('{name}', lp.name);
+                    return;
+                  }
+                } catch (e) {}
+                demoBannerTextEl.textContent =
+                  "Currently showing " + lp.name + "'s chart. Edit any field below and your own chart will appear in the Natal Chart tab.";
+              }
+              function renderAttribText(preset) {
+                if (!demoAttribEl) return;
+                var lp = localizedPreset(preset);
+                try {
+                  var d = window.IYOGAU_I18N && window.IYOGAU_I18N[getActiveLang()];
+                  var tpl = d && d.natal && d.natal.presets
+                         && d.natal.presets.attribution;
+                  if (typeof tpl === 'string' && tpl) {
+                    demoAttribEl.textContent = tpl
+                      .replace('{name}', lp.name)
+                      .replace('{source}', lp.source);
+                    return;
+                  }
+                } catch (e) {}
+                demoAttribEl.textContent = lp.name + ' birth data: ' + lp.source;
               }
 
-              // Wire updateCaption + updateDemoState to all the relevant
-              // fields. The user has many ways to "edit" the form;
-              // listening on input AND change events catches every path
-              // (typing, paste, autocomplete-select, picker).
-              function bothUpdates() { updateCaption(); updateDemoState(); }
+              // Match form against EVERY preset and return the first
+              // exact hit (chart-math fields only — name is excluded).
+              // If activePresetId is set and STILL matches, we keep it
+              // (stable identity across language switches); otherwise
+              // we scan from the top.
+              function detectActivePreset() {
+                var date = dateElCap && dateElCap.value;
+                var time = timeElCap && timeElCap.value;
+                var lat  = latEl && latEl.value;
+                var lon  = lonEl && lonEl.value;
+                var tz   = tzSelEl && tzSelEl.value;
+                // Toggling "unknown time" sets buildPayload's time to
+                // 12:00 internally, but the user-visible time input
+                // still holds the preset's value. We treat the toggle
+                // itself as a chart-math edit (see listener below) so
+                // by the time detectActivePreset is called from a
+                // preset-active state, the toggle is off.
+                function matches(p) {
+                  return p.birthDate === date
+                      && p.birthTime === time
+                      && String(p.lat)  === String(lat)
+                      && String(p.lon)  === String(lon)
+                      && p.tz === tz;
+                }
+                if (activePresetId) {
+                  var current = getPresetById(activePresetId);
+                  if (current && matches(current)) return current;
+                }
+                for (var i = 0; i < PRESETS.length; i++) {
+                  if (matches(PRESETS[i])) return PRESETS[i];
+                }
+                return null;
+              }
+
+              // Render whatever the current state implies. Centralised
+              // so banner / intro / attribution / wheel title stay
+              // consistent regardless of which event fired.
+              function renderState() {
+                if (activePresetId) {
+                  var preset = getPresetById(activePresetId);
+                  if (!preset) {
+                    activePresetId = null;
+                    renderState();
+                    return;
+                  }
+                  if (demoBannerEl) demoBannerEl.hidden = false;
+                  if (demoAttribEl) demoAttribEl.hidden = false;
+                  if (demoIntroEl)  demoIntroEl.textContent = demoIntroCached;
+                  renderBannerText(preset);
+                  renderAttribText(preset);
+                } else {
+                  if (demoBannerEl) demoBannerEl.hidden = true;
+                  if (demoAttribEl) demoAttribEl.hidden = true;
+                  if (demoIntroEl)  demoIntroEl.textContent = getEditedIntro();
+                }
+                // Caption / title always re-derive from current input
+                // values (typed name overrides preset name as title;
+                // caption uses date + place).
+                updateCaption();
+              }
+
+              // Programmatically apply a preset's snapshot to the form.
+              // Sets internalUpdate=true so the change-listener guard
+              // doesn't treat these writes as user edits (which would
+              // immediately demote us back to CUSTOM and clear the
+              // name we just set).
+              function applyPreset(preset) {
+                if (!preset) return;
+                internalUpdate = true;
+                try {
+                  var lp = localizedPreset(preset);
+                  if (dateElCap)  dateElCap.value  = preset.birthDate;
+                  if (timeElCap)  timeElCap.value  = preset.birthTime;
+                  // If the user had toggled "unknown time" on, picking
+                  // a new preset implies they DO want this time —
+                  // untoggle it so the form looks coherent.
+                  if (timeUnkElCap && timeUnkElCap.checked) {
+                    timeUnkElCap.checked = false;
+                  }
+                  if (latEl) latEl.value = String(preset.lat);
+                  if (lonEl) lonEl.value = String(preset.lon);
+                  if (tzSelEl) {
+                    tzSelEl.value = preset.tz;
+                    // If the IANA tz isn't in the select (rare —
+                    // Intl.supportedValuesOf is a superset), append it
+                    // so the value sticks.
+                    if (tzSelEl.value !== preset.tz) {
+                      var opt = document.createElement('option');
+                      opt.value = preset.tz; opt.textContent = preset.tz;
+                      tzSelEl.appendChild(opt);
+                      tzSelEl.value = preset.tz;
+                    }
+                  }
+                  // Place input: write the localized label and mark
+                  // it resolved so updateCaption surfaces it and the
+                  // form-binder skips its gazetteer-pending state.
+                  if (placeElCap) {
+                    placeElCap.value = lp.placeLabel;
+                    placeElCap.setAttribute('data-resolved', '1');
+                  }
+                  // Clear the name input so the combobox shows the
+                  // preset name as the resolved label (matches the
+                  // "Edge case 1" spec: user picks Steve Jobs after
+                  // editing → name field cleared, label reads
+                  // "Steve Jobs" via i18n defaultName).
+                  if (nameEl) nameEl.value = '';
+                  activePresetId = preset.id;
+                } finally {
+                  internalUpdate = false;
+                }
+                renderState();
+                // Trigger a recalculate now that the form holds the
+                // new snapshot. recalculateDebounced is closured above
+                // and the listeners we replaced would normally call
+                // it; we call it directly here since our internalUpdate
+                // guard suppressed those listeners.
+                recalculateDebounced();
+              }
+
+              // ---- Event wiring.
+
+              // Name input — TWO listener responsibilities:
+              //   1. update the wheel title to the typed text (vanity)
+              //   2. if the typed text exactly matches a preset name
+              //      (i.e. the user selected from the datalist),
+              //      apply that preset.
+              // The datalist selection is hard to detect cross-browser
+              // (no dedicated event); the workaround is to compare the
+              // typed value against the known preset names on EVERY
+              // input event. If it matches one, treat it as a pick.
+              // Two signals that the user PICKED from the datalist (vs typed
+              // a name that happens to match a preset):
+              //  - InputEvent.inputType === 'insertReplacementText' — fired
+              //    by Chrome/Edge when a datalist option is selected.
+              //  - 'change' event — fires on blur after a datalist pick
+              //    AND on blur after manual typing. We only trust the
+              //    'change' path when it follows immediately after an
+              //    insertReplacementText input.
+              // Without this gate, typing "Steve Jobs" manually as your
+              // own father's name would hijack the field and clear the
+              // birth data.
+              function onNameInputEvent(e) {
+                if (internalUpdate) return;
+                // Pure typing: never apply a preset. Just update the
+                // chart title via updateCaption.
+                if (!e || e.inputType !== 'insertReplacementText') {
+                  updateCaption();
+                  return;
+                }
+                // Datalist selection signal: apply the matching preset.
+                var typed = (nameEl && nameEl.value) || '';
+                var match = findPresetByLocalizedName(typed);
+                if (match) applyPreset(match);
+                else updateCaption();
+              }
+              // Back-compat name for existing wiring.
+              function onNameInputChange() { onNameInputEvent({ inputType: 'change' }); }
+
+              // Chart-math field edit — when in DEMO, demote to CUSTOM.
+              // We only demote if the new value differs from the
+              // active preset's snapshot value, so the user can wiggle
+              // back to a preset's exact lat/lon/tz without losing
+              // demo state.
+              function onChartMathEdit() {
+                if (internalUpdate) return;
+                if (activePresetId) {
+                  var preset = getPresetById(activePresetId);
+                  // detectActivePreset checks all fields. If they
+                  // still match, keep DEMO.
+                  if (preset) {
+                    var stillMatches = detectActivePreset();
+                    if (stillMatches && stillMatches.id === preset.id) {
+                      renderState();
+                      return;
+                    }
+                  }
+                  // HARD auto-clear.
+                  activePresetId = null;
+                  if (nameEl) nameEl.value = '';
+                }
+                renderState();
+              }
 
               if (nameEl) {
-                nameEl.addEventListener('input', bothUpdates);
-                nameEl.addEventListener('change', bothUpdates);
+                // 'input' carries the InputEvent (inputType signal); use
+                // the event-aware handler. The 'change' fallback uses
+                // the back-compat wrapper which behaves identically to
+                // a non-datalist input event.
+                nameEl.addEventListener('input', onNameInputEvent);
+                nameEl.addEventListener('change', onNameInputChange);
               }
               if (dateElCap) {
-                dateElCap.addEventListener('input', bothUpdates);
-                dateElCap.addEventListener('change', bothUpdates);
+                dateElCap.addEventListener('input', onChartMathEdit);
+                dateElCap.addEventListener('change', onChartMathEdit);
+              }
+              if (timeElCap) {
+                timeElCap.addEventListener('input', onChartMathEdit);
+                timeElCap.addEventListener('change', onChartMathEdit);
+              }
+              if (timeUnkElCap) {
+                // Per Edge case 2: toggling "unknown time" is treated
+                // as a birth-field edit → demote. Toggling back without
+                // restoring the exact time stays CUSTOM (no snap-back,
+                // consistent with the HARD policy).
+                timeUnkElCap.addEventListener('change', onChartMathEdit);
               }
               if (placeElCap) {
-                placeElCap.addEventListener('input', bothUpdates);
-                placeElCap.addEventListener('change', bothUpdates);
+                placeElCap.addEventListener('input', onChartMathEdit);
+                placeElCap.addEventListener('change', onChartMathEdit);
               }
               if (latEl) {
-                latEl.addEventListener('input', updateDemoState);
-                latEl.addEventListener('change', updateDemoState);
+                latEl.addEventListener('input', onChartMathEdit);
+                latEl.addEventListener('change', onChartMathEdit);
               }
               if (lonEl) {
-                lonEl.addEventListener('input', updateDemoState);
-                lonEl.addEventListener('change', updateDemoState);
+                lonEl.addEventListener('input', onChartMathEdit);
+                lonEl.addEventListener('change', onChartMathEdit);
               }
-              var tzSelectEarly = $('home-nf-tz-select');
-              if (tzSelectEarly) {
-                tzSelectEarly.addEventListener('change', updateDemoState);
+              if (tzSelEl) {
+                tzSelEl.addEventListener('change', onChartMathEdit);
               }
 
-              // Prime the cache so the first keystroke has an i18n-resolved
-              // original to fall back to. Recapture the intro AFTER the
-              // i18n applier has had a chance to translate it.
+              // Build the datalist now that the i18n bundle should be
+              // populated (i18n.natal-chart.js runs at `defer` order
+              // before this inline script — verify by checking the
+              // PRESETS array length, falling through gracefully if
+              // anything's missing).
+              rebuildPresetDatalist();
+
+              // Re-render banner / attribution / datalist on language
+              // switch. The base i18n loader doesn't fire a documented
+              // event; we observe the <html lang> attribute as a proxy.
+              try {
+                var langObserver = new MutationObserver(function () {
+                  rebuildPresetDatalist();
+                  // Re-snapshot the localized intro (it just changed).
+                  if (demoIntroEl) {
+                    // Read the FRESH localized text from the i18n
+                    // dict, not the DOM (the DOM may already hold
+                    // our "edited intro" override).
+                    try {
+                      var d = window.IYOGAU_I18N && window.IYOGAU_I18N[getActiveLang()];
+                      var loc = d && d.natal && d.natal.section
+                             && d.natal.section.intro;
+                      if (typeof loc === 'string' && loc) {
+                        demoIntroCached = loc;
+                      }
+                    } catch (e) {}
+                  }
+                  renderState();
+                });
+                langObserver.observe(document.documentElement,
+                  { attributes: true, attributeFilter: ['lang'] });
+              } catch (e) {}
+
+              // Prime caches and render initial DEMO('steve-jobs')
+              // state. The page already loaded with Steve Jobs's birth
+              // fields baked into the HTML, so detectActivePreset
+              // should confirm DEMO('steve-jobs') on the first call.
               updateCaption();
               if (demoIntroEl) demoIntroCached = demoIntroEl.textContent;
-              updateDemoState();
+              var detected = detectActivePreset();
+              activePresetId = detected ? detected.id : null;
+              renderState();
 
               // ---- 5. Submit button → immediate recalc (no debounce).
               //         Also unlocks even if consent isn't toggled — we
@@ -1444,9 +1820,10 @@
      Bump these on every JS change (same pattern as natal-chart.css?v=N).
      Current version round: i18n.natal-chart.js (adds defaultName key) and
      natal-chart-form.js (other recent edits). -->
-<script src="/assets/js/i18n.natal-chart.js?v=5" defer></script>
-<script src="/assets/js/natal-chart-wheel.js?v=5" defer></script>
-<script src="/assets/js/natal-chart-tabs.js?v=5" defer></script>
-<script src="/assets/js/natal-chart-form.js?v=5" defer></script>
+<script src="/assets/js/natal-presets.js?v=1" defer></script>
+<script src="/assets/js/i18n.natal-chart.js?v=6" defer></script>
+<script src="/assets/js/natal-chart-wheel.js?v=6" defer></script>
+<script src="/assets/js/natal-chart-tabs.js?v=6" defer></script>
+<script src="/assets/js/natal-chart-form.js?v=6" defer></script>
 </body>
 </html>

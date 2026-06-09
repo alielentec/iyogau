@@ -14,7 +14,15 @@ const TIME_RE = /^([01]\d|2[0-3]):[0-5]\d$/;
 // UTC their wall-clock was. Range ±14:00 covers all real-world offsets;
 // historic anomalies (Liberia +44min, Kiribati +14:00) sit inside this.
 const OFFSET_RE = /^([+-])(\d{1,2}):([0-5]\d)$/;
-const MIN_DATE = '1900-01-01';
+// Lowered from 1900-01-01 to 1800-01-01 so historical figures (Gandhi
+// 1869, Einstein 1879, Yogananda 1893) can be sampled via the
+// famous-people picker on the homepage. astronomy-engine remains
+// accurate to better than 1 arcsec for centuries either side of J2000
+// (Meeus 1998 verifies through 4000 BC – 8000 AD). The IANA timezone
+// database has reasonable LMT data back to ~1800; pre-1800 stays
+// rejected because Intl.DateTimeFormat's offset calculations get
+// progressively less reliable.
+const MIN_DATE = '1800-01-01';
 
 function isFiniteNumber(x) {
   return typeof x === 'number' && Number.isFinite(x);

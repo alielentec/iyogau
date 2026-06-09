@@ -123,6 +123,58 @@
         aspects: {
           conjunction: 'Conjunction', sextile: 'Sextile',
           square: 'Square', trine: 'Trine', opposition: 'Opposition'
+        },
+        // Famous-people picker. Display strings only — the numeric
+        // birth-data snapshot (lat/lon/tz/date/time/source) lives in
+        // /assets/js/natal-presets.js. Adding a new preset means
+        // adding it to the JS module AND adding name/placeLabel/blurb
+        // here for every language. Keys mirror the preset `id` value.
+        presets: {
+          legendHeading: 'Or pick a famous person',
+          legendHelp: 'Loads a published natal chart. Edit any birth field to clear and use your own data.',
+          placeholder: 'Steve Jobs',
+          currentlyShowing: "Currently showing {name}'s chart. Edit any field below and your own chart will appear in the Natal Chart tab.",
+          attribution: '{name} birth data: {source}',
+          'steve-jobs': {
+            name: 'Steve Jobs',
+            placeLabel: 'San Francisco, United States',
+            blurb: "Apple co-founder; long-time Zen Buddhist practitioner; 1974 pilgrimage to Neem Karoli Baba's ashram in India"
+          },
+          'mahatma-gandhi': {
+            name: 'Mahatma Gandhi',
+            placeLabel: 'Porbandar, India',
+            blurb: 'Father of modern India; daily karma-yoga discipline and Bhagavad Gita study'
+          },
+          'albert-einstein': {
+            name: 'Albert Einstein',
+            placeLabel: 'Ulm, Germany',
+            blurb: 'Theoretical physicist; deep interest in Spinoza, Indian philosophy, and the unity of natural law'
+          },
+          'paramahansa-yogananda': {
+            name: 'Paramahansa Yogananda',
+            placeLabel: 'Gorakhpur, India',
+            blurb: 'Author of Autobiography of a Yogi; brought Kriya Yoga to the West (1920)'
+          },
+          'bks-iyengar': {
+            name: 'B.K.S. Iyengar',
+            placeLabel: 'Bellur, India',
+            blurb: 'Founder of Iyengar Yoga; author of Light on Yoga (1966); precision and alignment lineage'
+          },
+          'sachin-tendulkar': {
+            name: 'Sachin Tendulkar',
+            placeLabel: 'Mumbai, India',
+            blurb: "Cricket legend ('Little Master'); 100 international centuries; Bharat Ratna 2014"
+          },
+          'narendra-modi': {
+            name: 'Narendra Modi',
+            placeLabel: 'Vadnagar, India',
+            blurb: 'Prime Minister of India since 2014; long-time daily yoga practitioner; founded International Yoga Day (UN, 2014)'
+          },
+          'dalai-lama-14': {
+            name: 'Dalai Lama (14th, Tenzin Gyatso)',
+            placeLabel: 'Xining, China',
+            blurb: '14th Dalai Lama; spiritual leader of Tibetan Buddhism; Nobel Peace 1989'
+          }
         }
       }
     },
@@ -231,6 +283,53 @@
           square:      '사분상 (Square)',
           trine:       '삼분상 (Trine)',
           opposition:  '웅 (Opposition)'        // TODO native-review
+        },
+        presets: {
+          legendHeading: '또는 유명 인물 선택',
+          legendHelp: '공개된 출생 차트를 불러옵니다. 출생 정보를 수정하면 본인 데이터로 전환됩니다.',
+          placeholder: '스티브 잡스',
+          currentlyShowing: '현재 {name}의 차트를 표시 중입니다. 아래 항목을 수정하면 베다 차트 탭에 본인의 차트가 표시됩니다.',
+          attribution: '{name} 출생 정보: {source}',
+          'steve-jobs': {
+            name: '스티브 잡스',
+            placeLabel: '샌프란시스코, 미국',
+            blurb: '애플 공동 창업자; 오랜 선불교 수행자; 1974년 인도의 님 카롤리 바바 아쉬람을 순례'
+          },
+          'mahatma-gandhi': {
+            name: '마하트마 간디',
+            placeLabel: '포르반다르, 인도',
+            blurb: '현대 인도의 아버지; 매일 카르마 요가 수행과 바가바드 기타 공부'
+          },
+          'albert-einstein': {
+            name: '알베르트 아인슈타인',
+            placeLabel: '울름, 독일',
+            blurb: '이론 물리학자; 스피노자, 인도 철학, 자연 법칙의 통일성에 깊은 관심'
+          },
+          'paramahansa-yogananda': {
+            name: '파라마한사 요가난다',
+            placeLabel: '고라크푸르, 인도',
+            blurb: '《요가난다, 영혼의 자서전》 저자; 크리야 요가를 서양에 전파(1920)'
+          },
+          'bks-iyengar': {
+            name: 'B.K.S. 아헹가',
+            placeLabel: '벨루르, 인도',
+            blurb: '아헹가 요가 창시자; 《요가 디피카》(1966) 저자; 정밀성과 정렬 계보'
+          },
+          'sachin-tendulkar': {
+            name: '사친 텐둘카르',
+            placeLabel: '뭄바이, 인도',
+            blurb: '크리켓 전설(리틀 마스터); 국제 경기 100세기 기록; 2014년 인도 최고 훈장'
+          },
+          'narendra-modi': {
+            name: '나렌드라 모디',
+            placeLabel: '바드나가르, 인도',
+            blurb: '2014년부터 인도 총리; 오랜 일일 요가 수행자; UN 국제 요가의 날 제안(2014)'
+          },
+          'dalai-lama-14': {
+            name: '달라이 라마 14세 (텐진 갸초)',
+            placeLabel: '시닝, 중국',
+            blurb: '제14대 달라이 라마; 티베트 불교 영적 지도자; 1989년 노벨 평화상'
+          }
         }
       }
     },
@@ -335,6 +434,53 @@
           square: '四分相',
           trine: '三分相',
           opposition: '对相'
+        },
+        presets: {
+          legendHeading: '或选择一位名人',
+          legendHelp: '加载已公开的出生星盘。修改任意出生字段即可切换到您自己的数据。',
+          placeholder: '史蒂夫·乔布斯',
+          currentlyShowing: '当前显示的是 {name} 的星盘。修改下方任意字段，您自己的星盘将出现在"吠陀星盘"标签页。',
+          attribution: '{name} 出生数据：{source}',
+          'steve-jobs': {
+            name: '史蒂夫·乔布斯',
+            placeLabel: '旧金山, 美国',
+            blurb: '苹果联合创始人；长期禅宗修行者；1974 年赴印度尼姆·卡罗利·巴巴道场参学'
+          },
+          'mahatma-gandhi': {
+            name: '圣雄甘地',
+            placeLabel: '波尔本德尔, 印度',
+            blurb: '现代印度国父；每日实践业瑜伽并研读《薄伽梵歌》'
+          },
+          'albert-einstein': {
+            name: '阿尔伯特·爱因斯坦',
+            placeLabel: '乌尔姆, 德国',
+            blurb: '理论物理学家；深研斯宾诺莎、印度哲学与自然法则的统一'
+          },
+          'paramahansa-yogananda': {
+            name: '帕拉宏撒·尤迦南达',
+            placeLabel: '戈勒克布尔, 印度',
+            blurb: '《一个瑜伽行者的自传》作者；1920 年将克利亚瑜伽传入西方'
+          },
+          'bks-iyengar': {
+            name: '艾扬格 (B.K.S. Iyengar)',
+            placeLabel: '贝卢尔, 印度',
+            blurb: '艾扬格瑜伽创始人；《瑜伽之光》(1966) 作者；以精准与对位著称的瑜伽传承'
+          },
+          'sachin-tendulkar': {
+            name: '萨钦·坦杜尔卡',
+            placeLabel: '孟买, 印度',
+            blurb: '板球传奇"小大师"；国际赛事百次百分纪录；2014 年获印度最高荣誉国宝勋章'
+          },
+          'narendra-modi': {
+            name: '纳伦德拉·莫迪',
+            placeLabel: '瓦德纳加尔, 印度',
+            blurb: '自 2014 年起任印度总理；长期每日瑜伽修行者；2014 年倡议联合国国际瑜伽日'
+          },
+          'dalai-lama-14': {
+            name: '第十四世达赖喇嘛 (丹增嘉措)',
+            placeLabel: '西宁, 中国',
+            blurb: '第十四世达赖喇嘛；藏传佛教精神领袖；1989 年诺贝尔和平奖得主'
+          }
         }
       }
     }

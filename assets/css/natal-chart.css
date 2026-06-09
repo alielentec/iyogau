@@ -1114,3 +1114,33 @@
     min-height: calc(100vw - 2rem + 120px);
   }
 }
+
+/* ---- v=10 patch — famous-people picker ----
+   The name input is now a <input list="..."> combobox backed by a
+   <datalist>. Native <datalist> styling is locked-down per platform
+   (browsers render the popup in OS chrome), so this patch only
+   tweaks the INPUT field itself:
+     • subtle dropdown caret to hint at the list affordance
+     • spacing for the caret so it doesn't overlap typed text
+   The popup itself (rendered by the browser) is intentionally not
+   styled — keeping native look/feel for accessibility and to avoid
+   the layout shifts that custom dropdowns cause on iOS keyboards.
+   ---- */
+.natal-field--name input[list] {
+  /* Right padding leaves room for the chevron we paint with a
+     background-image. Using SVG-in-data-URI avoids loading an
+     extra HTTP asset on this critical page. */
+  padding-right: 2rem;
+  background-image: url("data:image/svg+xml;charset=UTF-8,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='8' viewBox='0 0 12 8' fill='none' stroke='%23717179' stroke-width='1.5' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpolyline points='1 1 6 6 11 1'/%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: right 0.85rem center;
+}
+/* Firefox renders its own caret on <input list>; hide ours so we
+   don't double-up. Detection via the Mozilla-only -moz-appearance
+   selector is fragile, so we use @-moz-document instead. */
+@-moz-document url-prefix() {
+  .natal-field--name input[list] {
+    background-image: none;
+    padding-right: 1rem;
+  }
+}
