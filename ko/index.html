@@ -591,7 +591,7 @@
           aria-busy="false"
         >
           <h2 id="home-natal-results-heading" class="sr-only" data-i18n="natal.results.heading">Your sidereal natal chart</h2>
-          <p class="natal-chart-title" id="home-natal-chart-title">Steve Jobs</p>
+          <p class="natal-chart-title" id="home-natal-chart-title" data-i18n="natal.results.defaultName">Steve Jobs</p>
           <p class="natal-default-caption" id="home-natal-default-caption" data-i18n="natal.results.defaultCaption">Currently showing: Steve Jobs &middot; 24 Feb 1955 &middot; San Francisco</p>
 
           <div class="natal-wheel-wrap">
@@ -924,7 +924,27 @@
               var nameEl    = $('home-nf-name');
               var titleEl   = $('home-natal-chart-title');
               var captionEl = $('home-natal-default-caption');
-              var defaultName = 'Steve Jobs';
+
+              // Look up the LOCALIZED default name from the i18n bundle.
+              // Without this, ko/zh visitors would type a name and see
+              // their TITLE update but the CAPTION stay frozen, because
+              // the caption was localized to "스티브 잡스" or "史蒂夫·乔布斯"
+              // and `replace("Steve Jobs", typed)` would find nothing to
+              // replace.
+              function getDefaultName() {
+                try {
+                  var html = document.documentElement.getAttribute('lang') || 'en';
+                  var lang = html.indexOf('ko') === 0 ? 'ko'
+                          : html.indexOf('zh') === 0 ? 'zh' : 'en';
+                  var dict = window.IYOGAU_I18N && window.IYOGAU_I18N[lang];
+                  var localized = dict && dict.natal && dict.natal.results
+                                && dict.natal.results.defaultName;
+                  if (typeof localized === 'string' && localized) return localized;
+                } catch (e) {}
+                return 'Steve Jobs';
+              }
+              var defaultName = getDefaultName();
+
               function updateName() {
                 if (!nameEl) return;
                 var typed = (nameEl.value || '').trim();
