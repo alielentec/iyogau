@@ -187,7 +187,15 @@ window.I18N = {
     "footer.seo": "iYogaU offers yoga, meditation, and inner transformation programs in Seoul (Korea), Shanghai (China), and California Bay Area (USA). Founded by Ali Karimi, certified 200-hour Raja Yoga instructor.",
 
     "course.health_notice": "Yoga is a physical practice. Consult a qualified physician before beginning, especially if you have any medical condition, are pregnant, or are recovering from injury. iYogaU programs are educational and not a substitute for medical care. Read our",
-    "course.health_notice_link": "Health Disclaimer & Liability Waiver"
+    "course.health_notice_link": "Health Disclaimer & Liability Waiver",
+
+    "natal.section.eyebrow": "Vedic Natal Chart",
+    "natal.section.heading": "Try it with your own birth details",
+    "natal.section.intro": "Enter the date, time, and place you were born. The calculator runs sidereal Vedic math on our server — your details are not stored, sold, or sent anywhere else. Results appear on screen within seconds.",
+    "natal.form.lat": "Latitude",
+    "natal.form.lon": "Longitude",
+    "natal.form.adjust.legend": "Fine-tune location (optional)",
+    "natal.form.adjust.help": "Auto-filled from the city you picked. Adjust if needed."
   },
 
   ko: {
@@ -376,7 +384,15 @@ window.I18N = {
     "footer.seo": "iYogaU는 서울(한국), 상하이(중국), 캘리포니아 베이 에어리어(미국)에서 요가, 명상, 내면 변화 프로그램을 제공합니다. 공인 200시간 라자 요가 강사 알리 카리미가 설립했습니다.",
 
     "course.health_notice": "요가는 신체 활동입니다. 시작 전에 반드시 자격 있는 의료 전문가와 상담하세요. 특히 질환이 있거나, 임신 중이거나, 부상 회복 중인 경우 더욱 그렇습니다. iYogaU 프로그램은 교육 목적이며 의료를 대체하지 않습니다. 자세한 내용은",
-    "course.health_notice_link": "건강 면책 조항 및 책임 면제 동의서"
+    "course.health_notice_link": "건강 면책 조항 및 책임 면제 동의서",
+
+    "natal.section.eyebrow": "베다 천궁도",
+    "natal.section.heading": "당신의 출생 정보로 직접 확인해보세요",
+    "natal.section.intro": "출생일, 출생 시간, 출생 장소를 입력하세요. 계산은 시데레알(베다) 방식으로 서버에서 수행되며, 입력하신 정보는 저장·판매·전송되지 않습니다. 결과는 몇 초 안에 화면에 표시됩니다.",
+    "natal.form.lat": "위도",
+    "natal.form.lon": "경도",
+    "natal.form.adjust.legend": "위치 세부 조정 (선택 사항)",
+    "natal.form.adjust.help": "선택하신 도시를 기반으로 자동 입력됩니다. 필요하면 직접 조정하세요."
   },
 
   zh: {
@@ -565,6 +581,14 @@ window.I18N = {
     "footer.seo": "iYogaU 在首尔（韩国）、上海（中国）和加州湾区（美国）提供瑜伽、冥想与内在转化项目。由认证 200 小时 Raja 瑜伽导师 Ali Karimi 创立。",
 
     "course.health_notice": "瑜伽是一项身体练习。开始前请咨询合格的医生，尤其是如果您有任何健康状况、正在怀孕或正在伤后恢复期。iYogaU 课程为教育性质，并非医疗服务的替代品。请阅读我们的",
-    "course.health_notice_link": "健康免责声明与责任豁免书"
+    "course.health_notice_link": "健康免责声明与责任豁免书",
+
+    "natal.section.eyebrow": "吠陀本命星盘",
+    "natal.section.heading": "用您自己的出生信息亲自试一下",
+    "natal.section.intro": "请输入您的出生日期、时间和地点。计算采用恒星黄道（吠陀）方法，在我们的服务器上完成。您输入的信息不会被保存、出售或转发给任何第三方。结果将在几秒内显示在屏幕上。",
+    "natal.form.lat": "纬度",
+    "natal.form.lon": "经度",
+    "natal.form.adjust.legend": "微调位置（可选）",
+    "natal.form.adjust.help": "根据您选择的城市自动填充。如需调整请修改。"
   }
 };
