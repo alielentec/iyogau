@@ -18,31 +18,57 @@
 (function () {
   'use strict';
 
+  // ---------- multi-mount config ----------
+  //
+  // Two pages embed this form: the dedicated /natal-chart/ page and an
+  // inline calculator section on the homepage (#natal-calc). Each mount
+  // needs unique HTML IDs to avoid collisions, but the binding code is
+  // identical. We define a small config per mount, then run initNatalForm
+  // once per matched form on the page. Mounts whose formId isn't present
+  // are silently skipped, so this file is safe to include on any page.
+  //
+  // To add a third mount (e.g. a modal): append a new entry here, give the
+  // markup unique IDs, and you're done — no other code changes.
+
+  var MOUNTS = [
+    { formId: 'natal-form',      inputPrefix: 'nf',      resultPrefix: 'natal' },
+    { formId: 'home-natal-form', inputPrefix: 'home-nf', resultPrefix: 'home-natal' },
+  ];
+
+  for (var __mi = 0; __mi < MOUNTS.length; __mi++) {
+    initNatalForm(MOUNTS[__mi]);
+  }
+
+  function initNatalForm(cfg) {
+
   // ---------- elements ----------
 
-  var form = document.getElementById('natal-form');
-  if (!form) return; // not on this page
+  var form = document.getElementById(cfg.formId);
+  if (!form) return; // mount not on this page
 
-  var nameEl      = document.getElementById('nf-name');
-  var dateEl      = document.getElementById('nf-date');
-  var timeEl      = document.getElementById('nf-time');
-  var timeUnk     = document.getElementById('nf-time-unknown');
-  var placeEl     = document.getElementById('nf-place');
-  var listboxEl   = document.getElementById('nf-place-listbox');
-  var emptyEl     = document.getElementById('nf-place-empty');
-  var latEl       = document.getElementById('nf-lat');
-  var lonEl       = document.getElementById('nf-lon');
-  var tzDisplay   = document.getElementById('nf-tz-display');
-  var tzAdjust    = document.getElementById('nf-tz-adjust');
-  var tzSelect    = document.getElementById('nf-tz-select');
-  var consentEl   = document.getElementById('nf-consent');
-  var submitBtn   = document.getElementById('nf-submit');
-  var errorEl     = document.getElementById('nf-error');
-  var resultsEl   = document.getElementById('natal-results');
-  var wheelEl     = document.getElementById('natal-wheel');
-  var tablesEl    = document.getElementById('natal-tables');
-  var metaEl      = document.getElementById('natal-meta');
-  var privacyLink = document.getElementById('nf-privacy-link');
+  function $in(suffix) { return document.getElementById(cfg.inputPrefix + suffix); }
+  function $rs(suffix) { return document.getElementById(cfg.resultPrefix + suffix); }
+
+  var nameEl      = $in('-name');
+  var dateEl      = $in('-date');
+  var timeEl      = $in('-time');
+  var timeUnk     = $in('-time-unknown');
+  var placeEl     = $in('-place');
+  var listboxEl   = $in('-place-listbox');
+  var emptyEl     = $in('-place-empty');
+  var latEl       = $in('-lat');
+  var lonEl       = $in('-lon');
+  var tzDisplay   = $in('-tz-display');
+  var tzAdjust    = $in('-tz-adjust');
+  var tzSelect    = $in('-tz-select');
+  var consentEl   = $in('-consent');
+  var submitBtn   = $in('-submit');
+  var errorEl     = $in('-error');
+  var resultsEl   = $rs('-results');
+  var wheelEl     = $rs('-wheel');
+  var tablesEl    = $rs('-tables');
+  var metaEl      = $rs('-meta');
+  var privacyLink = $in('-privacy-link');
 
   // ---------- date defaults ----------
 
@@ -203,7 +229,7 @@
     emptyEl.hidden = true;
     matches.forEach(function (c, i) {
       var li = elt('li', {
-        id: 'nf-place-opt-' + i,
+        id: cfg.inputPrefix + '-place-opt-' + i,
         role: 'option',
         'aria-selected': 'false',
         'class': 'combo-option'
@@ -228,7 +254,7 @@
       opts[i].classList.toggle('is-active', on);
     }
     placeEl.setAttribute('aria-activedescendant',
-      activeIndex >= 0 ? 'nf-place-opt-' + activeIndex : '');
+      activeIndex >= 0 ? cfg.inputPrefix + '-place-opt-' + activeIndex : '');
   }
 
   function selectCity(c) {
@@ -593,7 +619,7 @@
       if (typeof resultsEl.scrollIntoView === 'function') {
         try { resultsEl.scrollIntoView({ behavior: 'smooth', block: 'start' }); } catch (e) {}
       }
-      var heading = document.getElementById('natal-results-heading');
+      var heading = document.getElementById(cfg.resultPrefix + '-results-heading');
       if (heading) {
         heading.setAttribute('tabindex', '-1');
         try { heading.focus({ preventScroll: true }); } catch (e) {}
@@ -603,4 +629,5 @@
 
   // Initial state
   revalidate();
+  } // end initNatalForm
 }());
