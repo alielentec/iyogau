@@ -66,7 +66,7 @@
 
 <link rel="preload" as="style" href="/assets/css/styles.css" />
 <link rel="stylesheet" href="/assets/css/styles.css" />
-<link rel="stylesheet" href="/assets/css/natal-chart.css?v=8" />
+<link rel="stylesheet" href="/assets/css/natal-chart.css?v=9" />
 
 <!-- Schema.org -->
 <script type="application/ld+json">
@@ -1034,6 +1034,15 @@
               var demoBannerEl = $('home-natal-demo-banner');
               var demoIntroEl  = $('home-natal-section-intro');
               var demoAttribEl = $('home-natal-steve-jobs-attrib');
+              // Demo-state check needs lat/lon/tz references. The
+              // bootstrap's own buildPayload() declares them inside its
+              // closure; isDemoState() runs OUTSIDE that closure so we
+              // re-lookup here. (Earlier this was undefined-ed, causing
+              // every isDemoState call to throw ReferenceError and
+              // updateDemoState to silently fail.)
+              var latEl    = $('home-nf-lat');
+              var lonEl    = $('home-nf-lon');
+              var tzSelEl  = $('home-nf-tz-select');
               // Snapshot the default intro text once so we can restore it
               // verbatim if the user clears the form. The i18n applier
               // may translate this after init; we capture AFTER the
@@ -1056,8 +1065,7 @@
                 if (dateElCap && dateElCap.value !== DEMO_DEFAULTS.date) return false;
                 if (latEl && latEl.value !== DEMO_DEFAULTS.lat) return false;
                 if (lonEl && lonEl.value !== DEMO_DEFAULTS.lon) return false;
-                var tzSelLocal = $('home-nf-tz-select');
-                if (tzSelLocal && tzSelLocal.value !== DEMO_DEFAULTS.tz) return false;
+                if (tzSelEl && tzSelEl.value !== DEMO_DEFAULTS.tz) return false;
                 return true;
               }
 
