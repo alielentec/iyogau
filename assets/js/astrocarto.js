@@ -22,11 +22,18 @@
  *  for the rest of the session (the chart only changes when the user
  *  resubmits the form — at which point the cache is invalidated).
  *
- *  No external dependencies. Inline Marching Squares (~150 lines) extracts
- *  iso-contour polygons from the heat matrix; each contour band is rendered
- *  as a single SVG <path> filled with the matching --heat-N gradient stop.
- *  A continent <clipPath> derived from /assets/data/world-continents.js
- *  masks the bands to land only — oceans stay clean for visual orientation.
+ *  RENDER COMPOSITION (ported from ast/src/components/WorldMap.jsx)
+ *  ---------------------------------------------------------------------
+ *  Three SVG layers, stacked back→front:
+ *
+ *    1. Ocean background <rect> + graticule lines.
+ *    2. Heat-matrix cells as plain <rect>s, ONE per (lat,lon) sample,
+ *       clipped to land via <clipPath> built from continent polygons.
+ *       This is the same vector-cell approach the React reference uses;
+ *       we tried marching-squares contour bands and reverted because the
+ *       cell mosaic reads more clearly at the 4° resolution our API ships.
+ *    3. Continent borders drawn as a stroked <path> on top of the heat.
+ *    4. Planet lines (MC/IC/AC/DC) as colored <path>s on top.
  *
  *  i18n: reads from window.IYOGAU_I18N (populated by
  *  i18n.natal-chart.js); falls back to English source text if a key
@@ -49,12 +56,6 @@
   function lat2y(lat) { return (90 - lat) * (VIEW_H / 180); }
   function x2lon(x) { return (x / (VIEW_W / 360)) - 180; }
   function y2lat(y) { return 90 - (y / (VIEW_H / 180)); }
-
-  // Contour band thresholds — 7 iso-levels yields 8 visual bands. We pick
-  // breakpoints that match the perceptual "low / mid / high" buckets users
-  // care about for a relocation map: anything < 10 reads as background, and
-  // anything >= 92 marks the absolute hot-spots.
-  var BAND_THRESHOLDS = [10, 25, 40, 55, 70, 82, 92];
 
   // ---------- i18n helper ----------
 
@@ -105,21 +106,21 @@
     while (node && node.firstChild) node.removeChild(node.firstChild);
   }
 
-  // ---------- Heat-matrix color (5-stop gradient via CSS custom props) ----------
-
-  // Maps a heat score 0..100 to a fill color. Reads the five named CSS
-  // custom properties --heat-0, --heat-25, --heat-50, --heat-75, --heat-100
-  // off :root and linearly interpolates in RGB space.
-  function readHeatStops() {
-    var root = getComputedStyle(document.documentElement);
-    return [
-      { v: 0,   color: (root.getPropertyValue('--heat-0')   || '#1b2538').trim() },
-      { v: 25,  color: (root.getPropertyValue('--heat-25')  || '#2c4b67').trim() },
-      { v: 50,  color: (root.getPropertyValue('--heat-50')  || '#7a8a6b').trim() },
-      { v: 75,  color: (root.getPropertyValue('--heat-75')  || '#d6a352').trim() },
-      { v: 100, color: (root.getPropertyValue('--heat-100') || '#c64c3d').trim() }
-    ];
-  }
+  // ---------- Heat-matrix color (ast/ palette: deep blue → red) ----------
+  //
+  // The ast/ reference uses an 8-stop ramp that runs from the abyssal-blue
+  // background through tropical cyan / lime / yellow into orange and red.
+  // We mirror that ramp exactly so the iyogau map reads identically.
+  var HEAT_STOPS = [
+    { v: 0,   color: '#071331' },
+    { v: 18,  color: '#073a98' },
+    { v: 34,  color: '#008df8' },
+    { v: 48,  color: '#00d8c7' },
+    { v: 62,  color: '#55f03a' },
+    { v: 76,  color: '#fff12b' },
+    { v: 88,  color: '#ff8a00' },
+    { v: 100, color: '#f01818' }
+  ];
   function parseColor(c) {
     // Accept #RGB, #RRGGBB.
     var s = c.charAt(0) === '#' ? c.slice(1) : c;
@@ -130,14 +131,13 @@
       parseInt(s.slice(4, 6), 16)
     ];
   }
-  function colorForValue(value, stops) {
-    if (value <= stops[0].v) return stops[0].color;
-    if (value >= stops[stops.length - 1].v) return stops[stops.length - 1].color;
-    for (var i = 0; i < stops.length - 1; i += 1) {
-      var a = stops[i];
-      var b = stops[i + 1];
-      if (value >= a.v && value <= b.v) {
-        var t = (value - a.v) / (b.v - a.v);
+  function colorForValue(value) {
+    var score = Math.max(0, Math.min(100, value));
+    for (var i = 0; i < HEAT_STOPS.length - 1; i += 1) {
+      var a = HEAT_STOPS[i];
+      var b = HEAT_STOPS[i + 1];
+      if (score >= a.v && score <= b.v) {
+        var t = (score - a.v) / (b.v - a.v);
         var ra = parseColor(a.color);
         var rb = parseColor(b.color);
         var r = Math.round(ra[0] + (rb[0] - ra[0]) * t);
@@ -146,7 +146,14 @@
         return 'rgb(' + r + ',' + g + ',' + bv + ')';
       }
     }
-    return stops[stops.length - 1].color;
+    return HEAT_STOPS[HEAT_STOPS.length - 1].color;
+  }
+  // Opacity ramp from ast/'s WorldMap.jsx (line 148): 0.54 + min(0.34, v/220).
+  // Keeps low-value cells faint while letting hot zones ride bright; the
+  // clip-to-land mask prevents the faint blue blocks from oversaturating
+  // the ocean.
+  function cellOpacity(value) {
+    return 0.54 + Math.min(0.34, value / 220);
   }
 
   // ---------- Per-planet color (re-use existing --planet-* tokens) ----------
@@ -189,286 +196,21 @@
     return parts.join(' ');
   }
 
-  // =====================================================================
-  //   MARCHING SQUARES — inline, no dependency
-  // ---------------------------------------------------------------------
-  //   For a uniform grid of scalar values, extract the iso-contour at a
-  //   given threshold as a list of closed polygons (and possibly open
-  //   polylines that hit the grid edge). The algorithm:
-  //
-  //     1.  Scan every 2×2 quad of cells. Each of the 4 corners is either
-  //         BELOW threshold (0) or AT-OR-ABOVE (1). The 4-bit corner mask
-  //         (TL, TR, BR, BL) gives one of 16 cases (0..15).
-  //
-  //     2.  Each case emits 0, 1 or 2 line segments. The segment endpoints
-  //         lie on the cell edges, linearly interpolated to where the
-  //         threshold crosses (so the contour is smooth, not stair-stepped).
-  //
-  //     3.  We accumulate all (start, end) segments, then walk them by
-  //         endpoint adjacency (using a hashed lookup) to chain them into
-  //         polygons. Saddle cases 5 and 10 are disambiguated by sampling
-  //         the cell center value — this matches d3-contour's behaviour.
-  //
-  //     4.  The final closed polygons enclose the region {v >= threshold}.
-  //         Render lowest threshold first (largest area) and overpaint with
-  //         each higher band — z-order naturally creates filled bands.
-  //
-  //   Output is in (lon, lat) coordinates so the renderer can transform
-  //   uniformly with lon2x / lat2y.
-  // =====================================================================
-
-  // Marching-squares edge endpoints per case. Edges numbered:
-  //   0 = top    (between TL-TR)
-  //   1 = right  (between TR-BR)
-  //   2 = bottom (between BR-BL)
-  //   3 = left   (between BL-TL)
-  // For each of 16 corner-masks, return up to two segments. Each segment is
-  // [enterEdge, exitEdge] with the convention that the "inside" (v >= t)
-  // is to the RIGHT of the traversal direction — this gives consistent
-  // polygon winding for fill-rule.
-  var MS_EDGES = [
-    [],                       // 0000 — all out
-    [[3, 2]],                 // 0001 — BL in
-    [[2, 1]],                 // 0010 — BR in
-    [[3, 1]],                 // 0011 — bottom row in
-    [[1, 0]],                 // 0100 — TR in
-    [[3, 0], [1, 2]],         // 0101 — saddle (TR+BL in)
-    [[2, 0]],                 // 0110 — right col in
-    [[3, 0]],                 // 0111 — TL out only
-    [[0, 3]],                 // 1000 — TL in
-    [[0, 2]],                 // 1001 — left col in
-    [[0, 1], [2, 3]],         // 1010 — saddle (TL+BR in)
-    [[0, 1]],                 // 1011 — TR out only
-    [[1, 3]],                 // 1100 — top row in
-    [[1, 2]],                 // 1101 — BR out only
-    [[2, 3]],                 // 1110 — BL out only
-    []                        // 1111 — all in
-  ];
-
-  // Linear interpolation along an edge: given the two corner values and the
-  // threshold, return t ∈ [0, 1] at which v = threshold.
-  function lerpT(a, b, t) {
-    var d = b - a;
-    if (Math.abs(d) < 1e-9) return 0.5;
-    var v = (t - a) / d;
-    if (v < 0) return 0;
-    if (v > 1) return 1;
-    return v;
-  }
-
-  // Given a cell (col, row), corner values [TL, TR, BR, BL] and a threshold,
-  // return the (lon, lat) point on the requested edge.
-  function edgePoint(edge, col, row, vals, thresh, lons, lats) {
-    var lon0 = lons[col],     lon1 = lons[col + 1];
-    var lat0 = lats[row],     lat1 = lats[row + 1];
-    var t;
-    switch (edge) {
-      case 0: // top edge — TL→TR — vary lon
-        t = lerpT(vals[0], vals[1], thresh);
-        return [lon0 + (lon1 - lon0) * t, lat0];
-      case 1: // right edge — TR→BR — vary lat
-        t = lerpT(vals[1], vals[2], thresh);
-        return [lon1, lat0 + (lat1 - lat0) * t];
-      case 2: // bottom edge — BR→BL — vary lon (reverse)
-        t = lerpT(vals[3], vals[2], thresh);
-        return [lon0 + (lon1 - lon0) * t, lat1];
-      case 3: // left edge — BL→TL — vary lat (reverse)
-        t = lerpT(vals[0], vals[3], thresh);
-        return [lon0, lat0 + (lat1 - lat0) * t];
-    }
-    return [lon0, lat0];
-  }
-
-  // Run marching squares on `grid` (rowMajor, lats[0..R-1] × lons[0..C-1])
-  // at the given threshold. Returns an array of polylines (each is a list
-  // of [lon, lat] points). Polylines may be open (hit grid edge) or closed
-  // (loop back); the caller closes them with the bounding rectangle.
-  function marchingSquares(grid, lats, lons, thresh) {
-    var R = lats.length;
-    var C = lons.length;
-    var segments = [];
-
-    for (var r = 0; r < R - 1; r += 1) {
-      var row0 = grid[r];
-      var row1 = grid[r + 1];
-      if (!row0 || !row1) continue;
-      for (var c = 0; c < C - 1; c += 1) {
-        var TL = row0[c],     TR = row0[c + 1];
-        var BL = row1[c],     BR = row1[c + 1];
-        if (TL == null || TR == null || BL == null || BR == null) continue;
-
-        var mask = 0;
-        if (TL >= thresh) mask |= 8;
-        if (TR >= thresh) mask |= 4;
-        if (BR >= thresh) mask |= 2;
-        if (BL >= thresh) mask |= 1;
-        if (mask === 0 || mask === 15) continue;
-
-        var cases = MS_EDGES[mask];
-        // Saddle disambiguation (cases 5 + 10) — average corner value
-        // approximates the cell-centre value; pick connection so the
-        // contour matches the centre's side of the threshold.
-        if (mask === 5 || mask === 10) {
-          var centre = (TL + TR + BR + BL) * 0.25;
-          if ((mask === 5 && centre < thresh) || (mask === 10 && centre >= thresh)) {
-            // swap connection
-            cases = (mask === 5)
-              ? [[3, 2], [1, 0]]
-              : [[0, 3], [2, 1]];
-          }
-        }
-
-        var corners = [TL, TR, BR, BL];
-        for (var s = 0; s < cases.length; s += 1) {
-          var pair = cases[s];
-          var a = edgePoint(pair[0], c, r, corners, thresh, lons, lats);
-          var b = edgePoint(pair[1], c, r, corners, thresh, lons, lats);
-          segments.push([a, b]);
-        }
-      }
-    }
-    return chainSegments(segments);
-  }
-
-  // Chain unordered segments into polylines by endpoint match. Use a hash
-  // map keyed by quantised start-point (~1e-4 degree ≈ 11 m tolerance) to
-  // find the unique next segment in O(1). Total cost: O(N) for N segments.
-  function chainSegments(segments) {
-    if (!segments.length) return [];
-    var Q = 1e4; // quantise to 1e-4 degree — segments end at exact edge
-                 // intersections so an exact match is normally fine, but
-                 // quantising avoids floating-point drift misses.
-    function key(p) {
-      return Math.round(p[0] * Q) + ',' + Math.round(p[1] * Q);
-    }
-    var N = segments.length;
-    // For each start-point key, store the list of segment INDICES that begin
-    // there. Storing indices (not refs) lets the consumer flag them used in
-    // O(1) without an additional indexOf.
-    var byStart = Object.create(null);
-    for (var i = 0; i < N; i += 1) {
-      var k = key(segments[i][0]);
-      (byStart[k] || (byStart[k] = [])).push(i);
-    }
-    var used = new Uint8Array(N);
-    var lines = [];
-    for (var i2 = 0; i2 < N; i2 += 1) {
-      if (used[i2]) continue;
-      used[i2] = 1;
-      var seg2 = segments[i2];
-      var line = [seg2[0], seg2[1]];
-      var startKey = key(seg2[0]);
-      var endKey = key(seg2[1]);
-      // walk forward
-      while (true) {
-        var candidates = byStart[endKey];
-        if (!candidates || !candidates.length) break;
-        var nextIdx = -1;
-        for (var j = 0; j < candidates.length; j += 1) {
-          var idx = candidates[j];
-          if (!used[idx]) { nextIdx = idx; break; }
-        }
-        if (nextIdx < 0) break;
-        used[nextIdx] = 1;
-        var nextSeg = segments[nextIdx];
-        line.push(nextSeg[1]);
-        endKey = key(nextSeg[1]);
-        // closed loop?
-        if (endKey === startKey) break;
-      }
-      lines.push(line);
-    }
-    return lines;
-  }
-
-  // ---------- Douglas-Peucker simplification (in lon/lat space) ----------
-  //
-  // Reduces the number of vertices in each polyline by recursively dropping
-  // points that lie within `epsilon` of the chord between their neighbours.
-  // Operates on a copy; original points untouched. epsilon is in degrees —
-  // for our 4° / 3° grid, 0.35° (~40 km) preserves shape without ringing.
-  function simplify(points, epsilon) {
-    if (!points || points.length < 3) return points || [];
-    function sqSegDist(p, a, b) {
-      var x = a[0], y = a[1];
-      var dx = b[0] - x, dy = b[1] - y;
-      if (dx !== 0 || dy !== 0) {
-        var t = ((p[0] - x) * dx + (p[1] - y) * dy) / (dx * dx + dy * dy);
-        if (t > 1) { x = b[0]; y = b[1]; }
-        else if (t > 0) { x += dx * t; y += dy * t; }
-      }
-      dx = p[0] - x; dy = p[1] - y;
-      return dx * dx + dy * dy;
-    }
-    var sqEps = epsilon * epsilon;
-    var n = points.length;
-    var keep = new Uint8Array(n);
-    keep[0] = 1; keep[n - 1] = 1;
-    var stack = [[0, n - 1]];
-    while (stack.length) {
-      var range = stack.pop();
-      var first = range[0], last = range[1];
-      var maxDist = 0, index = -1;
-      for (var i = first + 1; i < last; i += 1) {
-        var d = sqSegDist(points[i], points[first], points[last]);
-        if (d > maxDist) { maxDist = d; index = i; }
-      }
-      if (maxDist > sqEps && index >= 0) {
-        keep[index] = 1;
-        stack.push([first, index]);
-        stack.push([index, last]);
-      }
-    }
-    var out = [];
-    for (var k = 0; k < n; k += 1) if (keep[k]) out.push(points[k]);
-    return out;
-  }
-
-  // Convert polylines (lon, lat) to a single SVG `d` string. Closed polygons
-  // get a trailing 'Z'; open ones (hit the grid edge) stay open — they'll be
-  // clipped by the continent <clipPath> anyway.
-  function polylinesToPathD(lines) {
-    var parts = [];
-    for (var i = 0; i < lines.length; i += 1) {
-      var line = lines[i];
-      if (!line || line.length < 2) continue;
-      var first = line[0];
-      var last = line[line.length - 1];
-      var closed = (Math.abs(first[0] - last[0]) < 1e-6 && Math.abs(first[1] - last[1]) < 1e-6);
-      var seg = 'M' + lon2x(first[0]).toFixed(1) + ' ' + lat2y(first[1]).toFixed(1);
-      for (var j = 1; j < line.length; j += 1) {
-        seg += ' L' + lon2x(line[j][0]).toFixed(1) + ' ' + lat2y(line[j][1]).toFixed(1);
-      }
-      if (closed) seg += ' Z';
-      parts.push(seg);
-    }
-    return parts.join(' ');
-  }
-
-  // =====================================================================
-  //   BAND COLOR RAMP
-  // ---------------------------------------------------------------------
-  //   Each iso-band's fill is the interpolated heat color at the band's
-  //   LOWER threshold (so adjacent bands share a stop boundary). Opacity
-  //   ramps with the band index to give the warmest bands more presence.
-  // =====================================================================
-  function bandFill(threshold, stops) {
-    return colorForValue(threshold, stops);
-  }
-  function bandOpacity(idx, total) {
-    // Bottom band ~0.18, top band ~0.78 — a perceptual ramp that keeps low
-    // areas readable as 'flat' while the apex bands ride bright.
-    return 0.18 + (idx / Math.max(1, total - 1)) * 0.6;
-  }
-
   // ---------- Build the SVG ----------
+  //
+  // Composition mirrors ast/src/components/WorldMap.jsx:
+  //   1. Ocean rect.
+  //   2. Faint graticule grid.
+  //   3. <defs><clipPath> built from continent polygons.
+  //   4. Heat-matrix cells as <rect>s, clip-pathed to land.
+  //   5. Continent outlines on top (no fill, dark stroke).
+  //   6. Planet lines colored per planet, dashed per line type.
+  //   7. Transparent pointer-capture rect for tooltip.
 
   function renderMap(container, response, mode) {
     if (!container || !response) return;
     var t0 = (typeof performance !== 'undefined' && performance.now) ? performance.now() : Date.now();
     removeAllChildren(container);
-
-    var heatStops = readHeatStops();
 
     var svg = svgEl('svg', {
       viewBox: '0 0 ' + VIEW_W + ' ' + VIEW_H,
@@ -485,7 +227,7 @@
     });
     svg.appendChild(bg);
 
-    // ---- Graticule (10° grid) ----
+    // ---- Graticule (30° grid) ----
     var grat = svgEl('g', { class: 'astrocarto-graticule', 'aria-hidden': 'true' });
     for (var lon = -180; lon <= 180; lon += 30) {
       grat.appendChild(svgEl('line', {
@@ -514,18 +256,17 @@
     if (landPathD) {
       var defs = svgEl('defs');
       var clip = svgEl('clipPath', { id: clipId, clipPathUnits: 'userSpaceOnUse' });
-      clip.appendChild(svgEl('path', { d: landPathD, 'fill-rule': 'evenodd' }));
+      clip.appendChild(svgEl('path', { d: landPathD, 'fill-rule': 'nonzero' }));
       defs.appendChild(clip);
       svg.appendChild(defs);
     }
 
-    // ---- Heat matrix → contour bands ----
+    // ---- Heat matrix → per-cell <rect>s, clipped to land ----
     // Response shape (from /api/astrocarto):
     //   heatMatrix.latitudes   = [lat_0, lat_1, ...]    (length R)
     //   heatMatrix.longitudes  = [lon_0, lon_1, ...]    (length C)
-    //   heatMatrix.values      = R × C array of {value 0..100}
+    //   heatMatrix.values      = R × C array of numbers 0..100
     //   heatMatrix.cellMeta    = R × C array of top-3 contributors
-    //   heatMatrix.latStep, lonStep
     var hm = response.heatMatrix || {};
     var latitudes = hm.latitudes || [];
     var longitudes = hm.longitudes || [];
@@ -534,80 +275,50 @@
     var latStep = hm.latStep || (latitudes.length > 1 ? Math.abs(latitudes[1] - latitudes[0]) : 4);
     var lonStep = hm.lonStep || (longitudes.length > 1 ? Math.abs(longitudes[1] - longitudes[0]) : 4);
 
-    var bandsG = svgEl('g', {
-      class: 'astrocarto-bands',
+    var heatG = svgEl('g', {
+      class: 'astrocarto-heat',
       'aria-hidden': 'true'
     });
-    if (landPathD) bandsG.setAttribute('clip-path', 'url(#' + clipId + ')');
+    if (landPathD) heatG.setAttribute('clip-path', 'url(#' + clipId + ')');
 
     if (latitudes.length && longitudes.length && values.length) {
-      // (1) Extend longitudes so the matrix wraps continuously around the
-      //     world (otherwise the last column never gets a contour back to
-      //     lon = −180).
-      // (2) Pad the matrix with a guard row of zeros above and below the
-      //     real data, so any iso-contour that would otherwise dangle off
-      //     the top or bottom edge closes cleanly. Without this, the
-      //     evenodd fill-rule paints unrelated screen regions where the
-      //     polyline straight-line closes back to its start.
-      var lonsExt = longitudes.slice();
-      var lastLon = longitudes[longitudes.length - 1];
-      lonsExt.push(lastLon + lonStep);
-
-      var firstLat = latitudes[0];
-      var lastLat = latitudes[latitudes.length - 1];
-      var latsExt = [firstLat - latStep].concat(latitudes).concat([lastLat + latStep]);
-
-      var paddedCols = lonsExt.length;
-      var zeroRow = new Array(paddedCols);
-      for (var z = 0; z < paddedCols; z += 1) zeroRow[z] = 0;
-      var valuesExt = new Array(latitudes.length + 2);
-      valuesExt[0] = zeroRow;
-      for (var r = 0; r < values.length; r += 1) {
-        var row = values[r] || [];
-        var extRow = row.slice();
-        extRow.push(row[0]); // wrap east → west match
-        valuesExt[r + 1] = extRow;
-      }
-      valuesExt[valuesExt.length - 1] = zeroRow;
-
-      // Simplification epsilon scales with cell step — finer grids tolerate
-      // tighter simplification before they look polygonal.
-      var simplifyEps = Math.max(0.15, latStep * 0.12);
-
-      for (var bi = 0; bi < BAND_THRESHOLDS.length; bi += 1) {
-        var thresh = BAND_THRESHOLDS[bi];
-        var polylines = marchingSquares(valuesExt, latsExt, lonsExt, thresh);
-        if (!polylines.length) continue;
-        var simplified = [];
-        for (var pi = 0; pi < polylines.length; pi += 1) {
-          simplified.push(simplify(polylines[pi], simplifyEps));
+      // Each cell spans (lat .. lat+latStep) × (lon .. lon+lonStep). We add
+      // a tiny 0.8px overdraw on width/height (matching ast/'s WorldMap line
+      // 136) so the cells abut without sub-pixel seams.
+      var cellW = (VIEW_W / 360) * lonStep + 0.8;
+      var cellH = (VIEW_H / 180) * latStep + 0.8;
+      for (var r = 0; r < latitudes.length; r += 1) {
+        var rowLat = latitudes[r];
+        var rowVals = values[r];
+        if (!rowVals) continue;
+        // The matrix is stored south→north (latitudes[0] = south); SVG y
+        // grows downward, so the rect's top-edge sits at lat2y(rowLat + step).
+        var y = lat2y(rowLat + latStep);
+        for (var c = 0; c < longitudes.length; c += 1) {
+          var v = rowVals[c];
+          if (v == null) continue;
+          var x = lon2x(longitudes[c]);
+          heatG.appendChild(svgEl('rect', {
+            x: x.toFixed(2),
+            y: y.toFixed(2),
+            width: cellW.toFixed(2),
+            height: cellH.toFixed(2),
+            fill: colorForValue(v),
+            'fill-opacity': cellOpacity(v).toFixed(3),
+            class: 'astrocarto-cell'
+          }));
         }
-        var d = polylinesToPathD(simplified);
-        if (!d) continue;
-
-        var fill = bandFill(thresh, heatStops);
-        var op = bandOpacity(bi, BAND_THRESHOLDS.length);
-        var bandPath = svgEl('path', {
-          d: d,
-          fill: fill,
-          'fill-opacity': op.toFixed(2),
-          'fill-rule': 'evenodd',
-          stroke: 'none',
-          class: 'astrocarto-band astrocarto-band--' + bi,
-          'data-threshold': String(thresh)
-        });
-        bandsG.appendChild(bandPath);
       }
     }
-    svg.appendChild(bandsG);
+    svg.appendChild(heatG);
 
-    // ---- Continent outlines (rendered ABOVE the bands, no fill) ----
+    // ---- Continent outlines (rendered ABOVE the heat cells, no fill) ----
     if (landPathD) {
       var land = svgEl('path', {
         d: landPathD,
         class: 'astrocarto-land',
         'aria-hidden': 'true',
-        'fill-rule': 'evenodd'
+        'fill-rule': 'nonzero'
       });
       svg.appendChild(land);
     }
