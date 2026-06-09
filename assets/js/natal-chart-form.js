@@ -56,10 +56,11 @@
   var placeEl     = $in('-place');
   var listboxEl   = $in('-place-listbox');
   var emptyEl     = $in('-place-empty');
+  var locDetail   = $in('-loc-detail'); // fieldset wrapping lat/lon/tz; hidden until city selected
   var latEl       = $in('-lat');
   var lonEl       = $in('-lon');
-  var tzDisplay   = $in('-tz-display');
-  var tzAdjust    = $in('-tz-adjust');
+  var tzDisplay   = $in('-tz-display');   // legacy aria-live span (hidden); kept for back-compat
+  var tzAdjust    = $in('-tz-adjust');    // legacy "adjust" link (hidden); kept for back-compat
   var tzSelect    = $in('-tz-select');
   var consentEl   = $in('-consent');
   var submitBtn   = $in('-submit');
@@ -260,9 +261,12 @@
   function selectCity(c) {
     placeEl.value = c.name + ', ' + c.country;
     placeEl.dataset.resolved = '1';
-    latEl.value = c.lat;
-    lonEl.value = c.lon;
+    latEl.value = (typeof c.lat === 'number') ? c.lat.toFixed(4) : c.lat;
+    lonEl.value = (typeof c.lon === 'number') ? c.lon.toFixed(4) : c.lon;
     setTimezone(c.tz);
+    // Reveal the lat/lon/tz fieldset so the user can fine-tune if they
+    // were born outside the city centre or near a timezone boundary.
+    if (locDetail) locDetail.hidden = false;
     listboxEl.hidden = true;
     placeEl.setAttribute('aria-expanded', 'false');
     revalidate();
@@ -272,6 +276,8 @@
     placeEl.dataset.resolved = '';
     latEl.value = '';
     lonEl.value = '';
+    // Hide the lat/lon/tz block again until the user picks a city.
+    if (locDetail) locDetail.hidden = true;
     var q = placeEl.value;
     if (!citiesLoaded) {
       loadCities().then(function () {
@@ -386,12 +392,22 @@
 
   // ---------- validation ----------
 
+  function currentTz() {
+    if (tzSelect && tzSelect.value) return tzSelect.value;
+    if (tzDisplay && tzDisplay.textContent) return tzDisplay.textContent.trim();
+    return '';
+  }
+
   function isValid() {
     if (!dateEl.value) return false;
     if (!timeUnk.checked && !timeEl.value) return false;
     if (!placeEl.dataset.resolved) return false;
-    if (!latEl.value || !lonEl.value) return false;
-    var tz = (tzSelect && tzSelect.value) || tzDisplay.textContent;
+    // lat/lon are now user-editable, so validate numeric range too
+    var lat = parseFloat(latEl.value);
+    var lon = parseFloat(lonEl.value);
+    if (!isFinite(lat) || lat < -66.5 || lat > 66.5) return false;
+    if (!isFinite(lon) || lon < -180 || lon > 180) return false;
+    var tz = currentTz();
     if (!tz || !/[A-Za-z]+\/[A-Za-z_]+/.test(tz)) return false;
     if (!consentEl.checked) return false;
     return true;
@@ -399,7 +415,10 @@
 
   function revalidate() { submitBtn.disabled = !isValid(); }
 
-  [dateEl, timeEl, placeEl, consentEl].forEach(function (el) {
+  // The lat/lon inputs are user-editable now, so we have to revalidate on
+  // their input event too — otherwise the submit button stays in whatever
+  // state selectCity() left it in, even if the user types nonsense.
+  [dateEl, timeEl, placeEl, latEl, lonEl, tzSelect, consentEl].forEach(function (el) {
     if (!el) return;
     el.addEventListener('input', revalidate);
     el.addEventListener('change', revalidate);
@@ -422,7 +441,7 @@
       return;
     }
 
-    var tz = (tzSelect && tzSelect.value) || tzDisplay.textContent;
+    var tz = currentTz();
     var payload = {
       date: dateEl.value,
       time: timeUnk.checked ? '12:00' : timeEl.value,

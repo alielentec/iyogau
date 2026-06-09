@@ -141,19 +141,33 @@
           </div>
           <small class="help" data-i18n="natal.form.place.help">Type a city name. We match against a built-in gazetteer &mdash; no third-party lookup.</small>
           <small class="help help--empty" id="nf-place-empty" hidden data-i18n="natal.form.place.empty">No matches. Try a larger nearby city.</small>
-          <input type="hidden" id="nf-lat" name="lat" />
-          <input type="hidden" id="nf-lon" name="lon" />
         </div>
 
-        <!-- Timezone (auto-filled) -->
-        <div class="natal-field">
-          <span class="label-text" data-i18n="natal.form.tz">Timezone</span>
-          <div class="tz-row">
-            <span id="nf-tz-display" class="tz-display" aria-live="polite">&mdash;</span>
-            <button type="button" id="nf-tz-adjust" class="link-btn" data-i18n="natal.form.tz.adjust">adjust</button>
+        <!-- Location detail: lat / lon / tz. Hidden until a city is selected;
+             then auto-filled AND editable, in case the birth was outside the
+             city centre or near a timezone boundary. -->
+        <fieldset class="natal-loc-detail" id="nf-loc-detail" hidden>
+          <legend data-i18n="natal.form.adjust.legend">Fine-tune location (optional)</legend>
+          <div class="natal-loc-grid">
+            <div class="natal-field">
+              <label for="nf-lat" data-i18n="natal.form.lat">Latitude</label>
+              <input id="nf-lat" name="lat" type="number" step="0.0001" min="-66.5" max="66.5"
+                     inputmode="decimal" required aria-required="true" />
+            </div>
+            <div class="natal-field">
+              <label for="nf-lon" data-i18n="natal.form.lon">Longitude</label>
+              <input id="nf-lon" name="lon" type="number" step="0.0001" min="-180" max="180"
+                     inputmode="decimal" required aria-required="true" />
+            </div>
+            <div class="natal-field">
+              <label for="nf-tz-select" data-i18n="natal.form.tz">Timezone</label>
+              <select id="nf-tz-select" name="tz" aria-label="IANA timezone"></select>
+              <span id="nf-tz-display" hidden aria-live="polite"></span>
+              <button type="button" id="nf-tz-adjust" hidden></button>
+            </div>
           </div>
-          <select id="nf-tz-select" name="tz" hidden aria-label="IANA timezone"></select>
-        </div>
+          <small class="help" data-i18n="natal.form.adjust.help">Auto-filled from the city you picked. Adjust if needed.</small>
+        </fieldset>
 
         <!-- Consent -->
         <div class="natal-field consent">

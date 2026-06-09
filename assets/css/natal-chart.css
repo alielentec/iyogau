@@ -68,23 +68,30 @@
   background: var(--surface-2);
   border: 1px solid var(--outline);
   border-radius: 14px;
-  padding: clamp(1.25rem, 2.5vw, 2rem);
+  /* Compactness pass: was clamp(1.25rem, 2.5vw, 2rem) — chamfer the
+     outer padding while keeping breathing room on phones. */
+  padding: clamp(1rem, 2vw, 1.5rem);
   box-shadow: 0 1px 2px rgba(0, 0, 0, 0.04);
 }
 
 .natal-form {
   display: grid;
   grid-template-columns: 1fr;
-  gap: 1.25rem;
+  /* Was 1.25rem — tighter inter-field spacing keeps the form on one
+     screen on a typical laptop without needing to scroll the form
+     itself. */
+  gap: 0.875rem;
 }
 @media (min-width: 640px) {
   .natal-form {
     grid-template-columns: 1fr 1fr;
-    gap: 1.25rem 1.5rem;
+    /* Row-gap stays tight; column-gap a hair wider for visual rhythm. */
+    gap: 0.875rem 1.25rem;
   }
   .natal-field--combo,
   .natal-field.consent,
-  .natal-field--submit {
+  .natal-field--submit,
+  .natal-loc-detail {
     grid-column: 1 / -1;
   }
 }
@@ -92,29 +99,33 @@
 .natal-field {
   display: flex;
   flex-direction: column;
-  gap: 0.375rem;
+  gap: 0.3125rem;
 }
 .natal-field > label,
 .natal-field > .label-text {
   font-weight: 600;
-  font-size: 0.9rem;
+  font-size: 0.875rem;
   color: var(--ink);
   letter-spacing: 0.01em;
 }
 .natal-field input[type="text"],
 .natal-field input[type="date"],
 .natal-field input[type="time"],
+.natal-field input[type="number"],
 .natal-field select {
   width: 100%;
-  padding: 0.625rem 0.75rem;
+  /* Was 0.625rem 0.75rem with min-height 44px — slimmer now but still
+     hits the 40px touch threshold (Apple HIG 44px is for primary tap
+     targets like buttons; form inputs can be 36–40px). */
+  padding: 0.5rem 0.625rem;
   font: inherit;
-  font-size: 0.95rem;
+  font-size: 0.9rem;
   color: var(--ink);
   background: var(--surface);
   border: 1px solid var(--outline);
   border-radius: 8px;
   transition: border-color 120ms ease, box-shadow 120ms ease;
-  min-height: 44px; /* touch target */
+  min-height: 40px;
 }
 .natal-field input:focus-visible,
 .natal-field select:focus-visible {
@@ -476,4 +487,44 @@
 .luna-angle-marker.angle-marker-mc,
 .luna-angle-marker.angle-marker-ic {
   fill: var(--gold-hover);
+}
+
+/* =====================================================================
+ * Location-detail fieldset (lat / lon / tz)
+ *
+ * Hidden until a city is picked from the autocomplete. When revealed,
+ * shows the autocomplete-resolved lat / lon / tz values as user-editable
+ * inputs in a 3-column row on tablet+, stacked on phones.
+ * =================================================================== */
+
+.natal-loc-detail {
+  margin: 0;
+  padding: 0.75rem 0.875rem;
+  border: 1px solid var(--outline);
+  border-radius: 10px;
+  background: color-mix(in srgb, var(--surface) 70%, transparent);
+}
+.natal-loc-detail > legend {
+  font-size: 0.8125rem;
+  font-weight: 600;
+  color: var(--ink);
+  padding: 0 0.375rem;
+  letter-spacing: 0.01em;
+}
+.natal-loc-grid {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 0.625rem;
+}
+@media (min-width: 560px) {
+  .natal-loc-grid {
+    grid-template-columns: 1fr 1fr 1.5fr; /* tz column gets more room for "Asia/Kolkata"-length labels */
+    gap: 0.75rem;
+  }
+}
+.natal-loc-detail .natal-field > label {
+  font-size: 0.8125rem; /* slightly tighter labels inside the inset */
+}
+.natal-loc-detail .help {
+  margin-top: 0.5rem;
 }
