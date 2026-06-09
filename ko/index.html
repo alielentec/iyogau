@@ -1418,40 +1418,98 @@
 
               // Name input — TWO listener responsibilities:
               //   1. update the wheel title to the typed text (vanity)
-              //   2. if the typed text exactly matches a preset name
-              //      (i.e. the user selected from the datalist),
-              //      apply that preset.
-              // The datalist selection is hard to detect cross-browser
-              // (no dedicated event); the workaround is to compare the
-              // typed value against the known preset names on EVERY
-              // input event. If it matches one, treat it as a pick.
-              // Two signals that the user PICKED from the datalist (vs typed
-              // a name that happens to match a preset):
-              //  - InputEvent.inputType === 'insertReplacementText' — fired
-              //    by Chrome/Edge when a datalist option is selected.
-              //  - 'change' event — fires on blur after a datalist pick
-              //    AND on blur after manual typing. We only trust the
-              //    'change' path when it follows immediately after an
-              //    insertReplacementText input.
-              // Without this gate, typing "Steve Jobs" manually as your
-              // own father's name would hijack the field and clear the
-              // birth data.
+              //   2. if the typed text was PICKED from the datalist
+              //      (vs typed character-by-character), apply that preset.
+              //
+              // Cross-browser datalist-pick detection is messy: Chrome/Edge
+              // fire an InputEvent with inputType='insertReplacementText',
+              // but Safari fires with inputType='' (empty string) or null,
+              // iOS Safari sometimes fires nothing on the input event at all
+              // and only fires 'change' on blur, and keyboard-Enter on a
+              // datalist suggestion is browser-specific too. The earlier
+              // single-signal gate (inputType==='insertReplacementText') was
+              // a Chrome-only assumption that broke Safari and iOS.
+              //
+              // Multi-signal value-jump detector:
+              //   prev = "S", new = "Steve Jobs"  → jumped by 10 chars → pick
+              //   prev = "Steve Job", new = "Steve Jobs"  → jumped by 1 char,
+              //     can only be a pick if the final keystroke happened to
+              //     land an exact preset match; but that keystroke is
+              //     inputType='insertText' which we ignore for condition (b)
+              //     since it never matches without the buildup. Safe.
+              //
+              // Conditions for accepting as a pick (ANY one is enough):
+              //   (a) inputType === 'insertReplacementText'  (Chrome/Edge signal)
+              //   (b) inputType is '' or null AND value exactly matches a
+              //       preset name  (Safari path — empty/null inputType is
+              //       Safari's signal for "this value came from the
+              //       datalist", not from a typed char)
+              //   (c) value length jumped by >1 character from the previous
+              //       value AND new value matches a preset  (catches paste-
+              //       of-full-name and any browser path we haven't enumerated)
+              //
+              // Typing letter-by-letter: each keystroke has inputType ===
+              // 'insertText' (NOT empty), value length jumps by exactly 1.
+              // None of (a)/(b)/(c) trigger. Confirmed safe against the
+              // "father named Steve Jobs" regression the original comment
+              // warned about.
+              var prevNameValue = (nameEl && nameEl.value) || '';
+
               function onNameInputEvent(e) {
                 if (internalUpdate) return;
-                // Pure typing: never apply a preset. Just update the
-                // chart title via updateCaption.
-                if (!e || e.inputType !== 'insertReplacementText') {
-                  updateCaption();
+                var typed = (nameEl && nameEl.value) || '';
+                var inputType = (e && typeof e.inputType !== 'undefined') ? e.inputType : null;
+                var isPick = false;
+
+                // (a) Chrome / Edge — explicit datalist replacement signal.
+                if (inputType === 'insertReplacementText') {
+                  isPick = true;
+                }
+                // (b) Safari — empty / null inputType + exact preset match.
+                //     A character-by-character typed value reaches an exact
+                //     preset name only on the final keystroke, which has
+                //     inputType='insertText' (NOT empty/null), so this
+                //     condition cannot fire from normal typing.
+                if (!isPick && (inputType === '' || inputType == null)) {
+                  if (findPresetByLocalizedName(typed)) isPick = true;
+                }
+                // (c) Universal fallback — value jumped by >1 char and
+                //     the new value matches a preset. Catches paste and
+                //     any browser path that wasn't accounted for above.
+                if (!isPick && (typed.length - prevNameValue.length) > 1) {
+                  if (findPresetByLocalizedName(typed)) isPick = true;
+                }
+
+                prevNameValue = typed;
+
+                if (isPick) {
+                  var match = findPresetByLocalizedName(typed);
+                  if (match) {
+                    applyPreset(match);
+                    return;
+                  }
+                }
+                // Pure typing path: just update the chart title.
+                updateCaption();
+              }
+
+              // 'change' fires on blur. If the value matches a preset and we
+              // are NOT already in that preset's DEMO state (i.e. the
+              // 'input' path didn't already apply it — happens on iOS where
+              // the input event is sometimes suppressed for datalist picks),
+              // apply it now. This is the final safety net for any browser /
+              // input modality that doesn't surface the input event correctly.
+              function onNameInputChange() {
+                if (internalUpdate) return;
+                var typed = (nameEl && nameEl.value) || '';
+                prevNameValue = typed;
+                var match = findPresetByLocalizedName(typed);
+                if (match && activePresetId !== match.id) {
+                  applyPreset(match);
                   return;
                 }
-                // Datalist selection signal: apply the matching preset.
-                var typed = (nameEl && nameEl.value) || '';
-                var match = findPresetByLocalizedName(typed);
-                if (match) applyPreset(match);
-                else updateCaption();
+                updateCaption();
               }
-              // Back-compat name for existing wiring.
-              function onNameInputChange() { onNameInputEvent({ inputType: 'change' }); }
 
               // Chart-math field edit — when in DEMO, demote to CUSTOM.
               // We only demote if the new value differs from the
@@ -1872,9 +1930,9 @@
      Current version round: i18n.natal-chart.js (adds defaultName key) and
      natal-chart-form.js (other recent edits). -->
 <script src="/assets/js/natal-presets.js?v=2" defer></script>
-<script src="/assets/js/i18n.natal-chart.js?v=9" defer></script>
-<script src="/assets/js/natal-chart-wheel.js?v=9" defer></script>
-<script src="/assets/js/natal-chart-tabs.js?v=9" defer></script>
-<script src="/assets/js/natal-chart-form.js?v=9" defer></script>
+<script src="/assets/js/i18n.natal-chart.js?v=10" defer></script>
+<script src="/assets/js/natal-chart-wheel.js?v=10" defer></script>
+<script src="/assets/js/natal-chart-tabs.js?v=10" defer></script>
+<script src="/assets/js/natal-chart-form.js?v=10" defer></script>
 </body>
 </html>
