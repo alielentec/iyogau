@@ -1419,21 +1419,34 @@
               // (stable identity across language switches); otherwise
               // we scan from the top.
               function detectActivePreset() {
-                // Hard short-circuits: a preset cannot be active when
-                // the user has overridden time/timezone via the
-                // "unknown time" or "use custom UTC offset" toggles.
-                // Those flags change the math the API receives even
-                // when the visible date/time/lat/lon/tz fields still
-                // match a preset's snapshot — without these guards the
-                // page can show a "Currently showing Steve Jobs" banner
-                // while the API gets 12:00 or a manually-keyed offset.
+                // Hard short-circuit: "unknown time" feeds 12:00 to the
+                // API regardless of what the time input shows, so no
+                // preset can be active while that's on (otherwise the
+                // banner would claim a preset while the chart is for
+                // a different time).
                 if (timeUnkElCap && timeUnkElCap.checked) return null;
-                if (useOffEl && useOffEl.checked) return null;
                 var date = dateElCap && dateElCap.value;
                 var time = timeElCap && timeElCap.value;
                 var lat  = latEl && latEl.value;
                 var lon  = lonEl && lonEl.value;
-                var tz   = tzSelEl && tzSelEl.value;
+                // Timezone match: two paths.
+                //   - useOff ON  → derive '+HH:MM' / '-HH:MM' from the
+                //     offset controls and match against offset-shaped
+                //     preset.tz values (Einstein / Edison).
+                //   - useOff OFF → match preset.tz against IANA select.
+                // Presets carry exactly one tz shape; the other path
+                // never matches, so this branch fully replaces the
+                // old "hard short-circuit when useOff is on" guard.
+                var tz;
+                if (useOffEl && useOffEl.checked
+                    && offSignEl && offHrsEl && offMinEl) {
+                  var sign = offSignEl.value === '-' ? '-' : '+';
+                  var h = String(Math.max(0, Math.min(14, parseInt(offHrsEl.value, 10) || 0))).padStart(2, '0');
+                  var m = String(Math.max(0, Math.min(59, parseInt(offMinEl.value, 10) || 0))).padStart(2, '0');
+                  tz = sign + h + ':' + m;
+                } else {
+                  tz = tzSelEl && tzSelEl.value;
+                }
                 function matches(p) {
                   return p.birthDate === date
                       && p.birthTime === time
@@ -1499,33 +1512,58 @@
                   if (timeUnkElCap && timeUnkElCap.checked) {
                     timeUnkElCap.checked = false;
                   }
-                  // Same treatment for the UTC-offset override: a preset
-                  // carries an IANA timezone, so any active fixed-offset
-                  // override would silently shadow it (buildPayload reads
-                  // the offset when useOff is checked). Untoggle the
-                  // checkbox, hide the row, re-enable the IANA select,
-                  // and dispatch a 'change' so anyone listening to it
-                  // (the step-3 recalculate) sees the demotion.
-                  if (useOffEl && useOffEl.checked) {
-                    useOffEl.checked = false;
-                    if (offRowEl) offRowEl.hidden = true;
-                    if (tzSelEl) tzSelEl.disabled = false;
-                    try {
-                      useOffEl.dispatchEvent(new Event('change', { bubbles: true }));
-                    } catch (e) { /* old browsers — no harm */ }
-                  }
                   if (latEl) latEl.value = String(preset.lat);
                   if (lonEl) lonEl.value = String(preset.lon);
-                  if (tzSelEl) {
-                    tzSelEl.value = preset.tz;
-                    // If the IANA tz isn't in the select (rare —
-                    // Intl.supportedValuesOf is a superset), append it
-                    // so the value sticks.
-                    if (tzSelEl.value !== preset.tz) {
-                      var opt = document.createElement('option');
-                      opt.value = preset.tz; opt.textContent = preset.tz;
-                      tzSelEl.appendChild(opt);
+                  // Two timezone shapes are supported in presets:
+                  //   - IANA name (e.g. 'America/Los_Angeles')
+                  //   - fixed UTC offset (e.g. '+00:40', '-05:30') — used
+                  //     for pre-CET / pre-railroad-zone presets like
+                  //     Einstein (1879 Ulm LMT) and Edison (1847 Milan-OH
+                  //     LMT) where no IANA zone applies historically.
+                  // For the offset shape we drive the form's UTC-offset
+                  // override controls instead of stuffing the offset
+                  // string into the IANA <select> — makes the UI
+                  // self-explanatory and keeps buildPayload on the
+                  // offset code path naturally.
+                  var offsetMatch = /^([+-])(\d{1,2}):(\d{2})$/.exec(preset.tz || '');
+                  if (offsetMatch && useOffEl && offSignEl && offHrsEl && offMinEl) {
+                    if (!useOffEl.checked) {
+                      useOffEl.checked = true;
+                      if (offRowEl) offRowEl.hidden = false;
+                      if (tzSelEl) tzSelEl.disabled = true;
+                      try {
+                        useOffEl.dispatchEvent(new Event('change', { bubbles: true }));
+                      } catch (e) { /* old browsers — no harm */ }
+                    } else {
+                      if (offRowEl) offRowEl.hidden = false;
+                      if (tzSelEl) tzSelEl.disabled = true;
+                    }
+                    offSignEl.value = offsetMatch[1];
+                    offHrsEl.value  = String(parseInt(offsetMatch[2], 10));
+                    offMinEl.value  = offsetMatch[3];
+                  } else {
+                    // IANA preset: ensure the offset override is OFF so
+                    // buildPayload picks up the IANA select value, not
+                    // a stale offset from a previous preset / user edit.
+                    if (useOffEl && useOffEl.checked) {
+                      useOffEl.checked = false;
+                      if (offRowEl) offRowEl.hidden = true;
+                      if (tzSelEl) tzSelEl.disabled = false;
+                      try {
+                        useOffEl.dispatchEvent(new Event('change', { bubbles: true }));
+                      } catch (e) { /* old browsers — no harm */ }
+                    }
+                    if (tzSelEl) {
                       tzSelEl.value = preset.tz;
+                      // If the IANA tz isn't in the select (rare —
+                      // Intl.supportedValuesOf is a superset), append it
+                      // so the value sticks.
+                      if (tzSelEl.value !== preset.tz) {
+                        var opt = document.createElement('option');
+                        opt.value = preset.tz; opt.textContent = preset.tz;
+                        tzSelEl.appendChild(opt);
+                        tzSelEl.value = preset.tz;
+                      }
                     }
                   }
                   // Place input: write the localized label and mark
