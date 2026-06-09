@@ -358,6 +358,14 @@ function buildChart(input, dateUTC) {
     provenance: {
       engine: 'astronomy-engine',
       engineVersion: ENGINE_VERSION,
+      // The Rahu/Ketu longitudes returned in `planets[]` are based on the
+      // Moon's MEAN ascending node (Meeus 1998 eq. 22.4) — they do not
+      // include the ±~1.5° nutation oscillation of the TRUE node. This
+      // matches Jagannatha Hora / Parashara's Light defaults and is the
+      // standard choice for Lahiri-sidereal Vedic charts, but consumers
+      // who specifically want the true node should not use these values.
+      // See api/_lib/astronomy.js#lunarNodeTropical for the formula.
+      nodeModel: 'mean',
       warnings,
     },
     computedAt: new Date().toISOString(),
