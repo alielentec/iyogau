@@ -22,6 +22,10 @@ function absoluteUrl(req, path) {
   return `${proto}://${host}${path}`;
 }
 
+export function googleRedirectUri(req) {
+  return process.env.GOOGLE_REDIRECT_URI || absoluteUrl(req, '/api/auth/google/callback/');
+}
+
 export function buildGoogleAuthRedirect(req, res, returnTo) {
   const cfg = config(req);
   const nonce = createOAuthState(req, res, returnTo);

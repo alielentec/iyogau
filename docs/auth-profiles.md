@@ -41,6 +41,35 @@ http://localhost:4177/api/auth/google/callback/
 
 Add the same callback URL to the Google OAuth client.
 
+## Real Google Sign-In Setup
+
+Local development is only a real Google login when these are present in
+`.env.local` and the server has been restarted:
+
+```bash
+GOOGLE_CLIENT_ID=...
+GOOGLE_CLIENT_SECRET=...
+GOOGLE_REDIRECT_URI=http://localhost:4177/api/auth/google/callback/
+IYOGAU_SESSION_SECRET=...
+IYOGAU_ENABLE_DEV_AUTH=0
+```
+
+Use `.env.example` as the safe template. The server loads `.env` and
+`.env.local` automatically during local development, and `.env*` files are
+git-ignored except `.env.example`.
+
+The Google OAuth client must be a Web application client and must include the
+same redirect URI returned by:
+
+```bash
+curl http://localhost:4177/api/auth/config/
+```
+
+When Google OAuth is configured, the header shows the normal `Sign in` button
+and redirects through Google. When it is not configured and local dev auth is
+enabled, the header explicitly shows `Dev sign in`, which creates only a local
+test session for development.
+
 ## Storage
 
 - Production/preview: Upstash Redis REST is required. This avoids relying on a
@@ -48,8 +77,8 @@ Add the same callback URL to the Google OAuth client.
 - Local development: when Upstash variables are absent and the environment is
   not production-like, profiles are stored in `.data/profile-store.json`.
 - `.data/` is git-ignored because it contains private birth data.
-- If Google OAuth variables are missing in local development, the UI exposes a
-  local test account button so profile save/load behavior can be verified
+- If Google OAuth variables are missing in local development, the UI exposes an
+  explicit `Dev sign in` button so profile save/load behavior can be verified
   without a Google OAuth client. This endpoint is disabled in production-like
   environments and can be disabled locally with `IYOGAU_ENABLE_DEV_AUTH=0`.
 

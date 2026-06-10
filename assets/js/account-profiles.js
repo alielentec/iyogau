@@ -174,7 +174,7 @@
     function configureLoginControl() {
       if (!state.authConfig.googleConfigured && state.authConfig.localDevAuthAvailable) {
         loginControls.forEach(function (control) {
-          setLoginControlText(control, 'Use local test account', 'Sign in');
+          setLoginControlText(control, 'Use development test account', 'Dev sign in');
           control.href = '#';
           control.removeAttribute('aria-disabled');
         });

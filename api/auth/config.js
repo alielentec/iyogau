@@ -1,4 +1,5 @@
 import { handleOptions, sendJson, setJsonHeaders } from '../_lib/api-utils.js';
+import { googleRedirectUri } from '../_lib/google-oauth.js';
 import { googleOAuthConfigured, localDevAuthEnabled } from '../_lib/runtime-env.js';
 
 export default async function handler(req, res) {
@@ -8,5 +9,6 @@ export default async function handler(req, res) {
   return sendJson(res, 200, {
     googleConfigured: googleOAuthConfigured(),
     localDevAuthAvailable: localDevAuthEnabled(),
+    googleRedirectUri: googleRedirectUri(req),
   });
 }

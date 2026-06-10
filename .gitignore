@@ -19,6 +19,11 @@ Thumbs.db
 .vercel
 .data/
 
+# Local secrets
+.env
+.env.*
+!.env.example
+
 # Node — installed by npm/Vercel during build. Lockfile (package-lock.json)
 # IS tracked so installs are reproducible; the unpacked tree is not.
 node_modules/
