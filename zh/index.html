@@ -498,63 +498,13 @@
           <span id="home-natal-demo-banner-text" data-i18n="natal.form.steveJobsNote">Currently showing Steve Jobs&rsquo;s chart. Edit any field below and your own chart will appear in the Natal Chart tab.</span>
         </aside>
 
-        <section class="natal-account" id="home-natal-account" data-account-profiles aria-labelledby="home-natal-account-heading">
-          <div class="natal-account__header">
-            <div>
-              <h3 id="home-natal-account-heading">Saved birth profiles</h3>
-              <p data-account-status>Sign in from the header to save your birth data and profiles for friends.</p>
+        <div class="natal-input-workspace">
+          <section class="natal-form-section" aria-labelledby="home-natal-form-heading">
+            <div class="natal-input-card__header">
+              <span class="natal-input-card__eyebrow" data-i18n="natal.form.inputEyebrow">Calculation input</span>
+              <h3 id="home-natal-form-heading" data-i18n="natal.form.heading">Birth details</h3>
+              <p data-i18n="natal.form.inputSummary">Active birth data for chart calculations.</p>
             </div>
-          </div>
-
-          <div class="natal-account__body" data-account-body hidden>
-            <div class="natal-account__active" data-active-profile>Active birth profile: current form</div>
-            <div class="natal-profile-save" aria-label="Save current birth data">
-              <div class="natal-profile-save__grid">
-                <label>
-                  <span>Profile name</span>
-                  <input type="text" maxlength="80" data-profile-display-name placeholder="My birth profile" />
-                </label>
-                <label>
-                  <span>Profile type</span>
-                  <select data-profile-type>
-                    <option value="self">My Profile</option>
-                    <option value="friend">Friend</option>
-                    <option value="other">Other</option>
-                  </select>
-                </label>
-                <label class="natal-profile-save__notes">
-                  <span>Notes</span>
-                  <textarea maxlength="1000" data-profile-notes placeholder="Optional private notes"></textarea>
-                </label>
-              </div>
-              <label class="inline-check natal-profile-save__consent">
-                <input type="checkbox" data-profile-save-consent />
-                <span>I consent to saving this birth profile in my signed-in account.</span>
-              </label>
-              <div class="natal-profile-save__actions">
-                <button type="button" class="btn btn-primary" data-profile-save>Save current birth data</button>
-                <button type="button" class="btn btn-secondary" data-profile-update disabled>Update selected profile</button>
-                <button type="button" class="btn btn-secondary" data-profile-duplicate disabled>Duplicate selected</button>
-                <button type="button" class="btn btn-secondary" data-profile-export disabled>Export selected</button>
-                <button type="button" class="btn btn-secondary natal-profile-danger" data-profile-delete disabled>Delete selected</button>
-              </div>
-              <p class="natal-profile-message" data-profile-message role="status" aria-live="polite"></p>
-            </div>
-            <div class="natal-profile-lists">
-              <section aria-labelledby="home-profile-self-heading">
-                <h4 id="home-profile-self-heading">My Profile</h4>
-                <div class="natal-profile-list" data-profile-list-self></div>
-              </section>
-              <section aria-labelledby="home-profile-others-heading">
-                <h4 id="home-profile-others-heading">Friends / Other Profiles</h4>
-                <div class="natal-profile-list" data-profile-list-others></div>
-              </section>
-            </div>
-          </div>
-        </section>
-
-        <section class="natal-form-section" aria-labelledby="home-natal-form-heading">
-          <h3 id="home-natal-form-heading" class="sr-only" data-i18n="natal.form.heading">Birth details</h3>
 
           <!-- Form fields are pre-populated with Steve Jobs's birth data so
                the default chart in the "Natal Chart" tab matches what's in
@@ -699,6 +649,64 @@
 
           </form>
         </section>
+
+          <section class="natal-account natal-account--side" id="home-natal-account" data-account-profiles aria-labelledby="home-natal-account-heading">
+            <div class="natal-account__header">
+              <div>
+                <span class="natal-account__eyebrow" data-i18n="natal.form.profileEyebrow">Profile library</span>
+                <h3 id="home-natal-account-heading" data-i18n="natal.form.profileHeading">Saved profiles</h3>
+                <p data-account-status data-i18n="natal.form.profileStatusSignedOut">Sign in from the header to save birth profiles.</p>
+              </div>
+            </div>
+
+            <div class="natal-account__body" data-account-body hidden>
+              <div class="natal-account__active" data-active-profile>Active birth profile: current form</div>
+              <div class="natal-profile-save" aria-label="Save current birth data">
+                <h4 class="natal-profile-save__title" data-i18n="natal.form.profileSaveTitle">Save current form</h4>
+                <div class="natal-profile-save__grid">
+                  <label>
+                    <span>Profile name</span>
+                    <input type="text" maxlength="80" data-profile-display-name placeholder="My birth profile" />
+                  </label>
+                  <label>
+                    <span>Profile type</span>
+                    <select data-profile-type>
+                      <option value="self">My Profile</option>
+                      <option value="friend">Friend</option>
+                      <option value="other">Other</option>
+                    </select>
+                  </label>
+                  <label class="natal-profile-save__notes">
+                    <span>Notes</span>
+                    <textarea maxlength="1000" data-profile-notes placeholder="Optional private notes"></textarea>
+                  </label>
+                </div>
+                <label class="inline-check natal-profile-save__consent">
+                  <input type="checkbox" data-profile-save-consent />
+                  <span>I consent to saving this birth profile in my signed-in account.</span>
+                </label>
+                <div class="natal-profile-save__actions">
+                  <button type="button" class="btn btn-primary" data-profile-save data-i18n="natal.form.profileSaveButton">Save profile</button>
+                  <button type="button" class="btn btn-secondary" data-profile-update data-i18n="natal.form.profileUpdateButton" disabled>Update</button>
+                  <button type="button" class="btn btn-secondary" data-profile-duplicate data-i18n="natal.form.profileDuplicateButton" disabled>Duplicate</button>
+                  <button type="button" class="btn btn-secondary" data-profile-export data-i18n="natal.form.profileExportButton" disabled>Export</button>
+                  <button type="button" class="btn btn-secondary natal-profile-danger" data-profile-delete data-i18n="natal.form.profileDeleteButton" disabled>Delete</button>
+                </div>
+                <p class="natal-profile-message" data-profile-message role="status" aria-live="polite"></p>
+              </div>
+              <div class="natal-profile-lists">
+                <section aria-labelledby="home-profile-self-heading">
+                  <h4 id="home-profile-self-heading">My Profile</h4>
+                  <div class="natal-profile-list" data-profile-list-self></div>
+                </section>
+                <section aria-labelledby="home-profile-others-heading">
+                  <h4 id="home-profile-others-heading">Friends / Other Profiles</h4>
+                  <div class="natal-profile-list" data-profile-list-others></div>
+                </section>
+              </div>
+            </div>
+          </section>
+        </div>
       </div>
 
       <!-- ----- Tabpanel 2: Natal Chart (default active) ----- -->
