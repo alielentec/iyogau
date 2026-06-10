@@ -63,6 +63,15 @@
     var logoutControls = $all('[data-account-logout]');
     var status = $('[data-account-status]', root);
     var globalStatus = $('[data-account-global-status]');
+    var accountShell = $('[data-account-menu-shell]');
+    var accountToggle = $('[data-account-menu-toggle]');
+    var accountMenu = $('[data-account-menu]');
+    var accountAvatar = $('[data-account-avatar]');
+    var accountNameEls = $all('[data-account-menu-name]');
+    var accountEmailEls = $all('[data-account-menu-email]');
+    var accountMenuLinks = $all('[data-account-menu-link]');
+    var exportAllBtns = $all('[data-account-export-all]');
+    var deleteAllBtns = $all('[data-account-delete-all]');
     var body = $('[data-account-body]', root);
     var activeBoxes = $all('[data-active-profile]');
     var manageButtons = $all('[data-profile-manage]');
@@ -114,6 +123,32 @@
     function accountLabel(user) {
       if (!user) return '';
       return user.name ? user.name + ' (' + user.email + ')' : user.email;
+    }
+
+    function accountInitials(user) {
+      var source = (user && (user.name || user.email)) || 'Account';
+      var parts = source.replace(/@.*$/, '').split(/\s+|[._-]+/).filter(Boolean);
+      var initials = parts.slice(0, 2).map(function (part) { return part.charAt(0).toUpperCase(); }).join('');
+      return initials || 'AC';
+    }
+
+    function setMenuOpen(open) {
+      if (!accountToggle || !accountMenu) return;
+      accountToggle.setAttribute('aria-expanded', open ? 'true' : 'false');
+      accountMenu.hidden = !open;
+    }
+
+    function closeMenu() {
+      setMenuOpen(false);
+    }
+
+    function setAccountIdentity(user) {
+      var name = user && user.name ? user.name : 'Account';
+      var email = user && user.email ? user.email : '';
+      accountNameEls.forEach(function (node) { node.textContent = name; });
+      accountEmailEls.forEach(function (node) { node.textContent = email; });
+      if (accountAvatar) accountAvatar.textContent = accountInitials(user);
+      if (accountToggle) accountToggle.setAttribute('aria-label', 'Account menu for ' + accountLabel(user));
     }
 
     function setControlsHidden(controls, hidden) {
@@ -179,6 +214,8 @@
       state.activeId = null;
       setControlsHidden(loginControls, false);
       setControlsHidden(logoutControls, true);
+      if (accountShell) accountShell.hidden = true;
+      closeMenu();
       if (body) body.hidden = true;
       renderProfiles();
       configureLoginControl();
@@ -188,6 +225,9 @@
       state.user = user;
       setControlsHidden(loginControls, true);
       setControlsHidden(logoutControls, false);
+      if (accountShell) accountShell.hidden = false;
+      setAccountIdentity(user);
+      closeMenu();
       if (body) body.hidden = false;
       setGlobalStatus('Signed in: ' + (user.name || user.email), accountLabel(user));
       if (status) {
@@ -340,6 +380,11 @@
       activeBoxes.forEach(function (box) {
         box.textContent = activeText;
       });
+      [exportAllBtns, deleteAllBtns].forEach(function (controls) {
+        controls.forEach(function (btn) {
+          btn.disabled = !state.profiles.length;
+        });
+      });
       [updateBtn, duplicateBtn, deleteBtn, exportBtn].forEach(function (btn) {
         if (btn) btn.disabled = !state.activeId;
       });
@@ -445,6 +490,59 @@
       a.remove();
     }
 
+    function downloadJson(filename, payload) {
+      var blob = new Blob([JSON.stringify(payload, null, 2)], { type: 'application/json' });
+      var a = document.createElement('a');
+      a.href = URL.createObjectURL(blob);
+      a.download = filename;
+      document.body.appendChild(a);
+      a.click();
+      URL.revokeObjectURL(a.href);
+      a.remove();
+    }
+
+    function exportAllProfiles() {
+      closeMenu();
+      if (!state.profiles.length) {
+        setMessage('No saved birth profiles to export.', 'error');
+        return;
+      }
+      downloadJson('iyogau-birth-profiles.json', {
+        exportedAt: new Date().toISOString(),
+        profileCount: state.profiles.length,
+        profiles: state.profiles,
+      });
+      setMessage('Exported saved birth profiles from this account.', null);
+    }
+
+    function deleteAllProfiles() {
+      closeMenu();
+      if (!state.profiles.length) {
+        setMessage('No saved birth profiles to delete.', 'error');
+        return;
+      }
+      if (!window.confirm('Delete all saved birth profiles for this signed-in account? This cannot be undone.')) return;
+      var ids = state.profiles.map(function (profile) { return profile.id; });
+      ids.reduce(function (chain, id) {
+        return chain.then(function () {
+          return jsonFetch('/api/profiles/', {
+            method: 'DELETE',
+            body: JSON.stringify({ id: id }),
+          });
+        });
+      }, Promise.resolve())
+        .then(function () {
+          state.activeId = null;
+          return refreshProfiles(false);
+        })
+        .then(function () {
+          setMessage('Deleted all saved birth profiles for this account.', null);
+        })
+        .catch(function (err) {
+          setMessage(err.message || 'Could not delete saved birth profiles.', 'error');
+        });
+    }
+
     function initSession() {
       setSignedOut();
       jsonFetch('/api/auth/config/')
@@ -486,6 +584,7 @@
     });
     logoutControls.forEach(function (control) {
       control.addEventListener('click', function () {
+        closeMenu();
         jsonFetch('/api/auth/logout/', { method: 'POST', body: '{}' })
           .then(function () {
             setSignedOut();
@@ -496,12 +595,37 @@
     });
     manageButtons.forEach(function (control) {
       control.addEventListener('click', function () {
+        closeMenu();
         var tab = document.getElementById('home-tab-input');
         if (tab) tab.click();
         setTimeout(function () {
           root.scrollIntoView({ behavior: 'smooth', block: 'start' });
         }, 0);
       });
+    });
+    if (accountToggle) {
+      accountToggle.addEventListener('click', function (evt) {
+        evt.stopPropagation();
+        setMenuOpen(accountToggle.getAttribute('aria-expanded') !== 'true');
+      });
+    }
+    if (accountMenu) {
+      accountMenu.addEventListener('click', function (evt) {
+        evt.stopPropagation();
+      });
+    }
+    accountMenuLinks.forEach(function (link) {
+      link.addEventListener('click', closeMenu);
+    });
+    exportAllBtns.forEach(function (btn) {
+      btn.addEventListener('click', exportAllProfiles);
+    });
+    deleteAllBtns.forEach(function (btn) {
+      btn.addEventListener('click', deleteAllProfiles);
+    });
+    document.addEventListener('click', closeMenu);
+    document.addEventListener('keydown', function (evt) {
+      if (evt.key === 'Escape') closeMenu();
     });
     if (saveBtn) saveBtn.addEventListener('click', function () { saveProfile(false, false); });
     if (updateBtn) updateBtn.addEventListener('click', function () { saveProfile(true, false); });

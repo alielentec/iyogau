@@ -180,7 +180,27 @@
         <div class="site-account" data-account-global>
           <span class="site-account__status" data-account-global-status aria-live="polite">Not signed in</span>
           <a class="btn btn-secondary site-account__login" data-account-login data-account-login-compact href="/api/auth/google/start/">Sign in</a>
-          <button class="btn btn-secondary site-account__logout" type="button" data-account-logout hidden>Sign out</button>
+          <div class="site-account__menu-shell" data-account-menu-shell hidden>
+            <button class="site-account__trigger" type="button" data-account-menu-toggle aria-haspopup="menu" aria-expanded="false">
+              <span class="site-account__avatar" data-account-avatar aria-hidden="true">AK</span>
+              <span class="site-account__identity">
+                <span class="site-account__name" data-account-menu-name>Account</span>
+                <span class="site-account__email" data-account-menu-email></span>
+              </span>
+              <svg class="site-account__chevron" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.25" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="6 9 12 15 18 9"/></svg>
+            </button>
+            <div class="site-account__menu" data-account-menu role="menu" hidden>
+              <div class="site-account__summary" role="presentation">
+                <span class="site-account__summary-name" data-account-menu-name>Account</span>
+                <span class="site-account__summary-email" data-account-menu-email></span>
+              </div>
+              <button type="button" role="menuitem" data-profile-manage>Saved profiles</button>
+              <button type="button" role="menuitem" data-account-export-all disabled>Export birth data</button>
+              <button type="button" role="menuitem" class="site-account__danger" data-account-delete-all disabled>Delete saved birth data</button>
+              <a href="/privacy/california/#sensitive" role="menuitem" data-account-menu-link>Privacy and data rights</a>
+              <button type="button" role="menuitem" data-account-logout>Sign out</button>
+            </div>
+          </div>
         </div>
 
         <a href="#cta" class="btn btn-primary" data-i18n="nav.cta">Start Your Journey</a>
@@ -2361,7 +2381,7 @@
 <script src="/assets/js/natal-chart-wheel.js?v=21" defer></script>
 <script src="/assets/js/natal-chart-tabs.js?v=10" defer></script>
 <script src="/assets/js/natal-chart-form.js?v=16" defer></script>
-<script src="/assets/js/account-profiles.js?v=4" defer></script>
+<script src="/assets/js/account-profiles.js?v=5" defer></script>
 <!-- Astrocartography: data + renderer for the Relocation / Immigration /
      Soulmate tabs. Loaded `defer` so it runs AFTER the bootstrap above
      attaches __astrocarto.setNatalSource() (the renderer reads it lazily,
