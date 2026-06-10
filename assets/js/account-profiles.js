@@ -82,6 +82,10 @@
       profiles: [],
       activeId: null,
       autoLoadedSelf: false,
+      authConfig: {
+        googleConfigured: true,
+        localDevAuthAvailable: false,
+      },
     };
 
     function setMessage(text, kind) {
@@ -110,18 +114,43 @@
       return user.name ? user.name + ' (' + user.email + ')' : user.email;
     }
 
+    function configureLoginControl() {
+      if (!login) return;
+      if (!state.authConfig.googleConfigured && state.authConfig.localDevAuthAvailable) {
+        login.textContent = 'Use local test account';
+        login.href = '#';
+        login.removeAttribute('aria-disabled');
+        if (status && !state.user) {
+          status.textContent = 'Google Sign-In needs OAuth environment variables. Use the local test account to verify saved profiles on this machine.';
+        }
+        return;
+      }
+      if (!state.authConfig.googleConfigured) {
+        login.textContent = 'Google Sign-In unavailable';
+        login.href = '#';
+        login.setAttribute('aria-disabled', 'true');
+        if (status && !state.user) {
+          status.textContent = 'Google Sign-In is not configured. Add Google OAuth environment variables before using account profiles.';
+        }
+        return;
+      }
+      var returnTo = location.pathname + location.search + location.hash;
+      login.textContent = 'Sign in with Google';
+      login.href = '/api/auth/google/start/?returnTo=' + encodeURIComponent(returnTo || '/#natal-calc');
+      login.removeAttribute('aria-disabled');
+      if (status && !state.user) {
+        status.textContent = 'Sign in with Google to save your birth data and profiles for friends.';
+      }
+    }
+
     function setSignedOut() {
       state.user = null;
       state.profiles = [];
       state.activeId = null;
-      if (login) {
-        var returnTo = location.pathname + location.search + location.hash;
-        login.href = '/api/auth/google/start/?returnTo=' + encodeURIComponent(returnTo || '/#natal-calc');
-        login.hidden = false;
-      }
+      if (login) login.hidden = false;
       if (logout) logout.hidden = true;
       if (body) body.hidden = true;
-      if (status) status.textContent = 'Sign in with Google to save your birth data and profiles for friends.';
+      configureLoginControl();
     }
 
     function setSignedIn(user) {
@@ -385,7 +414,15 @@
 
     function initSession() {
       setSignedOut();
-      jsonFetch('/api/auth/session/')
+      jsonFetch('/api/auth/config/')
+        .then(function (json) {
+          state.authConfig = {
+            googleConfigured: !!json.googleConfigured,
+            localDevAuthAvailable: !!json.localDevAuthAvailable,
+          };
+          configureLoginControl();
+          return jsonFetch('/api/auth/session/');
+        })
         .then(function (json) {
           if (!json.authenticated) return;
           setSignedIn(json.user);
@@ -393,9 +430,27 @@
         })
         .catch(function () {
           setSignedOut();
-        });
+      });
     }
 
+    if (login) {
+      login.addEventListener('click', function (evt) {
+        if (!state.authConfig.googleConfigured && state.authConfig.localDevAuthAvailable) {
+          evt.preventDefault();
+          jsonFetch('/api/auth/dev-login/', { method: 'POST', body: '{}' })
+            .then(function () {
+              state.autoLoadedSelf = false;
+              return initSession();
+            })
+            .catch(function (err) { setMessage(err.message || 'Could not start local test account.', 'error'); });
+          return;
+        }
+        if (!state.authConfig.googleConfigured) {
+          evt.preventDefault();
+          setMessage('Google Sign-In is not configured on this server.', 'error');
+        }
+      });
+    }
     if (logout) {
       logout.addEventListener('click', function () {
         jsonFetch('/api/auth/logout/', { method: 'POST', body: '{}' })

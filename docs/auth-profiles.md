@@ -48,10 +48,16 @@ Add the same callback URL to the Google OAuth client.
 - Local development: when Upstash variables are absent and the environment is
   not production-like, profiles are stored in `.data/profile-store.json`.
 - `.data/` is git-ignored because it contains private birth data.
+- If Google OAuth variables are missing in local development, the UI exposes a
+  local test account button so profile save/load behavior can be verified
+  without a Google OAuth client. This endpoint is disabled in production-like
+  environments and can be disabled locally with `IYOGAU_ENABLE_DEV_AUTH=0`.
 
 ## API Surface
 
 - `GET /api/auth/session/`
+- `GET /api/auth/config/`
+- `POST /api/auth/dev-login/` local development only
 - `POST /api/auth/logout/`
 - `GET /api/auth/google/start/?returnTo=/...`
 - `GET /api/auth/google/callback/`

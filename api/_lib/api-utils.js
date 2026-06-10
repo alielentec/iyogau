@@ -83,6 +83,8 @@ export function sendJson(res, status, payload) {
 
 export function sendError(res, err) {
   const status = Number(err?.status) || 500;
-  const message = status >= 500 ? 'Server error.' : (err?.message || 'Request failed.');
+  const message = err instanceof HttpError
+    ? err.message
+    : (status >= 500 ? 'Server error.' : (err?.message || 'Request failed.'));
   res.status(status).json({ error: message });
 }

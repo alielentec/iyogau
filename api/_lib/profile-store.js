@@ -3,17 +3,12 @@ import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 
 import { HttpError } from './api-utils.js';
+import { isProdLikeEnv } from './runtime-env.js';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const ROOT = path.resolve(__dirname, '../..');
 const LOCAL_STORE_PATH = path.join(ROOT, '.data', 'profile-store.json');
 const KEY_PREFIX = 'iyogau:profiles:';
-
-function isProdLikeEnv() {
-  const v = process.env.VERCEL_ENV;
-  if (v) return v === 'production' || v === 'preview';
-  return process.env.NODE_ENV === 'production';
-}
 
 function userKey(userId) {
   return KEY_PREFIX + encodeURIComponent(userId);

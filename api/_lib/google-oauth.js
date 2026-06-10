@@ -1,5 +1,6 @@
 import { createOAuthState, setSessionCookie, verifyOAuthState } from './auth-session.js';
 import { HttpError } from './api-utils.js';
+import { googleOAuthConfigured } from './runtime-env.js';
 
 const AUTH_URL = 'https://accounts.google.com/o/oauth2/v2/auth';
 const TOKEN_URL = 'https://oauth2.googleapis.com/token';
@@ -8,7 +9,7 @@ const GOOGLE_ISSUERS = new Set(['https://accounts.google.com', 'accounts.google.
 function config(req) {
   const clientId = process.env.GOOGLE_CLIENT_ID;
   const clientSecret = process.env.GOOGLE_CLIENT_SECRET;
-  if (!clientId || !clientSecret) {
+  if (!googleOAuthConfigured()) {
     throw new HttpError(503, 'Google Sign-In is not configured.');
   }
   const redirectUri = process.env.GOOGLE_REDIRECT_URI || absoluteUrl(req, '/api/auth/google/callback/');

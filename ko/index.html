@@ -423,6 +423,65 @@
         <p class="natal-intro" id="home-natal-section-intro" data-i18n="natal.section.intro">Enter the date, time, and place you were born. The calculator runs sidereal Vedic math on our server &mdash; your details are not stored, sold, or sent anywhere else. Results appear on screen within seconds.</p>
       </div>
 
+      <section class="natal-account" id="home-natal-account" data-account-profiles aria-labelledby="home-natal-account-heading">
+        <div class="natal-account__header">
+          <div>
+            <h3 id="home-natal-account-heading">Saved birth profiles</h3>
+            <p data-account-status>Sign in with Google to save your birth data and profiles for friends.</p>
+          </div>
+          <div class="natal-account__actions">
+            <a class="btn btn-secondary" data-account-login href="/api/auth/google/start/">Sign in with Google</a>
+            <button class="btn btn-secondary" type="button" data-account-logout hidden>Sign out</button>
+          </div>
+        </div>
+
+        <div class="natal-account__body" data-account-body hidden>
+          <div class="natal-account__active" data-active-profile>Active profile: none selected</div>
+          <div class="natal-profile-save" aria-label="Save current birth data">
+            <div class="natal-profile-save__grid">
+              <label>
+                <span>Profile name</span>
+                <input type="text" maxlength="80" data-profile-display-name placeholder="My birth profile" />
+              </label>
+              <label>
+                <span>Profile type</span>
+                <select data-profile-type>
+                  <option value="self">My Profile</option>
+                  <option value="friend">Friend</option>
+                  <option value="other">Other</option>
+                </select>
+              </label>
+              <label class="natal-profile-save__notes">
+                <span>Notes</span>
+                <textarea maxlength="1000" data-profile-notes placeholder="Optional private notes"></textarea>
+              </label>
+            </div>
+            <label class="inline-check natal-profile-save__consent">
+              <input type="checkbox" data-profile-save-consent />
+              <span>I consent to saving this birth profile in my signed-in account.</span>
+            </label>
+            <div class="natal-profile-save__actions">
+              <button type="button" class="btn btn-primary" data-profile-save>Save current birth data</button>
+              <button type="button" class="btn btn-secondary" data-profile-update disabled>Update selected profile</button>
+              <button type="button" class="btn btn-secondary" data-profile-duplicate disabled>Duplicate selected</button>
+              <button type="button" class="btn btn-secondary" data-profile-export disabled>Export selected</button>
+              <button type="button" class="btn btn-secondary natal-profile-danger" data-profile-delete disabled>Delete selected</button>
+            </div>
+            <p class="natal-profile-message" data-profile-message role="status" aria-live="polite"></p>
+          </div>
+          <div class="natal-profile-lists">
+            <section aria-labelledby="home-profile-self-heading">
+              <h4 id="home-profile-self-heading">My Profile</h4>
+              <div class="natal-profile-list" data-profile-list-self></div>
+            </section>
+            <section aria-labelledby="home-profile-others-heading">
+              <h4 id="home-profile-others-heading">Friends / Other Profiles</h4>
+              <div class="natal-profile-list" data-profile-list-others></div>
+            </section>
+          </div>
+        </div>
+      </section>
+
       <!-- Tablist: 4 tabs. Default-active = Natal Chart (so landing
            visitors see the wheel first); rotating tabindex per ARIA
            authoring practice (only the active tab is in the focus
@@ -463,65 +522,6 @@
                switch; the bootstrap re-runs after that. -->
           <span id="home-natal-demo-banner-text" data-i18n="natal.form.steveJobsNote">Currently showing Steve Jobs&rsquo;s chart. Edit any field below and your own chart will appear in the Natal Chart tab.</span>
         </aside>
-
-        <section class="natal-account" id="home-natal-account" data-account-profiles aria-labelledby="home-natal-account-heading">
-          <div class="natal-account__header">
-            <div>
-              <h3 id="home-natal-account-heading">Saved birth profiles</h3>
-              <p data-account-status>Sign in with Google to save your birth data and profiles for friends.</p>
-            </div>
-            <div class="natal-account__actions">
-              <a class="btn btn-secondary" data-account-login href="/api/auth/google/start/">Sign in with Google</a>
-              <button class="btn btn-secondary" type="button" data-account-logout hidden>Sign out</button>
-            </div>
-          </div>
-
-          <div class="natal-account__body" data-account-body hidden>
-            <div class="natal-account__active" data-active-profile>Active profile: none selected</div>
-            <div class="natal-profile-save" aria-label="Save current birth data">
-              <div class="natal-profile-save__grid">
-                <label>
-                  <span>Profile name</span>
-                  <input type="text" maxlength="80" data-profile-display-name placeholder="My birth profile" />
-                </label>
-                <label>
-                  <span>Profile type</span>
-                  <select data-profile-type>
-                    <option value="self">My Profile</option>
-                    <option value="friend">Friend</option>
-                    <option value="other">Other</option>
-                  </select>
-                </label>
-                <label class="natal-profile-save__notes">
-                  <span>Notes</span>
-                  <textarea maxlength="1000" data-profile-notes placeholder="Optional private notes"></textarea>
-                </label>
-              </div>
-              <label class="inline-check natal-profile-save__consent">
-                <input type="checkbox" data-profile-save-consent />
-                <span>I consent to saving this birth profile in my signed-in account.</span>
-              </label>
-              <div class="natal-profile-save__actions">
-                <button type="button" class="btn btn-primary" data-profile-save>Save current birth data</button>
-                <button type="button" class="btn btn-secondary" data-profile-update disabled>Update selected profile</button>
-                <button type="button" class="btn btn-secondary" data-profile-duplicate disabled>Duplicate selected</button>
-                <button type="button" class="btn btn-secondary" data-profile-export disabled>Export selected</button>
-                <button type="button" class="btn btn-secondary natal-profile-danger" data-profile-delete disabled>Delete selected</button>
-              </div>
-              <p class="natal-profile-message" data-profile-message role="status" aria-live="polite"></p>
-            </div>
-            <div class="natal-profile-lists">
-              <section aria-labelledby="home-profile-self-heading">
-                <h4 id="home-profile-self-heading">My Profile</h4>
-                <div class="natal-profile-list" data-profile-list-self></div>
-              </section>
-              <section aria-labelledby="home-profile-others-heading">
-                <h4 id="home-profile-others-heading">Friends / Other Profiles</h4>
-                <div class="natal-profile-list" data-profile-list-others></div>
-              </section>
-            </div>
-          </div>
-        </section>
 
         <section class="natal-form-section" aria-labelledby="home-natal-form-heading">
           <h3 id="home-natal-form-heading" class="sr-only" data-i18n="natal.form.heading">Birth details</h3>
@@ -2351,7 +2351,7 @@
 <script src="/assets/js/natal-chart-wheel.js?v=21" defer></script>
 <script src="/assets/js/natal-chart-tabs.js?v=10" defer></script>
 <script src="/assets/js/natal-chart-form.js?v=16" defer></script>
-<script src="/assets/js/account-profiles.js?v=2" defer></script>
+<script src="/assets/js/account-profiles.js?v=3" defer></script>
 <!-- Astrocartography: data + renderer for the Relocation / Immigration /
      Soulmate tabs. Loaded `defer` so it runs AFTER the bootstrap above
      attaches __astrocarto.setNatalSource() (the renderer reads it lazily,

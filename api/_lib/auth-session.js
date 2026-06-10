@@ -1,15 +1,11 @@
 import crypto from 'node:crypto';
 
+import { isProdLikeEnv } from './runtime-env.js';
+
 const SESSION_COOKIE = 'iyogau_session';
 const OAUTH_STATE_COOKIE = 'iyogau_oauth_state';
 const SESSION_MAX_AGE_SECONDS = 60 * 60 * 24 * 30;
 const STATE_MAX_AGE_SECONDS = 60 * 10;
-
-function isProdLikeEnv() {
-  const v = process.env.VERCEL_ENV;
-  if (v) return v === 'production' || v === 'preview';
-  return process.env.NODE_ENV === 'production';
-}
 
 function secret() {
   const value = process.env.IYOGAU_SESSION_SECRET || process.env.SESSION_SECRET;
