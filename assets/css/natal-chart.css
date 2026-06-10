@@ -308,12 +308,44 @@
 }
 
 /* Account-owned saved birth profiles */
+.natal-profile-strip {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+  margin: 0 0 1rem;
+  padding: 0.75rem 0.875rem;
+  background: var(--surface-2);
+  border: 1px solid var(--outline);
+  border-radius: 8px;
+}
+.natal-profile-strip__copy {
+  min-width: 0;
+}
+.natal-profile-strip__eyebrow {
+  display: block;
+  margin-bottom: 0.125rem;
+  color: var(--ink-muted);
+  font-size: 0.72rem;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  line-height: 1.2;
+  text-transform: uppercase;
+}
+.natal-profile-strip strong {
+  display: block;
+  overflow: hidden;
+  color: var(--ink);
+  font-size: 0.9rem;
+  line-height: 1.35;
+  text-overflow: ellipsis;
+}
 .natal-account {
   margin: 0 0 1rem;
   padding: clamp(0.875rem, 1.8vw, 1.25rem);
   background: var(--surface-2);
   border: 1px solid var(--outline);
-  border-radius: 12px;
+  border-radius: 8px;
 }
 .natal-account__header {
   display: flex;
@@ -473,6 +505,13 @@
   line-height: 1.45;
 }
 @media (max-width: 640px) {
+  .natal-profile-strip {
+    align-items: stretch;
+    flex-direction: column;
+  }
+  .natal-profile-strip .btn {
+    width: 100%;
+  }
   .natal-account__header {
     flex-direction: column;
   }

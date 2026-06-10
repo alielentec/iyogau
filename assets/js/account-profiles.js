@@ -59,11 +59,13 @@
   }
 
   function init(root) {
-    var login = $('[data-account-login]', root);
-    var logout = $('[data-account-logout]', root);
+    var loginControls = $all('[data-account-login]');
+    var logoutControls = $all('[data-account-logout]');
     var status = $('[data-account-status]', root);
+    var globalStatus = $('[data-account-global-status]');
     var body = $('[data-account-body]', root);
-    var activeBox = $('[data-active-profile]', root);
+    var activeBoxes = $all('[data-active-profile]');
+    var manageButtons = $all('[data-profile-manage]');
     var selfList = $('[data-profile-list-self]', root);
     var othersList = $('[data-profile-list-others]', root);
     var message = $('[data-profile-message]', root);
@@ -114,32 +116,60 @@
       return user.name ? user.name + ' (' + user.email + ')' : user.email;
     }
 
+    function setControlsHidden(controls, hidden) {
+      controls.forEach(function (control) {
+        control.hidden = hidden;
+      });
+    }
+
+    function setGlobalStatus(text, title) {
+      if (!globalStatus) return;
+      globalStatus.textContent = text || '';
+      globalStatus.title = title || text || '';
+    }
+
+    function setLoginControlText(control, fullText, compactText) {
+      control.textContent = control.hasAttribute('data-account-login-compact')
+        ? compactText
+        : fullText;
+      control.title = fullText;
+      control.setAttribute('aria-label', fullText);
+    }
+
     function configureLoginControl() {
-      if (!login) return;
       if (!state.authConfig.googleConfigured && state.authConfig.localDevAuthAvailable) {
-        login.textContent = 'Use local test account';
-        login.href = '#';
-        login.removeAttribute('aria-disabled');
+        loginControls.forEach(function (control) {
+          setLoginControlText(control, 'Use local test account', 'Sign in');
+          control.href = '#';
+          control.removeAttribute('aria-disabled');
+        });
+        setGlobalStatus('Not signed in', 'Google Sign-In is not configured locally; use the local test account for development.');
         if (status && !state.user) {
-          status.textContent = 'Google Sign-In needs OAuth environment variables. Use the local test account to verify saved profiles on this machine.';
+          status.textContent = 'Google Sign-In needs OAuth environment variables. This local build uses a test account when you sign in from the header.';
         }
         return;
       }
       if (!state.authConfig.googleConfigured) {
-        login.textContent = 'Google Sign-In unavailable';
-        login.href = '#';
-        login.setAttribute('aria-disabled', 'true');
+        loginControls.forEach(function (control) {
+          setLoginControlText(control, 'Google Sign-In unavailable', 'Unavailable');
+          control.href = '#';
+          control.setAttribute('aria-disabled', 'true');
+        });
+        setGlobalStatus('Auth unavailable', 'Google Sign-In is not configured on this server.');
         if (status && !state.user) {
           status.textContent = 'Google Sign-In is not configured. Add Google OAuth environment variables before using account profiles.';
         }
         return;
       }
       var returnTo = location.pathname + location.search + location.hash;
-      login.textContent = 'Sign in with Google';
-      login.href = '/api/auth/google/start/?returnTo=' + encodeURIComponent(returnTo || '/#natal-calc');
-      login.removeAttribute('aria-disabled');
+      loginControls.forEach(function (control) {
+        setLoginControlText(control, 'Sign in with Google', 'Sign in');
+        control.href = '/api/auth/google/start/?returnTo=' + encodeURIComponent(returnTo || '/#natal-calc');
+        control.removeAttribute('aria-disabled');
+      });
+      setGlobalStatus('Not signed in', 'Not signed in');
       if (status && !state.user) {
-        status.textContent = 'Sign in with Google to save your birth data and profiles for friends.';
+        status.textContent = 'Sign in from the header to save your birth data and profiles for friends.';
       }
     }
 
@@ -147,17 +177,19 @@
       state.user = null;
       state.profiles = [];
       state.activeId = null;
-      if (login) login.hidden = false;
-      if (logout) logout.hidden = true;
+      setControlsHidden(loginControls, false);
+      setControlsHidden(logoutControls, true);
       if (body) body.hidden = true;
+      renderProfiles();
       configureLoginControl();
     }
 
     function setSignedIn(user) {
       state.user = user;
-      if (login) login.hidden = true;
-      if (logout) logout.hidden = false;
+      setControlsHidden(loginControls, true);
+      setControlsHidden(logoutControls, false);
       if (body) body.hidden = false;
+      setGlobalStatus('Signed in: ' + (user.name || user.email), accountLabel(user));
       if (status) {
         status.textContent = 'Signed in as ' + accountLabel(user) + '. Select which birth profile the chart should use.';
       }
@@ -301,12 +333,13 @@
     }
 
     function renderProfiles() {
-      if (activeBox) {
-        var active = profileById(state.activeId);
-        activeBox.textContent = active
-          ? 'Active birth profile: ' + active.displayName + ' (' + active.profileType + ')'
-          : 'Active birth profile: none selected';
-      }
+      var active = profileById(state.activeId);
+      var activeText = active
+        ? 'Active birth profile: ' + active.displayName + ' (' + active.profileType + ')'
+        : 'Active birth profile: current form (not saved)';
+      activeBoxes.forEach(function (box) {
+        box.textContent = activeText;
+      });
       [updateBtn, duplicateBtn, deleteBtn, exportBtn].forEach(function (btn) {
         if (btn) btn.disabled = !state.activeId;
       });
@@ -430,11 +463,11 @@
         })
         .catch(function () {
           setSignedOut();
-      });
+        });
     }
 
-    if (login) {
-      login.addEventListener('click', function (evt) {
+    loginControls.forEach(function (control) {
+      control.addEventListener('click', function (evt) {
         if (!state.authConfig.googleConfigured && state.authConfig.localDevAuthAvailable) {
           evt.preventDefault();
           jsonFetch('/api/auth/dev-login/', { method: 'POST', body: '{}' })
@@ -450,9 +483,9 @@
           setMessage('Google Sign-In is not configured on this server.', 'error');
         }
       });
-    }
-    if (logout) {
-      logout.addEventListener('click', function () {
+    });
+    logoutControls.forEach(function (control) {
+      control.addEventListener('click', function () {
         jsonFetch('/api/auth/logout/', { method: 'POST', body: '{}' })
           .then(function () {
             setSignedOut();
@@ -460,7 +493,16 @@
           })
           .catch(function (err) { setMessage(err.message || 'Could not sign out.', 'error'); });
       });
-    }
+    });
+    manageButtons.forEach(function (control) {
+      control.addEventListener('click', function () {
+        var tab = document.getElementById('home-tab-input');
+        if (tab) tab.click();
+        setTimeout(function () {
+          root.scrollIntoView({ behavior: 'smooth', block: 'start' });
+        }, 0);
+      });
+    });
     if (saveBtn) saveBtn.addEventListener('click', function () { saveProfile(false, false); });
     if (updateBtn) updateBtn.addEventListener('click', function () { saveProfile(true, false); });
     if (duplicateBtn) duplicateBtn.addEventListener('click', function () { saveProfile(false, true); });
