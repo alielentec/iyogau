@@ -2,7 +2,8 @@
  *  astrocarto.js
  *  ---------------------------------------------------------------------
  *  Client-side renderer for the astrocartography world maps shown in the
- *  three new natal-chart tabs (Relocation / Immigration / Soulmate).
+ *  natal-chart astrocartography tabs (Relocation / Immigration / Soulmate
+ *  plus the date-slider Soulmate Timing layer).
  *
  *  Data flow:
  *
@@ -12,9 +13,9 @@
  *        ▼
  *    window.__astrocarto.setNatalSource(payload)   <-- expose form payload
  *        ▼
- *    User clicks "Relocation"/"Immigration"/"Soulmate" tab
+ *    User clicks an astrocartography tab
  *        ▼
- *    POST /api/astrocarto  {date,time,tz,mode}
+ *    POST /api/astrocarto  {date,time,tz,mode,targetDate?}
  *        ▼
  *    renderMap(panelEl, response, mode)            <-- SVG world map
  *
@@ -30,8 +31,8 @@
  *    2. Heat-matrix cells as plain <rect>s, ONE per (lat,lon) sample,
  *       clipped to land via <clipPath> built from continent polygons.
  *       This is the same vector-cell approach the React reference uses;
- *       we tried marching-squares contour bands and reverted because the
- *       cell mosaic reads more clearly at the 4° resolution our API ships.
+ *       we tried marching-squares contour bands and reverted because exact
+ *       center-sampled cells make lat/lon alignment directly inspectable.
  *    3. Continent borders drawn as a stroked <path> on top of the heat.
  *    4. Planet lines (MC/IC/AC/DC) as colored <path>s on top.
  *
@@ -98,29 +99,159 @@
     return ok;
   }
 
-  // ---------- Gaussian smoothing of the heat-matrix score field ----------
+  function clamp(value, min, max) {
+    return Math.min(max, Math.max(min, value));
+  }
+
+  function validLonLat(point) {
+    return Array.isArray(point) &&
+      point.length >= 2 &&
+      typeof point[0] === 'number' &&
+      typeof point[1] === 'number' &&
+      isFinite(point[0]) &&
+      isFinite(point[1]);
+  }
+
+  function antimeridianCrossing(a, b) {
+    var delta = b[0] - a[0];
+    if (Math.abs(delta) <= 180) return null;
+
+    var edgeFrom;
+    var edgeTo;
+    var bLonUnwrapped;
+    if (delta > 180) {
+      // Example: -179 → +179 is a short westward crossing through -180.
+      bLonUnwrapped = b[0] - 360;
+      edgeFrom = -180;
+      edgeTo = 180;
+    } else {
+      // Example: +179 → -179 is a short eastward crossing through +180.
+      bLonUnwrapped = b[0] + 360;
+      edgeFrom = 180;
+      edgeTo = -180;
+    }
+
+    var denom = bLonUnwrapped - a[0];
+    var t = Math.abs(denom) < 1e-12 ? 0 : (edgeFrom - a[0]) / denom;
+    t = clamp(t, 0, 1);
+    var lat = a[1] + (b[1] - a[1]) * t;
+    return {
+      from: [edgeFrom, lat],
+      to: [edgeTo, lat]
+    };
+  }
+
+  function svgCoord(value) {
+    var n = Number(value);
+    if (Math.abs(n) < 0.0000005) n = 0;
+    return n.toFixed(6);
+  }
+
+  function appendMove(path, point) {
+    return path + (path ? ' ' : '') + 'M' + svgCoord(lon2x(point[0])) + ' ' + svgCoord(lat2y(point[1]));
+  }
+
+  function appendLine(path, point) {
+    return path + ' L' + svgCoord(lon2x(point[0])) + ' ' + svgCoord(lat2y(point[1]));
+  }
+
+  function lonLatPathD(points, opts) {
+    if (!points || points.length < 2) return '';
+    var closed = !!(opts && opts.closed);
+    var closeSubpaths = !!(opts && opts.closeSubpaths);
+    var d = '';
+    var open = false;
+    var subpathPoints = 0;
+    var first = null;
+    var subpathStart = null;
+    var currentPoint = null;
+    var prev = null;
+
+    function polarClosureLatitude(a, b) {
+      var crossesWholeMap = Math.abs(lon2x(a[0]) - lon2x(b[0])) > VIEW_W / 2;
+      if (!crossesWholeMap) return null;
+      var bothAtEdges = Math.abs(Math.abs(a[0]) - 180) < 1e-9 && Math.abs(Math.abs(b[0]) - 180) < 1e-9;
+      if (!bothAtEdges) return null;
+      if (a[1] < -80 && b[1] < -80) return -90;
+      if (a[1] > 80 && b[1] > 80) return 90;
+      return null;
+    }
+
+    function closeCurrent() {
+      if (open && closeSubpaths && subpathPoints >= 3) {
+        var poleLat = subpathStart && currentPoint ? polarClosureLatitude(currentPoint, subpathStart) : null;
+        if (poleLat !== null) {
+          d = appendLine(d, [currentPoint[0], poleLat]);
+          d = appendLine(d, [subpathStart[0], poleLat]);
+          d = appendLine(d, subpathStart);
+        }
+        d += ' Z';
+      }
+      open = false;
+      subpathPoints = 0;
+      subpathStart = null;
+      currentPoint = null;
+    }
+    function moveTo(point) {
+      d = appendMove(d, point);
+      open = true;
+      subpathPoints = 1;
+      subpathStart = point;
+      currentPoint = point;
+    }
+    function lineTo(point) {
+      if (!open) moveTo(point);
+      else {
+        d = appendLine(d, point);
+        subpathPoints += 1;
+        currentPoint = point;
+      }
+    }
+    function segmentTo(point) {
+      if (!prev) {
+        moveTo(point);
+        first = point;
+        prev = point;
+        return;
+      }
+      var crossing = antimeridianCrossing(prev, point);
+      if (crossing) {
+        lineTo(crossing.from);
+        closeCurrent();
+        moveTo(crossing.to);
+        lineTo(point);
+      } else {
+        lineTo(point);
+      }
+      prev = point;
+    }
+
+    for (var i = 0; i < points.length; i += 1) {
+      if (!validLonLat(points[i])) continue;
+      segmentTo(points[i]);
+    }
+    if (closed && first && prev) {
+      var closing = antimeridianCrossing(prev, first);
+      if (closing) {
+        lineTo(closing.from);
+        closeCurrent();
+        moveTo(closing.to);
+        lineTo(first);
+      } else if (prev[0] !== first[0] || prev[1] !== first[1]) {
+        lineTo(first);
+      }
+    }
+    closeCurrent();
+    return d;
+  }
+
+  // ---------- Optional heat-matrix smoothing helper ----------
   //
-  // After the heat matrix arrives from the API we apply a 2D Gaussian blur to
-  // the raw scores. The smoothing is purely cosmetic — it makes the gradient
-  // continuous instead of stair-stepped — and crucially DOES NOT invent
-  // information:
-  //
-  //   - Each smoothed cell is a local weighted average of nearby cells.
-  //   - σ is exposed in the UI ("Gaussian blur σ = N° latitude") so the
-  //     user knows exactly how much smoothing was applied.
-  //
-  // σ = 1.5 cells ≈ 6° of lat/lon at the default 4° grid → ~660 km on Earth's
-  // surface, comparable to the LINE_INFLUENCE_KM = 1100 km already used by
-  // the scoring kernel in /api/_lib/astrocarto.js. The blur is therefore
-  // consistent with the existing physical orb of influence — it does NOT
-  // extend that influence beyond what the scoring already implies.
-  //
-  // Kernel: discrete 1D Gaussian, radius 3σ → clamp to a max of 5 cells
-  // either side for performance. The convolution is separable: pass 1 blurs
-  // each row (longitude axis, wrap-around because longitude is periodic);
-  // pass 2 blurs each column (latitude axis, clamp at poles — the world
-  // does not wrap N↔S).
-  var GAUSSIAN_SIGMA_CELLS = 1.5;
+  // Accuracy-first default: sigma is zero, so the rendered heat map uses the
+  // raw equation score for each lat/lon cell. The Gaussian helper stays here
+  // for explicit debug experiments only; production rendering must not
+  // visually shift or average the API output.
+  var GAUSSIAN_SIGMA_CELLS = 0;
   function gaussianKernel(sigma) {
     if (sigma <= 0) return [1];
     var r = Math.min(5, Math.ceil(3 * sigma));
@@ -305,19 +436,29 @@
 
   // ---------- SVG continent path (continuous outline + clip-path source) -
 
-  // Each continent in IYOGAU_WORLD_CONTINENTS contributes one closed subpath.
-  // Returned string is shared by the visible outline and the <clipPath>.
-  function continentsPathD(polygons) {
+  // Each continent in IYOGAU_WORLD_CONTINENTS contributes one projected
+  // path. Rings that cross the antimeridian are split at ±180° so SVG never
+  // draws a false horizontal chord across the whole map. That split is
+  // critical because the heat clip, continent outline, and planet curves all
+  // sit on the same equirectangular lat/lon grid.
+  function continentsPathD(polygons, opts) {
     var parts = [];
     for (var i = 0; i < polygons.length; i += 1) {
-      var p = polygons[i].poly;
-      if (!p || p.length < 3) continue;
-      var seg = 'M' + lon2x(p[0][0]).toFixed(1) + ' ' + lat2y(p[0][1]).toFixed(1);
-      for (var j = 1; j < p.length; j += 1) {
-        seg += ' L' + lon2x(p[j][0]).toFixed(1) + ' ' + lat2y(p[j][1]).toFixed(1);
+      var poly = polygons[i];
+      var rings = [];
+      if (poly && poly.poly) rings.push(poly.poly);
+      if (poly && Array.isArray(poly.holes)) {
+        for (var h = 0; h < poly.holes.length; h += 1) rings.push(poly.holes[h]);
       }
-      seg += ' Z';
-      parts.push(seg);
+      for (var r = 0; r < rings.length; r += 1) {
+        var p = rings[r];
+        if (!p || p.length < 3) continue;
+        var seg = lonLatPathD(p, {
+          closed: true,
+          closeSubpaths: !!(opts && opts.closeSubpaths)
+        });
+        parts.push(seg);
+      }
     }
     return parts.join(' ');
   }
@@ -377,40 +518,47 @@
     // We need ONE unique clipPath id per panel so multiple maps on the page
     // (when running in dev test harnesses) don't collide.
     var continents = window.IYOGAU_WORLD_CONTINENTS || [];
-    var landPathD = continents.length ? continentsPathD(continents) : '';
+    // Clip paths must be closed for fill. The only allowed map-wide closure
+    // is Antarctica's polar-cap ring at the bottom edge; render tests enforce
+    // that no non-polar seam chord enters the hidden heat mask.
+    var landClipPathD = continents.length ? continentsPathD(continents, { closeSubpaths: true }) : '';
+    var landOutlinePathD = continents.length ? continentsPathD(continents, { closeSubpaths: false }) : '';
     var clipId = 'astrocarto-land-' + mode + '-' + Math.random().toString(36).slice(2, 8);
-    if (landPathD) {
+    if (landClipPathD) {
       var defs = svgEl('defs');
       var clip = svgEl('clipPath', { id: clipId, clipPathUnits: 'userSpaceOnUse' });
-      clip.appendChild(svgEl('path', { d: landPathD, 'fill-rule': 'nonzero' }));
+      clip.appendChild(svgEl('path', { d: landClipPathD, 'fill-rule': 'evenodd' }));
       defs.appendChild(clip);
       svg.appendChild(defs);
     }
 
     // ---- Heat matrix → per-cell <rect>s, clipped to land ----
     // Response shape (from /api/astrocarto):
-    //   heatMatrix.latitudes   = [lat_0, lat_1, ...]    (length R)
-    //   heatMatrix.longitudes  = [lon_0, lon_1, ...]    (length C)
+    //   heatMatrix.latitudes   = center latitudes [lat_0, ...]    (length R)
+    //   heatMatrix.longitudes  = center longitudes [lon_0, ...]   (length C)
+    //   heatMatrix.xCoordinates/yCoordinates = matching SVG center coords
     //   heatMatrix.values      = R × C array of numbers 0..100
     //   heatMatrix.cellMeta    = R × C array of top-3 contributors
     var hm = response.heatMatrix || {};
     var latitudes = hm.latitudes || [];
     var longitudes = hm.longitudes || [];
+    var xCoordinates = hm.xCoordinates || [];
+    var yCoordinates = hm.yCoordinates || [];
     var rawValues = hm.values || [];
     var cellMeta = hm.cellMeta || [];
     var latStep = hm.latStep || (latitudes.length > 1 ? Math.abs(latitudes[1] - latitudes[0]) : 4);
     var lonStep = hm.lonStep || (longitudes.length > 1 ? Math.abs(longitudes[1] - longitudes[0]) : 4);
+    var coordinateRole = hm.coordinateRole || 'cell-center';
 
-    // ---- Gaussian smoothing of the score field ----
-    // We blur the score matrix (NOT the per-cell metadata) so the rendered
-    // gradient looks continuous instead of stair-stepped. The tooltip still
-    // reports the RAW per-cell value and contributing lines, so the user
-    // sees honest data on hover even though the visual is smoothed.
+    // ---- Raw equation score field ----
+    // Default sigma is zero, so `values` is the raw API matrix. If a developer
+    // deliberately changes GAUSSIAN_SIGMA_CELLS for a debug pass, the DOM
+    // exposes the exact sigma and the tooltip still reports raw per-cell data.
     var sigmaCells = GAUSSIAN_SIGMA_CELLS;
     var values = gaussianBlur2D(rawValues, sigmaCells);
     var sigmaDegrees = sigmaCells * latStep;
-    // Surface σ in the DOM so the legend caption and verification scripts
-    // can read the exact smoothing amount applied to this render.
+    // Surface sigma in the DOM for verification. The production value is
+    // 0.00, which means no browser-side smoothing is applied.
     container.setAttribute('data-astrocarto-sigma-cells', sigmaCells.toFixed(2));
     container.setAttribute('data-astrocarto-sigma-degrees', sigmaDegrees.toFixed(2));
 
@@ -418,30 +566,36 @@
       class: 'astrocarto-heat',
       'aria-hidden': 'true'
     });
-    if (landPathD) heatG.setAttribute('clip-path', 'url(#' + clipId + ')');
+    if (landClipPathD) heatG.setAttribute('clip-path', 'url(#' + clipId + ')');
 
     if (latitudes.length && longitudes.length && values.length) {
-      // Each cell spans (lat .. lat+latStep) × (lon .. lon+lonStep). We add
-      // a tiny 0.8px overdraw on width/height (matching ast/'s WorldMap line
-      // 136) so the cells abut without sub-pixel seams.
-      var cellW = (VIEW_W / 360) * lonStep + 0.8;
-      var cellH = (VIEW_H / 180) * latStep + 0.8;
+      // Server v1.1 emits center-sampled cells: the same center lat/lon is
+      // used for equation input and SVG placement. Older edge-based payloads
+      // are still rendered for local cache/backward compatibility.
+      var baseCellW = (VIEW_W / 360) * lonStep;
+      var baseCellH = (VIEW_H / 180) * latStep;
+      var cellW = baseCellW;
+      var cellH = baseCellH;
       for (var r = 0; r < latitudes.length; r += 1) {
         var rowLat = latitudes[r];
         var rowVals = values[r];
         if (!rowVals) continue;
-        // The matrix is stored south→north (latitudes[0] = south); SVG y
-        // grows downward, so the rect's top-edge sits at lat2y(rowLat + step).
-        var y = lat2y(rowLat + latStep);
+        var centerY = (typeof yCoordinates[r] === 'number') ? yCoordinates[r] : lat2y(rowLat);
+        var y = coordinateRole === 'cell-center'
+          ? centerY - baseCellH / 2
+          : lat2y(rowLat + latStep);
         for (var c = 0; c < longitudes.length; c += 1) {
           var v = rowVals[c];
           if (v == null) continue;
-          var x = lon2x(longitudes[c]);
+          var centerX = (typeof xCoordinates[c] === 'number') ? xCoordinates[c] : lon2x(longitudes[c]);
+          var x = coordinateRole === 'cell-center'
+            ? centerX - baseCellW / 2
+            : lon2x(longitudes[c]);
           heatG.appendChild(svgEl('rect', {
-            x: x.toFixed(2),
-            y: y.toFixed(2),
-            width: cellW.toFixed(2),
-            height: cellH.toFixed(2),
+            x: svgCoord(x),
+            y: svgCoord(y),
+            width: svgCoord(cellW),
+            height: svgCoord(cellH),
             fill: colorForValue(v),
             'fill-opacity': cellOpacity(v).toFixed(3),
             class: 'astrocarto-cell'
@@ -452,12 +606,12 @@
     svg.appendChild(heatG);
 
     // ---- Continent outlines (rendered ABOVE the heat cells, no fill) ----
-    if (landPathD) {
+    if (landOutlinePathD) {
       var land = svgEl('path', {
-        d: landPathD,
+        d: landOutlinePathD,
         class: 'astrocarto-land',
         'aria-hidden': 'true',
-        'fill-rule': 'nonzero'
+        fill: 'none'
       });
       svg.appendChild(land);
     }
@@ -465,14 +619,13 @@
     // ---- Planet lines ----
     var lines = response.lines || [];
     var linesG = svgEl('g', { class: 'astrocarto-lines', 'aria-hidden': 'true' });
-    // Filter to top planets per mode to keep the map readable: ditch lines
-    // whose mode weight < 0.5. For Sun/Jupiter/Venus etc this still shows
-    // all major lines; it drops Ketu/Mars from soulmate, etc.
-    // Source of truth is the API response (see /api/_lib/astrocarto.js#L485).
+    // Render every line that contributes to the heat field. Hiding low-weight
+    // contributors makes hot cells look misaligned with the displayed curves.
+    // Source of truth is the API response (see /api/_lib/astrocarto.js).
     var modeWeights = response.modeWeights || {};
     for (var li = 0; li < lines.length; li += 1) {
       var line = lines[li];
-      if ((modeWeights[line.planet] || 0) < 0.5) continue;
+      if ((modeWeights[line.planet] || 0) <= 0) continue;
       var color = planetTokenColor(line.planet);
       var dash = strokeDashFor(line.type);
       var dl = polylineToPathD(line.points);
@@ -488,6 +641,27 @@
       });
       if (dash) path.setAttribute('stroke-dasharray', dash);
       linesG.appendChild(path);
+    }
+    var timing = response.timing || null;
+    var timingLines = timing && timing.lines ? timing.lines : [];
+    var transitWeights = timing && timing.transitWeights ? timing.transitWeights : {};
+    for (var ti = 0; ti < timingLines.length; ti += 1) {
+      var tLine = timingLines[ti];
+      if ((transitWeights[tLine.planet] || 0) <= 0) continue;
+      var tPathD = polylineToPathD(tLine.points);
+      if (!tPathD) continue;
+      var tPath = svgEl('path', {
+        d: tPathD,
+        stroke: planetTokenColor(tLine.planet),
+        'stroke-width': 1.05,
+        fill: 'none',
+        class: 'astrocarto-line astrocarto-line--timing astrocarto-line--' + tLine.type.toLowerCase(),
+        'data-planet': tLine.planet,
+        'data-type': tLine.type,
+        'data-source': 'transit'
+      });
+      tPath.setAttribute('stroke-dasharray', '2.4 3.2');
+      linesG.appendChild(tPath);
     }
     svg.appendChild(linesG);
 
@@ -522,17 +696,13 @@
       var ci = Math.round((lonP - lon0) / lonStep);
       if (ri < 0) ri = 0; else if (ri >= latitudes.length) ri = latitudes.length - 1;
       if (ci < 0) ci = 0; else if (ci >= longitudes.length) ci = longitudes.length - 1;
-      // Tooltip reports the RAW per-cell score and contributing lines
-      // (not the smoothed value), so the user sees honest data on hover even
-      // though the visual gradient is Gaussian-smoothed for readability.
+      // Tooltip reports the raw per-cell score and contributing lines.
       var rowVRaw = rawValues[ri] || [];
-      var rowVSmooth = values[ri] || [];
       var rowM = cellMeta[ri] || [];
       var match = {
         lat: latitudes[ri],
         lon: longitudes[ci],
         value: rowVRaw[ci],
-        smoothed: rowVSmooth[ci],
         top: rowM[ci] || []
       };
       if (match.value == null) { tooltip.hidden = true; return; }
@@ -582,7 +752,10 @@
         var swatch = htmlEl('span', { class: 'astrocarto-tip__swatch' });
         swatch.style.background = planetTokenColor(c.planet);
         li.appendChild(swatch);
-        li.appendChild(document.createTextNode(planetLbl + ' ' + typeLbl + ' — ' + c.distance + ' km'));
+        var sourceLbl = c.source === 'transit'
+          ? tr('natal.astrocarto.tooltip.transitPrefix', 'Transit') + ' '
+          : '';
+        li.appendChild(document.createTextNode(sourceLbl + planetLbl + ' ' + typeLbl + ' — ' + c.distance + ' km'));
         ul.appendChild(li);
       }
       tooltip.appendChild(ul);
@@ -603,23 +776,11 @@
   }
 
   // Convert [[lon, lat], ...] to an SVG path "M ... L ... L ..." string.
-  // Splits where adjacent vertices wrap > 180° apart (antimeridian).
+  // Splits where adjacent vertices wrap > 180° apart (antimeridian) and
+  // inserts edge points at ±180° so curves touch the map edge accurately
+  // instead of stopping short or drawing a false chord.
   function polylineToPathD(points) {
-    if (!points || points.length < 2) return '';
-    var d = '';
-    var open = false;
-    for (var i = 0; i < points.length; i += 1) {
-      var pt = points[i];
-      var prev = points[i - 1];
-      var jump = (i > 0 && Math.abs(pt[0] - prev[0]) > 180);
-      if (!open || jump) {
-        d += (d ? ' ' : '') + 'M' + lon2x(pt[0]).toFixed(1) + ' ' + lat2y(pt[1]).toFixed(1);
-        open = true;
-      } else {
-        d += ' L' + lon2x(pt[0]).toFixed(1) + ' ' + lat2y(pt[1]).toFixed(1);
-      }
-    }
-    return d;
+    return lonLatPathD(points, { closed: false, closeSubpaths: false });
   }
 
   // Mode weights are no longer duplicated here — the API ships them in the
@@ -635,9 +796,8 @@
     // Top 5 planets by weight.
     var ordered = Object.keys(weights)
       .map(function (k) { return { planet: k, weight: weights[k] }; })
-      .filter(function (p) { return p.weight >= 0.5; })
-      .sort(function (a, b) { return b.weight - a.weight; })
-      .slice(0, 6);
+      .filter(function (p) { return p.weight > 0; })
+      .sort(function (a, b) { return b.weight - a.weight; });
 
     var planetsWrap = htmlEl('div', { class: 'astrocarto-legend__planets' });
     planetsWrap.appendChild(htmlEl('span', { class: 'astrocarto-legend__title' },
@@ -682,23 +842,32 @@
       tr('natal.astrocarto.legend.heatLabels', 'Lower ▸ Higher')));
     container.appendChild(heatWrap);
 
-    // Gaussian smoothing caption — exposes σ so the user knows exactly how
-    // much the visual gradient was smoothed. The number is purely cosmetic
-    // (the tooltip continues to report RAW per-cell scores), but it must be
-    // visible so the smoothing isn't mistaken for new information.
-    var hm = (response && response.heatMatrix) || {};
-    var latStep = hm.latStep ||
-      (hm.latitudes && hm.latitudes.length > 1 ? Math.abs(hm.latitudes[1] - hm.latitudes[0]) : 4);
-    var sigmaDeg = (GAUSSIAN_SIGMA_CELLS * latStep).toFixed(1);
-    var sigmaTemplate = tr(
-      'natal.astrocarto.legend.smoothingCaption',
-      'Heat field smoothed via Gaussian blur (σ = {sigma}° lat/lon).'
-    );
-    var smoothWrap = htmlEl('div', { class: 'astrocarto-legend__smoothing' });
-    smoothWrap.appendChild(document.createTextNode(
-      sigmaTemplate.replace('{sigma}', sigmaDeg)
+    var rawWrap = htmlEl('div', { class: 'astrocarto-legend__note' });
+    rawWrap.appendChild(document.createTextNode(
+      tr('natal.astrocarto.legend.rawHeatCaption',
+        'Heat cells show raw equation scores; no browser smoothing is applied.')
     ));
-    container.appendChild(smoothWrap);
+    container.appendChild(rawWrap);
+
+    var provenance = (response && response.provenance) || {};
+    var timing = (response && response.timing) || null;
+    if (mode === 'soulmate_timing' && timing && timing.targetDate) {
+      var timingWrap = htmlEl('div', { class: 'astrocarto-legend__note' });
+      timingWrap.appendChild(document.createTextNode(
+        tr('natal.astrocarto.legend.timingCaption',
+          'Timing overlay for {date}: natal soulmate potential plus noon-UTC transit angular activation.')
+          .replace('{date}', timing.targetDate)
+      ));
+      container.appendChild(timingWrap);
+    }
+    if (mode === 'immigration' && provenance.immigrationDistanceBasis === 'omitted') {
+      var immigrationWrap = htmlEl('div', { class: 'astrocarto-legend__note' });
+      immigrationWrap.appendChild(document.createTextNode(
+        tr('natal.astrocarto.legend.immigrationResidenceOmitted',
+          'Immigration distance-from-current-residence adjustment is omitted because no current residence was supplied.')
+      ));
+      container.appendChild(immigrationWrap);
+    }
   }
 
   // ---------- Tab-driven loader ----------
@@ -710,36 +879,152 @@
   var responseCache = {};   // mode → JSON
   var pendingFetches = {};  // mode → Promise
 
+  function currentResidenceKey(payload) {
+    var r = payload && payload.currentResidence;
+    if (!r) return '';
+    return [r.lat, r.lon, r.city || '', r.country || ''].join(',');
+  }
+
   function canonicalKey(payload) {
     // Stable key from the fields that affect astrocarto output.
-    return [payload.date, payload.time, payload.tz, payload.lat, payload.lon].join('|');
+    return [
+      payload.date,
+      payload.time,
+      payload.tz,
+      payload.lat,
+      payload.lon,
+      payload.tradition || 'sidereal',
+      payload.ayanamsa || '',
+      currentResidenceKey(payload)
+    ].join('|');
   }
 
-  // Resolution tier: request `high` on desktop, `medium` on phones. The
-  // viewport boundary matches the standard Tailwind / Bootstrap "sm" break,
-  // which lines up with where the natal-chart UI shifts from single-column
-  // (mobile) to two-column (desktop). A coarser grid on mobile keeps the
-  // payload + render time within budget for slow networks and older phones.
-  function pickResolution() {
-    try {
-      if (window.matchMedia && window.matchMedia('(min-width: 640px)').matches) {
-        return 'high';
+  function pad2(n) {
+    return String(n).padStart(2, '0');
+  }
+
+  function parseDateUTC(dateString) {
+    if (!/^\d{4}-\d{2}-\d{2}$/.test(String(dateString || ''))) return null;
+    var parts = dateString.split('-').map(Number);
+    var d = new Date(Date.UTC(parts[0], parts[1] - 1, parts[2], 12, 0, 0));
+    if (d.getUTCFullYear() !== parts[0] || d.getUTCMonth() !== parts[1] - 1 || d.getUTCDate() !== parts[2]) return null;
+    return d;
+  }
+
+  function dateStringUTC(d) {
+    return d.getUTCFullYear() + '-' + pad2(d.getUTCMonth() + 1) + '-' + pad2(d.getUTCDate());
+  }
+
+  function daysInUTCMonth(year, monthIndex) {
+    return new Date(Date.UTC(year, monthIndex + 1, 0)).getUTCDate();
+  }
+
+  function addYearsClampedUTC(dateUTC, years) {
+    var year = dateUTC.getUTCFullYear() + years;
+    var month = dateUTC.getUTCMonth();
+    var day = Math.min(dateUTC.getUTCDate(), daysInUTCMonth(year, month));
+    return new Date(Date.UTC(year, month, day, 12, 0, 0));
+  }
+
+  function addDaysUTC(dateUTC, days) {
+    return new Date(Date.UTC(
+      dateUTC.getUTCFullYear(),
+      dateUTC.getUTCMonth(),
+      dateUTC.getUTCDate() + days,
+      12,
+      0,
+      0
+    ));
+  }
+
+  function daysBetweenUTC(startUTC, endUTC) {
+    var start = Date.UTC(startUTC.getUTCFullYear(), startUTC.getUTCMonth(), startUTC.getUTCDate());
+    var end = Date.UTC(endUTC.getUTCFullYear(), endUTC.getUTCMonth(), endUTC.getUTCDate());
+    return Math.round((end - start) / 86400000);
+  }
+
+  function ageYearsForOffset(offsetDays) {
+    return Math.round((Number(offsetDays) || 0) / 365.2425 * 100) / 100;
+  }
+
+  function timelineBoundsForSource(src) {
+    var start = parseDateUTC(src && src.date);
+    if (!start) return null;
+    var end = addYearsClampedUTC(start, 50);
+    var todayRaw = new Date();
+    var today = new Date(Date.UTC(todayRaw.getFullYear(), todayRaw.getMonth(), todayRaw.getDate(), 12, 0, 0));
+    var totalDays = daysBetweenUTC(start, end);
+    var defaultOffset = clamp(daysBetweenUTC(start, today), 0, totalDays);
+    return {
+      sourceDate: src.date,
+      start: start,
+      end: end,
+      startDate: dateStringUTC(start),
+      endDate: dateStringUTC(end),
+      totalDays: totalDays,
+      defaultOffset: defaultOffset
+    };
+  }
+
+  function dateStringFromTimelineOffset(bounds, offsetDays) {
+    return dateStringUTC(addDaysUTC(bounds.start, clamp(Math.round(Number(offsetDays) || 0), 0, bounds.totalDays)));
+  }
+
+  function timingTargetDateForPanel(panel) {
+    if (!panel || panel.getAttribute('data-astrocarto') !== 'soulmate_timing') return null;
+    var src = window.__astrocarto && window.__astrocarto.payload;
+    var bounds = timelineBoundsForSource(src);
+    if (!bounds) return null;
+    var slider = panel.querySelector('[data-astrocarto-date-slider]');
+    var offset = slider ? Number(slider.value) : bounds.defaultOffset;
+    if (slider) {
+      var existingKey = slider.getAttribute('data-astrocarto-timeline-source');
+      if (existingKey !== bounds.sourceDate) {
+        slider.setAttribute('min', '0');
+        slider.setAttribute('max', String(bounds.totalDays));
+        slider.setAttribute('step', '7');
+        slider.value = String(bounds.defaultOffset);
+        slider.setAttribute('data-astrocarto-timeline-source', bounds.sourceDate);
+        offset = bounds.defaultOffset;
+      } else if (offset < 0 || offset > bounds.totalDays) {
+        offset = clamp(offset, 0, bounds.totalDays);
+        slider.value = String(offset);
       }
-    } catch (e) {}
-    return 'medium';
+    }
+    var date = dateStringFromTimelineOffset(bounds, offset);
+    panel.setAttribute('data-astrocarto-target-date', date);
+    panel.setAttribute('data-astrocarto-timeline-start', bounds.startDate);
+    panel.setAttribute('data-astrocarto-timeline-end', bounds.endDate);
+    var label = panel.querySelector('[data-astrocarto-date-label]');
+    if (label) {
+      label.textContent = tr('natal.astrocarto.timing.dateLabel', '{date} · age {age}')
+        .replace('{date}', date)
+        .replace('{age}', ageYearsForOffset(offset).toFixed(2));
+    }
+    return date;
   }
 
-  function fetchAstrocarto(mode) {
+  // Accuracy-first resolution policy: request the same high-resolution
+  // full-world grid on every viewport. The map is used as an analytical
+  // surface, so mobile must not silently compute a coarser field than desktop.
+  function pickResolution() {
+    return 'high';
+  }
+
+  function fetchAstrocarto(mode, options) {
     var src = window.__astrocarto && window.__astrocarto.payload;
     if (!src) return Promise.reject(new Error('no-natal-source'));
     // Astrocartography requires a known birth time — the four angular lines
-    // pivot on GMST at the birth instant, and a 4-minute time uncertainty
+    // pivot on apparent sidereal time at the birth instant, and a 4-minute time uncertainty
     // shifts MC/IC lines ~1° (~110 km). Fail loudly so the panel surfaces a
     // helpful error rather than 400 from the API.
     if (src.unknownTime) {
       return Promise.reject(new Error('unknown-time'));
     }
     var resolution = pickResolution();
+    var targetDate = options && options.targetDate ? options.targetDate : null;
+    var targetLocation = options && options.targetLocation ? options.targetLocation : null;
+    var includeHeat = !(options && options.includeHeat === false);
     // Cache key includes resolution so a resize from mobile→desktop doesn't
     // serve a stale low-res payload.
     var key = canonicalKey(src) + '|' + resolution;
@@ -749,8 +1034,12 @@
       pendingFetches = {};
       lastSourceKey = key;
     }
-    if (responseCache[mode]) return Promise.resolve(responseCache[mode]);
-    if (pendingFetches[mode]) return pendingFetches[mode];
+    var targetLocationKey = targetLocation
+      ? ['loc', targetLocation.lat, targetLocation.lon, targetLocation.city || '', targetLocation.country || ''].join(',')
+      : '';
+    var responseKey = mode + (targetDate ? '|' + targetDate : '') + (includeHeat ? '' : '|noheat') + (targetLocationKey ? '|' + targetLocationKey : '');
+    if (responseCache[responseKey]) return Promise.resolve(responseCache[responseKey]);
+    if (pendingFetches[responseKey]) return pendingFetches[responseKey];
 
     // Only include `ayanamsa` when sidereal — the API validator rejects the
     // field for tropical charts (see /api/_lib/astrocarto.js schema).
@@ -766,9 +1055,26 @@
       resolution: resolution
     };
     if (tradition === 'sidereal') {
-      body.ayanamsa = src.ayanamsa || 'lahiri';
+      body.ayanamsa = src.ayanamsa || 'true_chitrapaksha';
     }
-    pendingFetches[mode] = fetch('/api/astrocarto/', {
+    if (mode === 'immigration' && src.currentResidence) {
+      body.currentResidence = src.currentResidence;
+    }
+    if (mode === 'soulmate_timing' && targetDate) {
+      body.targetDate = targetDate;
+    }
+    if (!includeHeat) {
+      body.includeHeat = false;
+    }
+    if (mode === 'soulmate_timing' && targetLocation) {
+      body.targetLocation = {
+        lat: targetLocation.lat,
+        lon: targetLocation.lon
+      };
+      if (targetLocation.city) body.targetLocation.city = targetLocation.city;
+      if (targetLocation.country) body.targetLocation.country = targetLocation.country;
+    }
+    pendingFetches[responseKey] = fetch('/api/astrocarto/', {
       method: 'POST',
       headers: { 'content-type': 'application/json', 'accept': 'application/json' },
       body: JSON.stringify(body)
@@ -778,15 +1084,15 @@
         return r.json();
       })
       .then(function (json) {
-        responseCache[mode] = json;
-        delete pendingFetches[mode];
+        responseCache[responseKey] = json;
+        delete pendingFetches[responseKey];
         return json;
       })
       .catch(function (err) {
-        delete pendingFetches[mode];
+        delete pendingFetches[responseKey];
         throw err;
       });
-    return pendingFetches[mode];
+    return pendingFetches[responseKey];
   }
 
   function setBusy(panel, busy) {
@@ -808,15 +1114,199 @@
     }
   }
 
+  function messageFromApiError(err) {
+    if (!err || !err.message) return null;
+    var text = String(err.message);
+    var match = text.match(/^API\s+(\d+):\s*(.*)$/);
+    if (!match) return null;
+    var status = Number(match[1]);
+    var bodyText = match[2] || '';
+    var apiMessage = bodyText;
+    try {
+      var parsed = JSON.parse(bodyText);
+      if (parsed && typeof parsed.error === 'string') apiMessage = parsed.error;
+    } catch (e) {}
+    if (status === 429) {
+      return apiMessage || 'Rate limit exceeded. Please wait and try again.';
+    }
+    if (status >= 400 && status < 500) {
+      return apiMessage || 'The map request was rejected. Please check the birth details and try again.';
+    }
+    if (status >= 500) {
+      return 'The map calculation failed on the server. Please try again.';
+    }
+    return apiMessage || null;
+  }
+
+  var timingCitiesLoaded = false;
+  var timingCitiesLoading = null;
+
+  function loadTimingCities() {
+    if (window.__natalCities && Array.isArray(window.__natalCities)) {
+      timingCitiesLoaded = true;
+      return Promise.resolve(window.__natalCities);
+    }
+    if (timingCitiesLoaded) return Promise.resolve(window.__natalCities || []);
+    if (timingCitiesLoading) return timingCitiesLoading;
+    timingCitiesLoading = fetch('/assets/data/cities.json', {
+      headers: { 'accept': 'application/json' }
+    })
+      .then(function (r) {
+        if (!r.ok) throw new Error('cities http ' + r.status);
+        return r.json();
+      })
+      .then(function (data) {
+        window.__natalCities = data;
+        timingCitiesLoaded = true;
+        return data;
+      })
+      .catch(function (err) {
+        timingCitiesLoading = null;
+        throw err;
+      });
+    return timingCitiesLoading;
+  }
+
+  function normaliseTimingQuery(s) {
+    return (s || '').toLowerCase()
+      .normalize('NFD').replace(/[̀-ͯ]/g, '')
+      .replace(/[^a-z0-9,\s.-]/g, '')
+      .replace(/\s+/g, ' ')
+      .trim();
+  }
+
+  function cityDisplayName(city) {
+    if (!city) return '';
+    var name = city.name || city.city || '';
+    if (!city.country && isFinite(Number(city.lat)) && isFinite(Number(city.lon))) {
+      return name + ' (' + Number(city.lat).toFixed(4) + ', ' + Number(city.lon).toFixed(4) + ')';
+    }
+    return city.country ? name + ', ' + city.country : name;
+  }
+
+  function parseCoordinateQuery(query) {
+    var m = String(query || '').trim().match(/^(-?\d+(?:\.\d+)?)\s*[, ]\s*(-?\d+(?:\.\d+)?)$/);
+    if (!m) return null;
+    var lat = Number(m[1]);
+    var lon = Number(m[2]);
+    if (!isFinite(lat) || !isFinite(lon) || lat < -90 || lat > 90 || lon < -180 || lon > 180) return null;
+    return {
+      city: tr('natal.astrocarto.timing.customLocation', 'Custom location'),
+      country: '',
+      lat: lat,
+      lon: lon
+    };
+  }
+
+  function timingCityMatches(query, limit) {
+    var cities = window.__natalCities || [];
+    var nq = normaliseTimingQuery(query);
+    if (!nq) return [];
+    var scored = [];
+    for (var i = 0; i < cities.length; i += 1) {
+      var city = cities[i];
+      var name = normaliseTimingQuery(city.name);
+      var label = normaliseTimingQuery(cityDisplayName(city));
+      var score = 0;
+      if (label === nq) score = 100;
+      else if (name === nq) score = 90;
+      else if (label.indexOf(nq) === 0) score = 80;
+      else if (name.indexOf(nq) === 0) score = 70;
+      else if (label.indexOf(nq) >= 0) score = 50;
+      else if (name.indexOf(nq) >= 0) score = 40;
+      if (score > 0) scored.push({ city: city, score: score, index: i });
+    }
+    return scored
+      .sort(function (a, b) { return b.score - a.score || a.index - b.index; })
+      .slice(0, limit || 8)
+      .map(function (item) { return item.city; });
+  }
+
+  function populateTimingCityList(panel, query) {
+    var list = panel.querySelector('[data-astrocarto-city-list]');
+    if (!list) return;
+    removeAllChildren(list);
+    if (!query || String(query).trim().length < 2) return;
+    var matches = timingCityMatches(query, 8);
+    for (var i = 0; i < matches.length; i += 1) {
+      var opt = htmlEl('option', { value: cityDisplayName(matches[i]) });
+      list.appendChild(opt);
+    }
+  }
+
+  function resolveTimingLocation(query) {
+    var parsed = parseCoordinateQuery(query);
+    if (parsed) return Promise.resolve(parsed);
+    return loadTimingCities().then(function () {
+      var matches = timingCityMatches(query, 1);
+      if (!matches.length) return null;
+      return {
+        city: matches[0].name,
+        country: matches[0].country,
+        lat: matches[0].lat,
+        lon: matches[0].lon
+      };
+    });
+  }
+
+  function setCityTimingStatus(panel, message, state) {
+    var status = panel.querySelector('[data-astrocarto-city-status]');
+    if (!status) return;
+    status.textContent = message || '';
+    if (state) status.setAttribute('data-state', state);
+    else status.removeAttribute('data-state');
+  }
+
+  function clearCityTimingResults(panel) {
+    var results = panel.querySelector('[data-astrocarto-city-results]');
+    if (results) removeAllChildren(results);
+    setCityTimingStatus(panel, '', null);
+  }
+
+  function renderCityTimingResults(panel, response, location) {
+    var results = panel.querySelector('[data-astrocarto-city-results]');
+    if (!results) return;
+    removeAllChildren(results);
+    var cityTiming = response && response.cityTiming;
+    var windows = cityTiming && cityTiming.windows ? cityTiming.windows : [];
+    var label = cityDisplayName(location);
+    if (!windows.length) {
+      setCityTimingStatus(panel, tr('natal.astrocarto.timing.cityNoWindows',
+        'No activation window was returned for this location.'), 'error');
+      return;
+    }
+    setCityTimingStatus(panel, tr('natal.astrocarto.timing.cityFound',
+      'Best soulmate activation windows for {city}.').replace('{city}', label), null);
+    for (var i = 0; i < windows.length; i += 1) {
+      var w = windows[i];
+      var li = htmlEl('li');
+      var wrap = htmlEl('div', { class: 'astrocarto-city-timing__window' });
+      wrap.appendChild(htmlEl('strong', null, tr('natal.astrocarto.timing.cityWindow',
+        '{start} to {end}').replace('{start}', w.startDate).replace('{end}', w.endDate)));
+      var meta = [
+        tr('natal.astrocarto.timing.cityPeak', 'Peak {date}').replace('{date}', w.peakDate),
+        tr('natal.astrocarto.timing.cityAge', 'age {age}').replace('{age}', Number(w.peakAgeYears).toFixed(2)),
+        tr('natal.astrocarto.timing.cityScore', 'score {score}').replace('{score}', w.peakScore)
+      ].join(' · ');
+      wrap.appendChild(htmlEl('span', { class: 'astrocarto-city-timing__meta' }, meta));
+      li.appendChild(wrap);
+      results.appendChild(li);
+    }
+  }
+
   function loadAndRenderInto(panel) {
     var mode = panel.getAttribute('data-astrocarto');
     if (!mode) return;
     var mapEl = panel.querySelector('[data-astrocarto-map]');
     var legendEl = panel.querySelector('[data-astrocarto-legend]');
     if (!mapEl) return;
+    var targetDate = timingTargetDateForPanel(panel);
     setBusy(panel, true);
-    fetchAstrocarto(mode)
+    fetchAstrocarto(mode, { targetDate: targetDate })
       .then(function (json) {
+        if (mode === 'soulmate_timing' && timingTargetDateForPanel(panel) !== targetDate) {
+          return;
+        }
         setBusy(panel, false);
         renderMap(mapEl, json, mode);
         if (legendEl) renderLegend(legendEl, mode, json);
@@ -832,9 +1322,84 @@
         } else if (err && err.message === 'no-natal-source') {
           msg = tr('natal.astrocarto.errorNoSource',
             'Please calculate your natal chart first — the map needs your birth details.');
+        } else {
+          msg = messageFromApiError(err);
         }
         setError(panel, msg);
       });
+  }
+
+  function bindTimingControls(panel) {
+    if (!panel || panel.getAttribute('data-astrocarto') !== 'soulmate_timing') return;
+    var slider = panel.querySelector('[data-astrocarto-date-slider]');
+    if (!slider || slider.getAttribute('data-astrocarto-bound') === '1') return;
+    slider.setAttribute('data-astrocarto-bound', '1');
+    timingTargetDateForPanel(panel);
+    var timer = 0;
+    function scheduleReload() {
+      timingTargetDateForPanel(panel);
+      panel.removeAttribute('data-astrocarto-loaded');
+      if (!panel.hidden) setBusy(panel, true);
+      clearTimeout(timer);
+      timer = setTimeout(function () {
+        if (!panel.hidden) loadAndRenderInto(panel);
+      }, 320);
+    }
+    slider.addEventListener('input', scheduleReload);
+    slider.addEventListener('change', scheduleReload);
+  }
+
+  function bindCityTimingControls(panel) {
+    if (!panel || panel.getAttribute('data-astrocarto') !== 'soulmate_timing') return;
+    var form = panel.querySelector('[data-astrocarto-city-form]');
+    var input = panel.querySelector('[data-astrocarto-city-input]');
+    if (!form || !input || form.getAttribute('data-astrocarto-bound') === '1') return;
+    form.setAttribute('data-astrocarto-bound', '1');
+    input.addEventListener('focus', function () {
+      loadTimingCities()
+        .then(function () { populateTimingCityList(panel, input.value); })
+        .catch(function () {});
+    });
+    input.addEventListener('input', function () {
+      loadTimingCities()
+        .then(function () { populateTimingCityList(panel, input.value); })
+        .catch(function () {});
+    });
+    form.addEventListener('submit', function (evt) {
+      evt.preventDefault();
+      clearCityTimingResults(panel);
+      var query = input.value.trim();
+      if (!query) return;
+      var button = form.querySelector('button[type="submit"]');
+      if (button) button.disabled = true;
+      resolveTimingLocation(query)
+        .then(function (location) {
+          if (!location) {
+            setCityTimingStatus(panel, tr('natal.astrocarto.timing.cityNoMatch',
+              'No city match. Enter a larger nearby city or exact coordinates as lat, lon.'), 'error');
+            return null;
+          }
+          var label = cityDisplayName(location);
+          input.value = label;
+          setCityTimingStatus(panel, tr('natal.astrocarto.timing.cityLoading',
+            'Scanning birth-to-age-50 timing for {city}…').replace('{city}', label), null);
+          return fetchAstrocarto('soulmate_timing', {
+            targetDate: timingTargetDateForPanel(panel),
+            targetLocation: location,
+            includeHeat: false
+          }).then(function (json) {
+            renderCityTimingResults(panel, json, location);
+          });
+        })
+        .catch(function (err) {
+          if (window.console && console.warn) console.warn('[astrocarto] city timing', err);
+          setCityTimingStatus(panel, messageFromApiError(err) || tr('natal.astrocarto.error',
+            'Sorry — we could not load the astrocartography map. Please try again.'), 'error');
+        })
+        .then(function () {
+          if (button) button.disabled = false;
+        });
+    });
   }
 
   // ---------- Public API ----------
@@ -854,6 +1419,7 @@
         lastSourceKey = '';
         document.querySelectorAll('[data-astrocarto][data-astrocarto-loaded="1"]').forEach(function (p) {
           p.removeAttribute('data-astrocarto-loaded');
+          clearCityTimingResults(p);
           // Re-load eagerly only if the tab is currently visible.
           if (!p.hidden) loadAndRenderInto(p);
         });
@@ -868,6 +1434,8 @@
     if (!panelId) return;
     var panel = document.getElementById(panelId);
     if (!panel || !panel.hasAttribute('data-astrocarto')) return;
+    bindTimingControls(panel);
+    bindCityTimingControls(panel);
 
     function maybeLoad() {
       if (panel.getAttribute('data-astrocarto-loaded') === '1') return;
@@ -925,24 +1493,6 @@
       });
     }
 
-    // Re-fetch when crossing the desktop/mobile breakpoint so the resolution
-    // tier matches the new viewport. We invalidate the cache via setNatalSource
-    // re-trigger — same path as the form submit.
-    try {
-      var widthMql = window.matchMedia && window.matchMedia('(min-width: 640px)');
-      if (widthMql && widthMql.addEventListener) {
-        widthMql.addEventListener('change', function () {
-          // Force a cache miss next fetch by clearing the lastSourceKey.
-          lastSourceKey = '';
-          responseCache = {};
-          pendingFetches = {};
-          document.querySelectorAll('[data-astrocarto][data-astrocarto-loaded="1"]').forEach(function (p) {
-            p.removeAttribute('data-astrocarto-loaded');
-            if (!p.hidden) loadAndRenderInto(p);
-          });
-        });
-      }
-    } catch (e) {}
   }
 
   if (document.readyState === 'loading') {
@@ -960,13 +1510,20 @@
     if (qs.indexOf('astrocartoDebug=1') >= 0 || (window.__astrocartoDebug === true)) {
       window.__debug_astrocarto_renderMap = renderMap;
       window.__debug_astrocarto_renderLegend = renderLegend;
-      // Projection + smoothing helpers, exposed for the in-browser
+      window.__debug_astrocarto_pickResolution = pickResolution;
+      // Projection + optional smoothing helpers, exposed for the in-browser
       // verification pass. Read-only — callers can compose their own tests.
       window.__debug_astrocarto_projection = {
         xOfLon: xOfLon, yOfLat: yOfLat,
         lonOfX: lonOfX, latOfY: latOfY,
         VIEW_W: VIEW_W, VIEW_H: VIEW_H,
         runSelfCheck: runProjectionSelfCheck
+      };
+      window.__debug_astrocarto_pathing = {
+        antimeridianCrossing: antimeridianCrossing,
+        lonLatPathD: lonLatPathD,
+        polylineToPathD: polylineToPathD,
+        continentsPathD: continentsPathD
       };
       window.__debug_astrocarto_smoothing = {
         sigmaCells: GAUSSIAN_SIGMA_CELLS,

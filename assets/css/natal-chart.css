@@ -307,6 +307,181 @@
   border-radius: 6px;
 }
 
+/* Account-owned saved birth profiles */
+.natal-account {
+  margin: 0 0 1rem;
+  padding: clamp(0.875rem, 1.8vw, 1.25rem);
+  background: var(--surface-2);
+  border: 1px solid var(--outline);
+  border-radius: 12px;
+}
+.natal-account__header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 1rem;
+}
+.natal-account__header h3 {
+  margin: 0 0 0.25rem;
+  font-family: "Noto Serif", serif;
+  font-size: 1.1rem;
+  color: var(--ink);
+}
+.natal-account__header p,
+.natal-profile-message {
+  margin: 0;
+  font-size: 0.875rem;
+  line-height: 1.45;
+  color: var(--ink-muted);
+}
+.natal-account__actions,
+.natal-profile-save__actions,
+.natal-profile-card__actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+}
+.natal-account__body {
+  display: flex;
+  flex-direction: column;
+  gap: 0.875rem;
+  margin-top: 1rem;
+}
+.natal-account__body[hidden] { display: none; }
+.natal-account__active {
+  padding: 0.625rem 0.75rem;
+  background: var(--surface);
+  border: 1px solid var(--outline);
+  border-radius: 8px;
+  color: var(--ink);
+  font-size: 0.875rem;
+  font-weight: 600;
+}
+.natal-profile-save {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+}
+.natal-profile-save__grid {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 0.625rem;
+}
+@media (min-width: 720px) {
+  .natal-profile-save__grid {
+    grid-template-columns: 1fr 12rem;
+  }
+  .natal-profile-save__notes {
+    grid-column: 1 / -1;
+  }
+}
+.natal-profile-save label {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+  font-size: 0.8125rem;
+  font-weight: 600;
+  color: var(--ink);
+}
+.natal-profile-save input,
+.natal-profile-save select,
+.natal-profile-save textarea {
+  width: 100%;
+  padding: 0.4375rem 0.5625rem;
+  font: inherit;
+  font-size: 0.875rem;
+  color: var(--ink);
+  background: var(--surface);
+  border: 1px solid var(--outline);
+  border-radius: 8px;
+  min-height: 36px;
+}
+.natal-profile-save textarea {
+  resize: vertical;
+  min-height: 4.5rem;
+}
+.natal-profile-save__consent {
+  font-weight: 400;
+}
+.natal-profile-danger {
+  color: #8f1d1d;
+  border-color: color-mix(in srgb, #8f1d1d 45%, var(--outline));
+}
+.natal-profile-lists {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 0.875rem;
+}
+@media (min-width: 760px) {
+  .natal-profile-lists {
+    grid-template-columns: minmax(0, 0.9fr) minmax(0, 1.3fr);
+  }
+}
+.natal-profile-lists h4 {
+  margin: 0 0 0.5rem;
+  font-size: 0.875rem;
+  color: var(--ink);
+}
+.natal-profile-list {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+.natal-profile-empty {
+  margin: 0;
+  padding: 0.75rem;
+  border: 1px dashed var(--outline);
+  border-radius: 8px;
+  color: var(--ink-muted);
+  font-size: 0.875rem;
+  background: color-mix(in srgb, var(--surface) 70%, transparent);
+}
+.natal-profile-card {
+  padding: 0.75rem;
+  background: var(--surface);
+  border: 1px solid var(--outline);
+  border-radius: 8px;
+}
+.natal-profile-card.is-active {
+  border-color: var(--primary);
+  box-shadow: 0 0 0 3px var(--primary-faint);
+}
+.natal-profile-card__top {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 0.75rem;
+  margin-bottom: 0.5rem;
+}
+.natal-profile-card__name {
+  margin: 0;
+  color: var(--ink);
+  font-size: 0.95rem;
+  font-weight: 700;
+}
+.natal-profile-card__type {
+  flex: 0 0 auto;
+  color: var(--ink-muted);
+  font-size: 0.75rem;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+.natal-profile-card__meta {
+  margin: 0 0 0.625rem;
+  color: var(--ink-muted);
+  font-size: 0.8125rem;
+  line-height: 1.45;
+}
+@media (max-width: 640px) {
+  .natal-account__header {
+    flex-direction: column;
+  }
+  .natal-account__actions .btn,
+  .natal-profile-save__actions .btn {
+    width: 100%;
+  }
+}
+
 /* --- Results ------------------------------------------------------- */
 .natal-results {
   display: flex;
@@ -1287,6 +1462,118 @@
   line-height: 1.5;
   max-width: 60ch;
 }
+.astrocarto-timing {
+  display: grid;
+  gap: 0.45rem;
+  max-width: 1000px;
+  padding: 0.75rem 0.875rem;
+  border: 1px solid var(--outline);
+  border-radius: 8px;
+  background: color-mix(in srgb, var(--surface-2) 78%, transparent);
+}
+.astrocarto-timing__label {
+  font-size: 0.8125rem;
+  font-weight: 700;
+  color: var(--ink-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+.astrocarto-timing__row {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 0.75rem;
+  align-items: center;
+}
+.astrocarto-timing input[type="range"] {
+  width: 100%;
+  accent-color: var(--primary);
+}
+.astrocarto-timing output {
+  min-width: 12rem;
+  text-align: right;
+  font-size: 0.875rem;
+  font-weight: 600;
+  color: var(--ink);
+}
+.astrocarto-city-timing {
+  max-width: 1000px;
+  padding: 0.75rem 0.875rem;
+  border: 1px solid var(--outline);
+  border-radius: 8px;
+  background: color-mix(in srgb, var(--surface-2) 78%, transparent);
+}
+.astrocarto-city-timing form {
+  display: grid;
+  gap: 0.55rem;
+}
+.astrocarto-city-timing__label {
+  font-size: 0.8125rem;
+  font-weight: 700;
+  color: var(--ink-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+.astrocarto-city-timing__row {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 0.625rem;
+  align-items: center;
+}
+.astrocarto-city-timing input[type="text"] {
+  width: 100%;
+  min-width: 0;
+  border: 1px solid var(--outline);
+  border-radius: 8px;
+  padding: 0.625rem 0.75rem;
+  color: var(--ink);
+  background: var(--surface);
+}
+.astrocarto-city-timing button {
+  border: 0;
+  border-radius: 8px;
+  padding: 0.66rem 0.95rem;
+  color: #fff;
+  background: var(--primary);
+  font-weight: 700;
+  cursor: pointer;
+  white-space: nowrap;
+}
+.astrocarto-city-timing button:disabled {
+  cursor: wait;
+  opacity: 0.7;
+}
+.astrocarto-city-timing__status {
+  min-height: 1.15rem;
+  font-size: 0.8125rem;
+  color: var(--ink-muted);
+}
+.astrocarto-city-timing__status[data-state="error"] {
+  color: var(--ink);
+}
+.astrocarto-city-timing__results {
+  display: grid;
+  gap: 0.45rem;
+  margin: 0;
+  padding-left: 1.15rem;
+}
+.astrocarto-city-timing__results:empty {
+  display: none;
+}
+.astrocarto-city-timing__results li {
+  padding-left: 0.15rem;
+  color: var(--ink);
+}
+.astrocarto-city-timing__window {
+  display: grid;
+  gap: 0.12rem;
+}
+.astrocarto-city-timing__window strong {
+  font-size: 0.9rem;
+}
+.astrocarto-city-timing__meta {
+  font-size: 0.8125rem;
+  color: var(--ink-muted);
+}
 
 /* ---------- Map wrap ---------- */
 
@@ -1356,6 +1643,10 @@
 .astrocarto-line--ic { stroke-opacity: 0.75; }
 .astrocarto-line--ac { stroke-opacity: 0.85; }
 .astrocarto-line--dc { stroke-opacity: 0.85; }
+.astrocarto-line--timing {
+  opacity: 0.72;
+  stroke-linecap: round;
+}
 .astrocarto-tip-surface {
   cursor: crosshair;
 }
@@ -1492,6 +1783,11 @@
   font-size: 0.75rem;
   color: var(--ink-muted);
 }
+.astrocarto-legend__note {
+  flex-basis: 100%;
+  font-size: 0.75rem;
+  color: var(--ink-muted);
+}
 
 /* ---------- Loading + error states ---------- */
 
@@ -1528,6 +1824,10 @@
 /* Narrow viewports — let the map shrink gracefully. The aspect-ratio
    keeps the 2:1 shape, so width contracts proportionally. */
 @media (max-width: 560px) {
+  .astrocarto-timing__row { grid-template-columns: 1fr; }
+  .astrocarto-timing output { text-align: left; min-width: 0; }
+  .astrocarto-city-timing__row { grid-template-columns: 1fr; }
+  .astrocarto-city-timing button { width: 100%; }
   .astrocarto-legend { gap: 0.75rem 1rem; font-size: 0.75rem; }
   .astrocarto-legend__heatbar { width: 6rem; }
   .astrocarto-tooltip { font-size: 0.75rem; min-width: 150px; max-width: 220px; }

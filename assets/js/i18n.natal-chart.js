@@ -46,7 +46,7 @@
         header: { back: '← Back to iYogaU' },
         title: 'Your Free Vedic Natal Chart',
         subtitle: 'A sidereal birth chart in the classical Jyotisha tradition — computed instantly, with no birth details stored on our servers.',
-        intro: 'Enter the date, time, and place of your birth. We use the Lahiri ayanamsa and the whole-sign house system, the conventions used in classical yoga training.',
+        intro: 'Enter the date, time, and place of your birth. We use the JHora-compatible true Chitrapaksha ayanamsa and the whole-sign house system, the conventions used in classical yoga training.',
         form: {
           heading: 'Birth details',
           name: 'Your name (optional)',
@@ -84,7 +84,8 @@
           aspects: 'Major Aspects',
           relocation: 'Relocation',
           immigration: 'Immigration',
-          soulmate: 'Soulmate'
+          soulmate: 'Soulmate',
+          soulmateTiming: 'Soulmate Timing'
         },
         astrocarto: {
           loading: 'Computing astrocartography map…',
@@ -94,13 +95,32 @@
           relocation: { intro: 'Places where the planets that support stability, visibility, and growth in your chart amplify their effects. Warmer cells mark stronger zones; lines mark exact angular activation.' },
           immigration: { intro: 'Places that support foreign movement, paperwork endurance, and settlement. Rahu, Saturn, and Jupiter lead this lens; warmer cells indicate where the transition can take root.' },
           soulmate:    { intro: 'Places that favor partnership and meeting: where Venus, the Moon, and Jupiter lines run close to angular points. Warmer cells mark zones of relationship resonance.' },
-          tabs: { relocation: 'Relocation', immigration: 'Immigration', soulmate: 'Soulmate' },
+          soulmateTiming: { intro: "Slide the date to see where natal soulmate potential is more activated by current relationship transits. Dashed lines show the selected date's transit angular curves." },
+          timing: {
+            sliderLabel: 'Life timing date',
+            dateLabel: '{date} · age {age}',
+            cityLabel: 'City timing search',
+            cityPlaceholder: 'City or lat, lon',
+            cityButton: 'Find windows',
+            cityLoading: 'Scanning birth-to-age-50 timing for {city}…',
+            cityNoMatch: 'No city match. Enter a larger nearby city or exact coordinates as lat, lon.',
+            cityNoWindows: 'No activation window was returned for this location.',
+            cityFound: 'Best soulmate activation windows for {city}.',
+            customLocation: 'Custom location',
+            cityWindow: '{start} to {end}',
+            cityPeak: 'Peak {date}',
+            cityAge: 'age {age}',
+            cityScore: 'score {score}'
+          },
+          tabs: { relocation: 'Relocation', immigration: 'Immigration', soulmate: 'Soulmate', soulmate_timing: 'Soulmate Timing' },
           legend: {
             planets: 'Planets',
             lines: 'Lines',
             heat: 'Heat scale',
             heatLabels: 'Lower ▸ Higher',
-            smoothingCaption: 'Heat field smoothed via Gaussian blur (σ = {sigma}° lat/lon).'
+            rawHeatCaption: 'Heat cells show raw equation scores; no browser smoothing is applied.',
+            timingCaption: 'Timing overlay for {date}: natal soulmate potential plus noon-UTC transit angular activation.',
+            immigrationResidenceOmitted: 'Immigration distance-from-current-residence adjustment is omitted because no current residence was supplied.'
           },
           lineTypes: {
             mc: 'MC', ic: 'IC', ac: 'AC', dc: 'DC',
@@ -112,7 +132,8 @@
           tooltip: {
             score: 'Score',
             topLines: 'Top contributing lines',
-            noLines: 'No major lines nearby'
+            noLines: 'No major lines nearby',
+            transitPrefix: 'Transit'
           }
         },
         section: {
@@ -174,6 +195,11 @@
             name: 'Steve Jobs',
             placeLabel: 'San Francisco, United States',
             blurb: "Apple co-founder; long-time Zen Buddhist practitioner; 1974 pilgrimage to Neem Karoli Baba's ashram in India"
+          },
+          'ali': {
+            name: 'Ali',
+            placeLabel: 'Hamedan, Iran',
+            blurb: 'User-provided comparison chart for validating the natal, relocation, immigration, and soulmate calculations'
           },
           'donald-trump': {
             name: 'Donald Trump',
@@ -249,7 +275,7 @@
         header: { back: '← iYogaU로 돌아가기' },
         title: '무료 베다 출생 차트',
         subtitle: '고전 주이티쉬(Jyotisha) 전통의 항성(sidereal) 출생 차트 — 서버에 출생 정보를 저장하지 않고 즉시 계산해 드립니다.',
-        intro: '생년월일, 출생 시각, 출생지를 입력하세요. 라히리 아야난사(Lahiri ayanamsa)와 함께 전스타일 사인(whole-sign) 하우스 시스템을 사용합니다.',
+        intro: '생년월일, 출생 시각, 출생지를 입력하세요. JHora 호환 True Chitrapaksha 아야난사와 전사인(whole-sign) 하우스 시스템을 사용합니다.',
         form: {
           heading: '출생 정보',
           name: '이름 (선택)',
@@ -287,7 +313,8 @@
           aspects: '주요 각도',
           relocation: '이주',
           immigration: '이민',
-          soulmate: '소울메이트'
+          soulmate: '소울메이트',
+          soulmateTiming: '소울메이트 타이밍'
         },
         astrocarto: {
           loading: '점성지리도(astrocartography) 지도를 계산하는 중…',
@@ -297,13 +324,32 @@
           relocation: { intro: '안정, 가시성, 성장에 도움이 되는 행성의 영향이 강해지는 장소들입니다. 따뜻한 색상의 셀일수록 강한 구역이며, 선은 정확한 각도 활성화를 표시합니다.' },
           immigration: { intro: '해외 이주, 행정 절차의 인내, 정착을 돕는 장소들입니다. 라후·토성·목성이 이 렌즈를 이끌며, 따뜻한 색상의 셀은 이주가 자리잡기 좋은 곳을 나타냅니다.' },
           soulmate:    { intro: '관계와 만남에 유리한 장소들입니다. 금성·달·목성의 선이 각점(angular points) 가까이를 지나는 곳이며, 따뜻한 색상의 셀은 관계 공명의 구역을 표시합니다.' },
-          tabs: { relocation: '이주', immigration: '이민', soulmate: '소울메이트' },
+          soulmateTiming: { intro: '날짜를 움직여 현재 관계 트랜짓이 출생 소울메이트 가능성을 더 활성화하는 장소를 확인합니다. 점선은 선택한 날짜의 트랜짓 각점 라인을 표시합니다.' },
+          timing: {
+            sliderLabel: '생애 타이밍 날짜',
+            dateLabel: '{date} · {age}세',
+            cityLabel: '도시 타이밍 검색',
+            cityPlaceholder: '도시 또는 위도, 경도',
+            cityButton: '시기 찾기',
+            cityLoading: '{city}의 출생일부터 50세까지 타이밍을 스캔하는 중…',
+            cityNoMatch: '도시를 찾을 수 없습니다. 가까운 큰 도시 또는 정확한 좌표를 위도, 경도 형식으로 입력해 주세요.',
+            cityNoWindows: '이 위치에 대한 활성화 구간이 반환되지 않았습니다.',
+            cityFound: '{city}의 가장 강한 소울메이트 활성화 구간입니다.',
+            customLocation: '사용자 지정 위치',
+            cityWindow: '{start}부터 {end}까지',
+            cityPeak: '피크 {date}',
+            cityAge: '{age}세',
+            cityScore: '점수 {score}'
+          },
+          tabs: { relocation: '이주', immigration: '이민', soulmate: '소울메이트', soulmate_timing: '소울메이트 타이밍' },
           legend: {
             planets: '행성',
             lines: '라인',
             heat: '강도 척도',
             heatLabels: '낮음 ▸ 높음',
-            smoothingCaption: '히트 필드는 가우시안 블러로 부드럽게 처리됨 (σ = {sigma}°).'
+            rawHeatCaption: '히트 셀은 원시 방정식 점수를 표시하며 브라우저 스무딩은 적용되지 않습니다.',
+            timingCaption: '{date} 타이밍 오버레이: 출생 소울메이트 가능성에 정오 UTC 트랜짓 각점 활성화를 더합니다.',
+            immigrationResidenceOmitted: '현재 거주지가 제공되지 않아 이민 지도에서 현재 거주지와의 거리 보정은 생략됩니다.'
           },
           lineTypes: {
             mc: 'MC', ic: 'IC', ac: 'AC', dc: 'DC',
@@ -315,7 +361,8 @@
           tooltip: {
             score: '점수',
             topLines: '주요 기여 라인',
-            noLines: '근처에 주요 라인 없음'
+            noLines: '근처에 주요 라인 없음',
+            transitPrefix: '트랜짓'
           }
         },
         section: {
@@ -396,6 +443,11 @@
             placeLabel: '샌프란시스코, 미국',
             blurb: '애플 공동 창업자; 오랜 선불교 수행자; 1974년 인도의 님 카롤리 바바 아쉬람을 순례'
           },
+          'ali': {
+            name: 'Ali',
+            placeLabel: '하메단, 이란',
+            blurb: '출생 차트, 이주, 이민, 소울메이트 계산 검증을 위한 사용자 제공 비교 차트'
+          },
           'donald-trump': {
             name: '도널드 트럼프',
             placeLabel: '퀸스, 뉴욕, 미국',
@@ -470,7 +522,7 @@
         header: { back: '← 返回 iYogaU' },
         title: '免费吐吃师出生星盘',  // TODO native-review: 吐吃师 vs 吐吃迦 transliteration choice
         subtitle: '古典 Jyotisha 传统的恒星（sidereal）出生星盘 — 即时计算，出生资料不会存储在我们的服务器上。',
-        intro: '请输入您的出生日期、时间与地点。我们使用 Lahiri 岁差（ayanamsa）以及整宫制（whole-sign）宫位系统，这是古典瑜伽训练中使用的约定。',
+        intro: '请输入您的出生日期、时间与地点。我们使用兼容 JHora 的 True Chitrapaksha 岁差（ayanamsa）以及整宫制（whole-sign）宫位系统。',
         form: {
           heading: '出生资料',
           name: '姓名（选填）',
@@ -508,7 +560,8 @@
           aspects: '主要相位',
           relocation: '迁居',
           immigration: '移民',
-          soulmate: '灵魂伴侣'
+          soulmate: '灵魂伴侣',
+          soulmateTiming: '灵魂伴侣时机'
         },
         astrocarto: {
           loading: '正在计算占星地理（astrocartography）地图…',
@@ -518,13 +571,32 @@
           relocation: { intro: '在您星盘中支持稳定、能见度与成长的行星在这些地方影响最强。颜色越暖的格子代表越强区域；线条标示精确的角度激活位置。' },
           immigration: { intro: '有助于跨国迁徙、办理手续与定居的地方。罗睺、土星与木星主导此视角；颜色更暖的格子表示更易扎根之处。' },
           soulmate:    { intro: '有利于伴侣关系与相遇的地方：金星、月亮与木星的线条经过角点附近。颜色更暖的格子标示关系共振区域。' },
-          tabs: { relocation: '迁居', immigration: '移民', soulmate: '灵魂伴侣' },
+          soulmateTiming: { intro: '滑动日期，查看当前关系行运在何处更强地激活出生盘中的灵魂伴侣潜力。虚线显示所选日期的行运角点线。' },
+          timing: {
+            sliderLabel: '人生时机日期',
+            dateLabel: '{date} · {age}岁',
+            cityLabel: '城市时机搜索',
+            cityPlaceholder: '城市或纬度, 经度',
+            cityButton: '查找窗口',
+            cityLoading: '正在扫描 {city} 从出生到 50 岁的时机…',
+            cityNoMatch: '未找到城市。请输入附近较大的城市，或用 纬度, 经度 输入精确坐标。',
+            cityNoWindows: '此位置未返回激活窗口。',
+            cityFound: '{city} 的最佳灵魂伴侣激活窗口。',
+            customLocation: '自定义位置',
+            cityWindow: '{start} 至 {end}',
+            cityPeak: '峰值 {date}',
+            cityAge: '{age}岁',
+            cityScore: '分数 {score}'
+          },
+          tabs: { relocation: '迁居', immigration: '移民', soulmate: '灵魂伴侣', soulmate_timing: '灵魂伴侣时机' },
           legend: {
             planets: '行星',
             lines: '线条',
             heat: '强度刻度',
             heatLabels: '低 ▸ 高',
-            smoothingCaption: '热力图通过高斯模糊平滑（σ = {sigma}°）。'
+            rawHeatCaption: '热力格显示原始方程分数；浏览器不进行平滑处理。',
+            timingCaption: '{date} 的时机叠加层：出生灵魂伴侣潜力加上 UTC 正午行运角点激活。',
+            immigrationResidenceOmitted: '未提供当前居住地，因此移民地图省略了与当前居住地距离相关的修正。'
           },
           lineTypes: {
             mc: 'MC', ic: 'IC', ac: 'AC', dc: 'DC',
@@ -536,7 +608,8 @@
           tooltip: {
             score: '分数',
             topLines: '主要贡献线条',
-            noLines: '附近无主要线条'
+            noLines: '附近无主要线条',
+            transitPrefix: '行运'
           }
         },
         section: {
@@ -612,6 +685,11 @@
             name: '史蒂夫·乔布斯',
             placeLabel: '旧金山, 美国',
             blurb: '苹果联合创始人；长期禅宗修行者；1974 年赴印度尼姆·卡罗利·巴巴道场参学'
+          },
+          'ali': {
+            name: 'Ali',
+            placeLabel: '哈马丹, 伊朗',
+            blurb: '用于验证本命盘、迁居、移民和灵魂伴侣计算的用户提供对照星盘'
           },
           'donald-trump': {
             name: '唐纳德·特朗普',

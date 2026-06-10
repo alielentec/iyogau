@@ -66,7 +66,7 @@
 
 <link rel="preload" as="style" href="/assets/css/styles.css" />
 <link rel="stylesheet" href="/assets/css/styles.css" />
-<link rel="stylesheet" href="/assets/css/natal-chart.css?v=28" />
+<link rel="stylesheet" href="/assets/css/natal-chart.css?v=31" />
 
 <!-- Schema.org -->
 <script type="application/ld+json">
@@ -440,6 +440,7 @@
         <button id="home-tab-relocation"  role="tab" aria-controls="home-panel-relocation"  aria-selected="false" tabindex="-1" class="natal-tab"           data-i18n="natal.tabs.relocation">Relocation</button>
         <button id="home-tab-immigration" role="tab" aria-controls="home-panel-immigration" aria-selected="false" tabindex="-1" class="natal-tab"           data-i18n="natal.tabs.immigration">Immigration</button>
         <button id="home-tab-soulmate"    role="tab" aria-controls="home-panel-soulmate"    aria-selected="false" tabindex="-1" class="natal-tab"           data-i18n="natal.tabs.soulmate">Soulmate</button>
+        <button id="home-tab-soulmate-timing" role="tab" aria-controls="home-panel-soulmate-timing" aria-selected="false" tabindex="-1" class="natal-tab" data-i18n="natal.tabs.soulmateTiming">Soulmate Timing</button>
       </div>
 
       <!-- ----- Tabpanel 1: Input Data ----- -->
@@ -462,6 +463,65 @@
                switch; the bootstrap re-runs after that. -->
           <span id="home-natal-demo-banner-text" data-i18n="natal.form.steveJobsNote">Currently showing Steve Jobs&rsquo;s chart. Edit any field below and your own chart will appear in the Natal Chart tab.</span>
         </aside>
+
+        <section class="natal-account" id="home-natal-account" data-account-profiles aria-labelledby="home-natal-account-heading">
+          <div class="natal-account__header">
+            <div>
+              <h3 id="home-natal-account-heading">Saved birth profiles</h3>
+              <p data-account-status>Sign in with Google to save your birth data and profiles for friends.</p>
+            </div>
+            <div class="natal-account__actions">
+              <a class="btn btn-secondary" data-account-login href="/api/auth/google/start/">Sign in with Google</a>
+              <button class="btn btn-secondary" type="button" data-account-logout hidden>Sign out</button>
+            </div>
+          </div>
+
+          <div class="natal-account__body" data-account-body hidden>
+            <div class="natal-account__active" data-active-profile>Active profile: none selected</div>
+            <div class="natal-profile-save" aria-label="Save current birth data">
+              <div class="natal-profile-save__grid">
+                <label>
+                  <span>Profile name</span>
+                  <input type="text" maxlength="80" data-profile-display-name placeholder="My birth profile" />
+                </label>
+                <label>
+                  <span>Profile type</span>
+                  <select data-profile-type>
+                    <option value="self">My Profile</option>
+                    <option value="friend">Friend</option>
+                    <option value="other">Other</option>
+                  </select>
+                </label>
+                <label class="natal-profile-save__notes">
+                  <span>Notes</span>
+                  <textarea maxlength="1000" data-profile-notes placeholder="Optional private notes"></textarea>
+                </label>
+              </div>
+              <label class="inline-check natal-profile-save__consent">
+                <input type="checkbox" data-profile-save-consent />
+                <span>I consent to saving this birth profile in my signed-in account.</span>
+              </label>
+              <div class="natal-profile-save__actions">
+                <button type="button" class="btn btn-primary" data-profile-save>Save current birth data</button>
+                <button type="button" class="btn btn-secondary" data-profile-update disabled>Update selected profile</button>
+                <button type="button" class="btn btn-secondary" data-profile-duplicate disabled>Duplicate selected</button>
+                <button type="button" class="btn btn-secondary" data-profile-export disabled>Export selected</button>
+                <button type="button" class="btn btn-secondary natal-profile-danger" data-profile-delete disabled>Delete selected</button>
+              </div>
+              <p class="natal-profile-message" data-profile-message role="status" aria-live="polite"></p>
+            </div>
+            <div class="natal-profile-lists">
+              <section aria-labelledby="home-profile-self-heading">
+                <h4 id="home-profile-self-heading">My Profile</h4>
+                <div class="natal-profile-list" data-profile-list-self></div>
+              </section>
+              <section aria-labelledby="home-profile-others-heading">
+                <h4 id="home-profile-others-heading">Friends / Other Profiles</h4>
+                <div class="natal-profile-list" data-profile-list-others></div>
+              </section>
+            </div>
+          </div>
+        </section>
 
         <section class="natal-form-section" aria-labelledby="home-natal-form-heading">
           <h3 id="home-natal-form-heading" class="sr-only" data-i18n="natal.form.heading">Birth details</h3>
@@ -510,7 +570,7 @@
 
             <div class="natal-field">
               <label for="home-nf-time" data-i18n="natal.form.time">Birth time</label>
-              <input id="home-nf-time" name="time" type="time" value="19:15" required aria-required="true" />
+              <input id="home-nf-time" name="time" type="time" step="1" value="19:15" required aria-required="true" />
               <label class="inline-check">
                 <input id="home-nf-time-unknown" type="checkbox" />
                 <span data-i18n="natal.form.time.unknown">I don&rsquo;t know my birth time</span>
@@ -548,11 +608,11 @@
               <div class="natal-loc-grid">
                 <div class="natal-field">
                   <label for="home-nf-lat" data-i18n="natal.form.lat">Latitude</label>
-                  <input id="home-nf-lat" name="lat" type="number" step="0.0001" min="-66.563" max="66.563" value="37.7749" inputmode="decimal" required aria-required="true" />
+                  <input id="home-nf-lat" name="lat" type="number" step="any" min="-66.563" max="66.563" value="37.7749" inputmode="decimal" required aria-required="true" />
                 </div>
                 <div class="natal-field">
                   <label for="home-nf-lon" data-i18n="natal.form.lon">Longitude</label>
-                  <input id="home-nf-lon" name="lon" type="number" step="0.0001" min="-180" max="180" value="-122.4194" inputmode="decimal" required aria-required="true" />
+                  <input id="home-nf-lon" name="lon" type="number" step="any" min="-180" max="180" value="-122.4194" inputmode="decimal" required aria-required="true" />
                 </div>
                 <div class="natal-field">
                   <label for="home-nf-tz-select" data-i18n="natal.form.tz">Timezone</label>
@@ -694,6 +754,36 @@
         <div class="astrocarto-legend" data-astrocarto-legend aria-label="Map legend"></div>
       </div>
 
+      <!-- ----- Tabpanel 8: Soulmate Timing (transit activation layer) ----- -->
+      <div role="tabpanel" id="home-panel-soulmate-timing" aria-labelledby="home-tab-soulmate-timing" class="natal-tabpanel astrocarto-panel" data-astrocarto="soulmate_timing" hidden>
+        <div class="astrocarto-timing" data-astrocarto-timing>
+          <label class="astrocarto-timing__label" for="home-soulmate-timing-slider" data-i18n="natal.astrocarto.timing.sliderLabel">Life timing date</label>
+          <div class="astrocarto-timing__row">
+            <input id="home-soulmate-timing-slider" type="range" min="0" max="18263" step="7" value="0" data-astrocarto-date-slider aria-describedby="home-soulmate-timing-date" />
+            <output id="home-soulmate-timing-date" data-astrocarto-date-label></output>
+          </div>
+        </div>
+        <div class="astrocarto-map" data-astrocarto-map aria-busy="false"></div>
+        <div class="astrocarto-state" data-astrocarto-loader hidden>
+          <span class="astrocarto-state__spinner" aria-hidden="true"></span>
+          <span data-i18n="natal.astrocarto.loading">Computing astrocartography map…</span>
+        </div>
+        <div class="astrocarto-state astrocarto-state--error" data-astrocarto-error role="alert" hidden></div>
+        <div class="astrocarto-legend" data-astrocarto-legend aria-label="Map legend"></div>
+        <div class="astrocarto-city-timing" data-astrocarto-city-timing>
+          <form data-astrocarto-city-form>
+            <label class="astrocarto-city-timing__label" for="home-soulmate-city" data-i18n="natal.astrocarto.timing.cityLabel">City timing search</label>
+            <div class="astrocarto-city-timing__row">
+              <input id="home-soulmate-city" type="text" autocomplete="off" list="home-soulmate-city-list" data-astrocarto-city-input data-i18n-attr="placeholder:natal.astrocarto.timing.cityPlaceholder" placeholder="City or lat, lon" />
+              <datalist id="home-soulmate-city-list" data-astrocarto-city-list></datalist>
+              <button type="submit" data-i18n="natal.astrocarto.timing.cityButton">Find windows</button>
+            </div>
+            <div class="astrocarto-city-timing__status" data-astrocarto-city-status role="status" aria-live="polite"></div>
+            <ol class="astrocarto-city-timing__results" data-astrocarto-city-results></ol>
+          </form>
+        </div>
+      </div>
+
       <p class="natal-attribution">
         <small>
           City data &copy; <a href="https://www.geonames.org/" rel="noopener" target="_blank">GeoNames</a>,
@@ -705,10 +795,10 @@
       <!-- Default chart for the "Natal Chart" tab on landing. JSON
            below is a verbatim /api/calculate-chart response for Steve
            Jobs (1955-02-24 19:15 PST, San Francisco, lat 37.7749,
-           lon -122.4194, sidereal/Lahiri). The form binder reads it
+           lon -122.4194, sidereal/true Chitrapaksha). The form binder reads it
            on init and renders the wheel + planets + aspects before
            the user touches the form. -->
-      <script id="home-natal-default-data" type="application/json">{"ascendant":{"longitude":149.06441296669777,"sign":"Leo","signIndex":4,"degree":29,"minute":3,"second":52},"midheaven":{"longitude":58.0882769856228,"sign":"Taurus","signIndex":1,"degree":28,"minute":5,"second":18},"planets":[{"name":"Sun","longitude":312.5212435909421,"latitude":-7.436211995827448e-05,"sign":"Aquarius","signIndex":10,"degree":12,"minute":31,"second":16,"speed":1.006,"retrograde":false,"house":7,"nakshatra":{"index":23,"name":"Shatabhisha","pada":2,"lord":"Rahu"},"navamsha":{"sign":9,"signName":"Capricorn","pada":4,"longitude":292.69119231847895,"longitudeWithinNavamshaSign":22.691192318478954}},{"name":"Moon","longitude":344.52082698910385,"latitude":5.0469561558173375,"sign":"Pisces","signIndex":11,"degree":14,"minute":31,"second":15,"speed":14.1762,"retrograde":false,"house":8,"nakshatra":{"index":25,"name":"Uttara Bhadrapada","pada":4,"lord":"Saturn"},"navamsha":{"sign":7,"signName":"Scorpio","pada":5,"longitude":220.68744290193467,"longitudeWithinNavamshaSign":10.687442901934668}},{"name":"Mercury","longitude":291.13441635828747,"latitude":2.1070509775537953,"sign":"Capricorn","signIndex":9,"degree":21,"minute":8,"second":4,"speed":-0.0325,"retrograde":true,"house":6,"nakshatra":{"index":21,"name":"Shravana","pada":4,"lord":"Moon"},"navamsha":{"sign":3,"signName":"Cancer","pada":7,"longitude":100.2097472245872,"longitudeWithinNavamshaSign":10.209747224587204}},{"name":"Venus","longitude":267.9455611204071,"latitude":1.7173909307941988,"sign":"Sagittarius","signIndex":8,"degree":27,"minute":56,"second":44,"speed":1.1367,"retrograde":false,"house":5,"nakshatra":{"index":20,"name":"Uttara Ashadha","pada":1,"lord":"Sun"},"navamsha":{"sign":8,"signName":"Sagittarius","pada":9,"longitude":251.51005008366383,"longitudeWithinNavamshaSign":11.510050083663815}},{"name":"Mars","longitude":5.863535344005449,"latitude":0.30505974160026234,"sign":"Aries","signIndex":0,"degree":5,"minute":51,"second":49,"speed":0.7018,"retrograde":false,"house":9,"nakshatra":{"index":0,"name":"Ashwini","pada":2,"lord":"Ketu"},"navamsha":{"sign":1,"signName":"Taurus","pada":2,"longitude":52.77181809604903,"longitudeWithinNavamshaSign":22.771818096049035}},{"name":"Jupiter","longitude":87.2804956914565,"latitude":0.4740878036658731,"sign":"Gemini","signIndex":2,"degree":27,"minute":16,"second":50,"speed":-0.063,"retrograde":true,"house":11,"nakshatra":{"index":6,"name":"Punarvasu","pada":3,"lord":"Jupiter"},"navamsha":{"sign":2,"signName":"Gemini","pada":9,"longitude":65.52446122310843,"longitudeWithinNavamshaSign":5.524461223108435}},{"name":"Saturn","longitude":207.93582687333412,"latitude":2.3707636232903626,"sign":"Libra","signIndex":6,"degree":27,"minute":56,"second":9,"speed":0.0071,"retrograde":false,"house":3,"nakshatra":{"index":15,"name":"Vishakha","pada":3,"lord":"Jupiter"},"navamsha":{"sign":2,"signName":"Gemini","pada":9,"longitude":71.42244186000708,"longitudeWithinNavamshaSign":11.422441860007085}},{"name":"Uranus","longitude":90.9072058497672,"latitude":0.5462800724106303,"sign":"Cancer","signIndex":3,"degree":0,"minute":54,"second":26,"speed":-0.0292,"retrograde":true,"house":12,"nakshatra":{"index":6,"name":"Punarvasu","pada":4,"lord":"Jupiter"},"navamsha":{"sign":3,"signName":"Cancer","pada":1,"longitude":98.16485264790475,"longitudeWithinNavamshaSign":8.164852647904752}},{"name":"Neptune","longitude":184.82162360364492,"latitude":1.751786779671622,"sign":"Libra","signIndex":6,"degree":4,"minute":49,"second":18,"speed":-0.0141,"retrograde":true,"house":3,"nakshatra":{"index":13,"name":"Chitra","pada":4,"lord":"Mars"},"navamsha":{"sign":7,"signName":"Scorpio","pada":2,"longitude":223.3946124328043,"longitudeWithinNavamshaSign":13.394612432804307}},{"name":"Pluto","longitude":122.0962440763987,"latitude":10.544173263564584,"sign":"Leo","signIndex":4,"degree":2,"minute":5,"second":46,"speed":-0.0244,"retrograde":true,"house":1,"nakshatra":{"index":9,"name":"Magha","pada":1,"lord":"Ketu"},"navamsha":{"sign":0,"signName":"Aries","pada":1,"longitude":18.86619668758834,"longitudeWithinNavamshaSign":18.86619668758834}},{"name":"Rahu","longitude":249.27300871566274,"latitude":0,"sign":"Sagittarius","signIndex":8,"degree":9,"minute":16,"second":23,"speed":-0.053,"retrograde":true,"house":5,"nakshatra":{"index":18,"name":"Mula","pada":3,"lord":"Ketu"},"navamsha":{"sign":2,"signName":"Gemini","pada":3,"longitude":83.45707844096466,"longitudeWithinNavamshaSign":23.45707844096466}},{"name":"Ketu","longitude":69.27300871566274,"latitude":0,"sign":"Gemini","signIndex":2,"degree":9,"minute":16,"second":23,"speed":-0.053,"retrograde":true,"house":11,"nakshatra":{"index":5,"name":"Ardra","pada":1,"lord":"Rahu"},"navamsha":{"sign":8,"signName":"Sagittarius","pada":3,"longitude":263.45707844096466,"longitudeWithinNavamshaSign":23.45707844096466}}],"moonNakshatra":{"index":25,"name":"Uttara Bhadrapada","pada":4,"lord":"Saturn"},"houses":[{"number":1,"cusp":120,"sign":"Leo","signIndex":4,"degree":0,"minute":0},{"number":2,"cusp":150,"sign":"Virgo","signIndex":5,"degree":0,"minute":0},{"number":3,"cusp":180,"sign":"Libra","signIndex":6,"degree":0,"minute":0},{"number":4,"cusp":210,"sign":"Scorpio","signIndex":7,"degree":0,"minute":0},{"number":5,"cusp":240,"sign":"Sagittarius","signIndex":8,"degree":0,"minute":0},{"number":6,"cusp":270,"sign":"Capricorn","signIndex":9,"degree":0,"minute":0},{"number":7,"cusp":300,"sign":"Aquarius","signIndex":10,"degree":0,"minute":0},{"number":8,"cusp":330,"sign":"Pisces","signIndex":11,"degree":0,"minute":0},{"number":9,"cusp":0,"sign":"Aries","signIndex":0,"degree":0,"minute":0},{"number":10,"cusp":30,"sign":"Taurus","signIndex":1,"degree":0,"minute":0},{"number":11,"cusp":60,"sign":"Gemini","signIndex":2,"degree":0,"minute":0},{"number":12,"cusp":90,"sign":"Cancer","signIndex":3,"degree":0,"minute":0}],"aspects":[{"from":"Sun","to":"Rahu","type":"sextile","orb":3.25,"exact":60},{"from":"Sun","to":"Ketu","type":"trine","orb":3.25,"exact":120},{"from":"Moon","to":"Rahu","type":"square","orb":5.25,"exact":90},{"from":"Moon","to":"Ketu","type":"square","orb":5.25,"exact":90},{"from":"Venus","to":"Jupiter","type":"opposition","orb":0.67,"exact":180},{"from":"Venus","to":"Saturn","type":"sextile","orb":0.01,"exact":60},{"from":"Venus","to":"Uranus","type":"opposition","orb":2.96,"exact":180},{"from":"Mars","to":"Uranus","type":"square","orb":4.96,"exact":90},{"from":"Mars","to":"Neptune","type":"opposition","orb":1.04,"exact":180},{"from":"Mars","to":"Pluto","type":"trine","orb":3.77,"exact":120},{"from":"Mars","to":"Rahu","type":"trine","orb":3.41,"exact":120},{"from":"Mars","to":"Ketu","type":"sextile","orb":3.41,"exact":60},{"from":"Jupiter","to":"Saturn","type":"trine","orb":0.66,"exact":120},{"from":"Jupiter","to":"Uranus","type":"conjunction","orb":3.63,"exact":0},{"from":"Saturn","to":"Uranus","type":"trine","orb":2.97,"exact":120},{"from":"Saturn","to":"Pluto","type":"square","orb":4.16,"exact":90},{"from":"Uranus","to":"Neptune","type":"square","orb":3.91,"exact":90},{"from":"Neptune","to":"Pluto","type":"sextile","orb":2.73,"exact":60},{"from":"Neptune","to":"Ketu","type":"trine","orb":4.45,"exact":120},{"from":"Rahu","to":"Ketu","type":"opposition","orb":0,"exact":180}],"tradition":"sidereal","ayanamsa":"lahiri","ayanamsaValue":23.226856,"houseSystem":"whole-sign","input":{"date":"1955-02-24","time":"19:15","tz":"America/Los_Angeles","lat":37.7749,"lon":-122.4194,"tradition":"sidereal","ayanamsa":"lahiri","unknownTime":false},"provenance":{"engine":"astronomy-engine","engineVersion":"2.1.19","warnings":[]},"computedAt":"2026-06-09T04:38:59.000Z"}</script>
+      <script id="home-natal-default-data" type="application/json">{"ascendant":{"longitude":149.0666708138579,"sign":"Leo","signIndex":4,"degree":29,"minute":4,"second":0},"midheaven":{"longitude":58.09053483278292,"sign":"Taurus","signIndex":1,"degree":28,"minute":5,"second":26},"planets":[{"name":"Sun","longitude":312.52350143810224,"latitude":-0.00007436211995827448,"sign":"Aquarius","signIndex":10,"degree":12,"minute":31,"second":25,"speed":1.006,"retrograde":false,"house":7,"nakshatra":{"index":23,"name":"Shatabhisha","pada":2,"lord":"Rahu"},"navamsha":{"sign":9,"signName":"Capricorn","pada":4,"longitude":292.7115129429202,"longitudeWithinNavamshaSign":22.71151294292019}},{"name":"Moon","longitude":344.523084836264,"latitude":5.0469561558173375,"sign":"Pisces","signIndex":11,"degree":14,"minute":31,"second":23,"speed":14.1747,"retrograde":false,"house":8,"nakshatra":{"index":25,"name":"Uttara Bhadrapada","pada":4,"lord":"Saturn"},"navamsha":{"sign":7,"signName":"Scorpio","pada":5,"longitude":220.7077635263759,"longitudeWithinNavamshaSign":10.707763526375908}},{"name":"Mercury","longitude":291.1366742054476,"latitude":2.1070509775537953,"sign":"Capricorn","signIndex":9,"degree":21,"minute":8,"second":12,"speed":-0.0331,"retrograde":true,"house":6,"nakshatra":{"index":21,"name":"Shravana","pada":4,"lord":"Moon"},"navamsha":{"sign":3,"signName":"Cancer","pada":7,"longitude":100.23006784902844,"longitudeWithinNavamshaSign":10.230067849028442}},{"name":"Venus","longitude":267.94781896756723,"latitude":1.7173909307941988,"sign":"Sagittarius","signIndex":8,"degree":27,"minute":56,"second":52,"speed":1.1367,"retrograde":false,"house":5,"nakshatra":{"index":20,"name":"Uttara Ashadha","pada":1,"lord":"Sun"},"navamsha":{"sign":8,"signName":"Sagittarius","pada":9,"longitude":251.53037070810507,"longitudeWithinNavamshaSign":11.530370708105055}},{"name":"Mars","longitude":5.865793191165572,"latitude":0.30505974160026234,"sign":"Aries","signIndex":0,"degree":5,"minute":51,"second":57,"speed":0.7018,"retrograde":false,"house":9,"nakshatra":{"index":0,"name":"Ashwini","pada":2,"lord":"Ketu"},"navamsha":{"sign":1,"signName":"Taurus","pada":2,"longitude":52.79213872049015,"longitudeWithinNavamshaSign":22.79213872049015}},{"name":"Jupiter","longitude":87.28275353861662,"latitude":0.4740878036658731,"sign":"Gemini","signIndex":2,"degree":27,"minute":16,"second":58,"speed":-0.0631,"retrograde":true,"house":11,"nakshatra":{"index":6,"name":"Punarvasu","pada":3,"lord":"Jupiter"},"navamsha":{"sign":2,"signName":"Gemini","pada":9,"longitude":65.54478184754954,"longitudeWithinNavamshaSign":5.544781847549547}},{"name":"Saturn","longitude":207.93808472049426,"latitude":2.3707636232903626,"sign":"Libra","signIndex":6,"degree":27,"minute":56,"second":17,"speed":0.0071,"retrograde":false,"house":3,"nakshatra":{"index":15,"name":"Vishakha","pada":3,"lord":"Jupiter"},"navamsha":{"sign":2,"signName":"Gemini","pada":9,"longitude":71.44276248444832,"longitudeWithinNavamshaSign":11.442762484448325}},{"name":"Uranus","longitude":90.90946369692732,"latitude":0.5462800724106303,"sign":"Cancer","signIndex":3,"degree":0,"minute":54,"second":34,"speed":-0.0292,"retrograde":true,"house":12,"nakshatra":{"index":6,"name":"Punarvasu","pada":4,"lord":"Jupiter"},"navamsha":{"sign":3,"signName":"Cancer","pada":1,"longitude":98.18517327234586,"longitudeWithinNavamshaSign":8.185173272345864}},{"name":"Neptune","longitude":184.82388145080506,"latitude":1.751786779671622,"sign":"Libra","signIndex":6,"degree":4,"minute":49,"second":26,"speed":-0.0141,"retrograde":true,"house":3,"nakshatra":{"index":13,"name":"Chitra","pada":4,"lord":"Mars"},"navamsha":{"sign":7,"signName":"Scorpio","pada":2,"longitude":223.41493305724555,"longitudeWithinNavamshaSign":13.414933057245547}},{"name":"Pluto","longitude":122.09850192355883,"latitude":10.544173263564584,"sign":"Leo","signIndex":4,"degree":2,"minute":5,"second":55,"speed":-0.0244,"retrograde":true,"house":1,"nakshatra":{"index":9,"name":"Magha","pada":1,"lord":"Ketu"},"navamsha":{"sign":0,"signName":"Aries","pada":1,"longitude":18.886517312029454,"longitudeWithinNavamshaSign":18.886517312029454}},{"name":"Rahu","longitude":249.27526656282288,"latitude":0,"sign":"Sagittarius","signIndex":8,"degree":9,"minute":16,"second":31,"speed":-0.053,"retrograde":true,"house":5,"nakshatra":{"index":18,"name":"Mula","pada":3,"lord":"Ketu"},"navamsha":{"sign":2,"signName":"Gemini","pada":3,"longitude":83.4773990654059,"longitudeWithinNavamshaSign":23.477399065405898}},{"name":"Ketu","longitude":69.27526656282286,"latitude":0,"sign":"Gemini","signIndex":2,"degree":9,"minute":16,"second":31,"speed":-0.053,"retrograde":true,"house":11,"nakshatra":{"index":5,"name":"Ardra","pada":1,"lord":"Rahu"},"navamsha":{"sign":8,"signName":"Sagittarius","pada":3,"longitude":263.4773990654058,"longitudeWithinNavamshaSign":23.477399065405773}}],"moonNakshatra":{"index":25,"name":"Uttara Bhadrapada","pada":4,"lord":"Saturn"},"houses":[{"number":1,"cusp":120,"sign":"Leo","signIndex":4,"degree":0,"minute":0},{"number":2,"cusp":150,"sign":"Virgo","signIndex":5,"degree":0,"minute":0},{"number":3,"cusp":180,"sign":"Libra","signIndex":6,"degree":0,"minute":0},{"number":4,"cusp":210,"sign":"Scorpio","signIndex":7,"degree":0,"minute":0},{"number":5,"cusp":240,"sign":"Sagittarius","signIndex":8,"degree":0,"minute":0},{"number":6,"cusp":270,"sign":"Capricorn","signIndex":9,"degree":0,"minute":0},{"number":7,"cusp":300,"sign":"Aquarius","signIndex":10,"degree":0,"minute":0},{"number":8,"cusp":330,"sign":"Pisces","signIndex":11,"degree":0,"minute":0},{"number":9,"cusp":0,"sign":"Aries","signIndex":0,"degree":0,"minute":0},{"number":10,"cusp":30,"sign":"Taurus","signIndex":1,"degree":0,"minute":0},{"number":11,"cusp":60,"sign":"Gemini","signIndex":2,"degree":0,"minute":0},{"number":12,"cusp":90,"sign":"Cancer","signIndex":3,"degree":0,"minute":0}],"aspects":[{"from":"Sun","to":"Rahu","type":"sextile","orb":3.25,"exact":60},{"from":"Sun","to":"Ketu","type":"trine","orb":3.25,"exact":120},{"from":"Moon","to":"Rahu","type":"square","orb":5.25,"exact":90},{"from":"Moon","to":"Ketu","type":"square","orb":5.25,"exact":90},{"from":"Venus","to":"Jupiter","type":"opposition","orb":0.67,"exact":180},{"from":"Venus","to":"Saturn","type":"sextile","orb":0.01,"exact":60},{"from":"Venus","to":"Uranus","type":"opposition","orb":2.96,"exact":180},{"from":"Mars","to":"Uranus","type":"square","orb":4.96,"exact":90},{"from":"Mars","to":"Neptune","type":"opposition","orb":1.04,"exact":180},{"from":"Mars","to":"Pluto","type":"trine","orb":3.77,"exact":120},{"from":"Mars","to":"Rahu","type":"trine","orb":3.41,"exact":120},{"from":"Mars","to":"Ketu","type":"sextile","orb":3.41,"exact":60},{"from":"Jupiter","to":"Saturn","type":"trine","orb":0.66,"exact":120},{"from":"Jupiter","to":"Uranus","type":"conjunction","orb":3.63,"exact":0},{"from":"Saturn","to":"Uranus","type":"trine","orb":2.97,"exact":120},{"from":"Saturn","to":"Pluto","type":"square","orb":4.16,"exact":90},{"from":"Uranus","to":"Neptune","type":"square","orb":3.91,"exact":90},{"from":"Neptune","to":"Pluto","type":"sextile","orb":2.73,"exact":60},{"from":"Neptune","to":"Ketu","type":"trine","orb":4.45,"exact":120},{"from":"Rahu","to":"Ketu","type":"opposition","orb":0,"exact":180}],"tradition":"sidereal","ayanamsa":"true_chitrapaksha","ayanamsaValue":23.224598,"houseSystem":"whole-sign","input":{"date":"1955-02-24","time":"19:15","tz":"America/Los_Angeles","lat":37.7749,"lon":-122.4194,"tradition":"sidereal","ayanamsa":"true_chitrapaksha","unknownTime":false},"provenance":{"engine":"astronomy-engine","engineVersion":"2.1.19","nodeModel":"mean","warnings":[]},"computedAt":"2026-06-09T21:41:40.635Z"}</script>
 
       <!-- Auto-render + live recalc bootstrap.
            - Renders Steve Jobs's chart on landing from the embedded JSON above.
@@ -759,6 +849,11 @@
           var m = (p.minute != null) ? p.minute : 0;
           return p.degree + '°' + (m < 10 ? '0' + m : m) + '′';
         }
+        function ayanamsaLabel(value) {
+          if (value === 'true_chitrapaksha' || value === 'jhora') return 'True Chitrapaksha (JHora)';
+          if (value === 'lahiri') return 'Lahiri';
+          return value;
+        }
         function $(id) { return document.getElementById(id); }
 
         // ---- Render a chart model into the four containers.
@@ -776,7 +871,7 @@
             var parts = [];
             if (model.tradition === 'sidereal') parts.push('Sidereal (Vedic)');
             if (model.ayanamsa) {
-              parts.push('Ayanamsa: ' + model.ayanamsa +
+              parts.push('Ayanamsa: ' + ayanamsaLabel(model.ayanamsa) +
                 (typeof model.ayanamsaValue === 'number' ? ' (' + model.ayanamsaValue.toFixed(2) + '°)' : ''));
             }
             if (model.houseSystem) parts.push('Houses: ' + model.houseSystem);
@@ -864,7 +959,7 @@
 
           return {
             date: date, time: time, tz: tz, lat: lat, lon: lon,
-            tradition: 'sidereal', ayanamsa: 'lahiri',
+            tradition: 'sidereal', ayanamsa: 'true_chitrapaksha',
             unknownTime: !!(timeUnk && timeUnk.checked)
           };
         }
@@ -2251,17 +2346,18 @@
      Bump these on every JS change (same pattern as natal-chart.css?v=N).
      Current version round: i18n.natal-chart.js (adds defaultName key) and
      natal-chart-form.js (other recent edits). -->
-<script src="/assets/js/natal-presets.js?v=5" defer></script>
-<script src="/assets/js/i18n.natal-chart.js?v=14" defer></script>
+<script src="/assets/js/natal-presets.js?v=7" defer></script>
+<script src="/assets/js/i18n.natal-chart.js?v=19" defer></script>
 <script src="/assets/js/natal-chart-wheel.js?v=21" defer></script>
 <script src="/assets/js/natal-chart-tabs.js?v=10" defer></script>
-<script src="/assets/js/natal-chart-form.js?v=14" defer></script>
+<script src="/assets/js/natal-chart-form.js?v=16" defer></script>
+<script src="/assets/js/account-profiles.js?v=2" defer></script>
 <!-- Astrocartography: data + renderer for the Relocation / Immigration /
      Soulmate tabs. Loaded `defer` so it runs AFTER the bootstrap above
      attaches __astrocarto.setNatalSource() (the renderer reads it lazily,
      so even if the order ever swaps, the first tab activation just shows
      the loading state until the natal data is available). -->
-<script src="/assets/data/world-continents.js?v=2" defer></script>
-<script src="/assets/js/astrocarto.js?v=5" defer></script>
+<script src="/assets/data/world-continents.js?v=3" defer></script>
+<script src="/assets/js/astrocarto.js?v=14" defer></script>
 </body>
 </html>
