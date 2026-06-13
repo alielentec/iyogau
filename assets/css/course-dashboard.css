@@ -5,6 +5,10 @@
   background: var(--surface);
 }
 
+.course-shell [hidden] {
+  display: none !important;
+}
+
 .course-page {
   padding: 4rem 0 6rem;
 }
@@ -28,6 +32,7 @@
 .course-dashboard {
   display: grid;
   gap: 1.25rem;
+  min-width: 0;
 }
 
 .course-dashboard__message {
@@ -50,6 +55,7 @@
 
 .course-auth-empty,
 .course-panel {
+  min-width: 0;
   border: 1px solid var(--outline);
   border-radius: 14px;
   background: color-mix(in srgb, var(--surface) 82%, var(--surface-2));
@@ -202,6 +208,7 @@
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
   gap: 0.85rem;
+  min-width: 0;
 }
 
 .course-form label {
@@ -258,6 +265,500 @@
   font-size: 0.9rem;
 }
 
+.sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border: 0;
+}
+
+.owner-shell {
+  position: relative;
+}
+
+.owner-main {
+  gap: 1rem;
+  padding-left: 3rem;
+}
+
+.owner-menu-toggle {
+  position: fixed;
+  left: 0;
+  top: 50%;
+  z-index: 240;
+  transform: translateY(-50%);
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  min-height: 3.25rem;
+  padding: 0.65rem 0.8rem;
+  border: 1px solid var(--outline-strong);
+  border-left: 0;
+  border-radius: 0 10px 10px 0;
+  background: var(--surface);
+  color: var(--primary);
+  box-shadow: var(--shadow-sm);
+  font: inherit;
+  font-weight: 800;
+  cursor: pointer;
+}
+
+.owner-sidebar-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 250;
+  background: rgba(31, 22, 42, 0.18);
+}
+
+.owner-sidebar {
+  position: fixed;
+  top: 1rem;
+  bottom: 1rem;
+  left: 1rem;
+  z-index: 260;
+  width: min(280px, calc(100vw - 2rem));
+  padding: 1rem;
+  border: 1px solid var(--outline-strong);
+  border-radius: 18px;
+  background: color-mix(in srgb, var(--surface) 94%, var(--primary-faint));
+  box-shadow: 0 24px 70px rgba(45, 30, 65, 0.2);
+  transform: translateX(calc(-100% - 2rem));
+  transition: transform 180ms ease;
+}
+
+.owner-sidebar.is-open {
+  transform: translateX(0);
+}
+
+.owner-sidebar__brand {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 1rem;
+  padding-bottom: 1rem;
+  border-bottom: 1px solid var(--outline);
+}
+
+.owner-sidebar__brand .brand {
+  font-size: 1.35rem;
+}
+
+.owner-sidebar__close {
+  display: grid;
+  place-items: center;
+  width: 2.25rem;
+  height: 2.25rem;
+  border: 1px solid var(--outline);
+  border-radius: 10px;
+  background: var(--surface-2);
+  color: var(--ink);
+  font: inherit;
+  font-size: 1.3rem;
+  cursor: pointer;
+}
+
+.owner-sidebar__nav {
+  display: grid;
+  gap: 0.4rem;
+  padding-top: 1rem;
+}
+
+.owner-sidebar__nav a {
+  display: flex;
+  align-items: center;
+  min-height: 2.65rem;
+  padding: 0.55rem 0.75rem;
+  border-radius: 10px;
+  color: var(--ink-muted);
+  font-weight: 800;
+}
+
+.owner-sidebar__nav a[aria-current="page"],
+.owner-sidebar__nav a:hover,
+.owner-sidebar__nav a:focus-visible {
+  background: var(--primary);
+  color: #fff;
+}
+
+.owner-panel {
+  max-width: 100%;
+  overflow-wrap: normal;
+  scroll-margin-top: 8rem;
+}
+
+.owner-section-head {
+  display: flex;
+  justify-content: space-between;
+  gap: 1rem;
+  align-items: flex-start;
+  flex-wrap: wrap;
+  margin-bottom: 1rem;
+}
+
+.owner-section-head h2 {
+  margin: 0 0 0.35rem;
+}
+
+.owner-section-head p {
+  margin: 0;
+  color: var(--ink-muted);
+  font-size: 0.95rem;
+}
+
+.owner-calendar-sync {
+  min-width: min(360px, 100%);
+}
+
+.owner-sync-card {
+  display: grid;
+  gap: 0.4rem;
+  padding: 0.75rem;
+  border: 1px solid var(--outline);
+  border-radius: 12px;
+  background: var(--surface);
+  font-size: 0.86rem;
+}
+
+.owner-sync-card > span:not(.course-status) {
+  color: var(--ink-muted);
+}
+
+.owner-sync-card__actions,
+.owner-table-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.45rem;
+}
+
+.owner-sync-card__error {
+  color: #9b2f2f;
+}
+
+.owner-calendar-toolbar,
+.owner-calendar-toolbar__range,
+.owner-segmented,
+.owner-table-controls {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 0.55rem;
+  min-width: 0;
+}
+
+.owner-calendar-toolbar {
+  justify-content: space-between;
+  min-width: 0;
+  padding: 0.75rem;
+  margin-bottom: 0.85rem;
+  border: 1px solid var(--outline);
+  border-radius: 12px;
+  background: var(--surface);
+}
+
+.owner-icon-btn {
+  width: 2.6rem;
+  padding-inline: 0;
+  font-size: 1.2rem;
+}
+
+.owner-segmented {
+  max-width: 100%;
+  padding: 0.25rem;
+  border: 1px solid var(--outline);
+  border-radius: 999px;
+  background: var(--surface-2);
+}
+
+.owner-segmented button {
+  min-height: 2.15rem;
+  padding: 0.35rem 0.75rem;
+  border: 0;
+  border-radius: 999px;
+  background: transparent;
+  color: var(--ink-muted);
+  font: inherit;
+  font-size: 0.86rem;
+  font-weight: 800;
+  cursor: pointer;
+}
+
+.owner-segmented button[aria-pressed="true"] {
+  background: var(--primary);
+  color: #fff;
+}
+
+.owner-segmented--compact button {
+  min-height: 2rem;
+}
+
+.owner-calendar-workbench {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(220px, 300px);
+  gap: 1rem;
+  align-items: start;
+}
+
+.owner-calendar-board,
+.owner-event-detail {
+  min-width: 0;
+}
+
+.owner-calendar-grid {
+  display: grid;
+  grid-template-columns: repeat(7, minmax(0, 1fr));
+  border: 1px solid var(--outline);
+  border-radius: 14px;
+  overflow: hidden;
+  background: var(--surface);
+}
+
+.owner-calendar-grid--day {
+  grid-template-columns: minmax(0, 1fr);
+}
+
+.owner-calendar-grid__weekday {
+  padding: 0.55rem;
+  border-bottom: 1px solid var(--outline);
+  background: var(--surface-2);
+  color: var(--ink-muted);
+  font-size: 0.78rem;
+  font-weight: 900;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+.owner-calendar-cell {
+  min-height: 8.25rem;
+  padding: 0.5rem;
+  border-right: 1px solid var(--outline);
+  border-bottom: 1px solid var(--outline);
+  background: color-mix(in srgb, var(--surface) 94%, #fff);
+}
+
+.owner-calendar-cell.is-muted {
+  background: color-mix(in srgb, var(--surface-2) 70%, var(--surface));
+  color: var(--ink-muted);
+}
+
+.owner-calendar-cell__date {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 1.65rem;
+  height: 1.65rem;
+  margin-bottom: 0.35rem;
+  border-radius: 999px;
+  color: var(--ink);
+  font-size: 0.84rem;
+  font-weight: 900;
+}
+
+.owner-event-chip {
+  display: grid;
+  min-width: 0;
+  width: 100%;
+  min-height: 2.25rem;
+  margin-top: 0.3rem;
+  padding: 0.35rem 0.45rem;
+  border: 1px solid transparent;
+  border-radius: 8px;
+  background: var(--primary-faint);
+  color: var(--primary);
+  text-align: left;
+  font: inherit;
+  font-size: 0.78rem;
+  font-weight: 800;
+  cursor: pointer;
+}
+
+.owner-event-chip span,
+.owner-event-chip small {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.owner-event-chip small {
+  color: currentColor;
+  opacity: 0.78;
+  font-size: 0.72rem;
+}
+
+.owner-event-chip--owner-availability {
+  background: rgba(80, 145, 90, 0.14);
+  color: #2f6b3a;
+}
+
+.owner-event-chip--owner-blocked-time {
+  background: rgba(100, 105, 115, 0.14);
+  color: #4f5560;
+}
+
+.owner-event-chip--free-workshop {
+  background: var(--gold-faint);
+  color: var(--gold);
+}
+
+.owner-event-chip--confirmed-private-class {
+  background: rgba(38, 130, 150, 0.14);
+  color: #286f7c;
+}
+
+.owner-calendar-more {
+  display: block;
+  margin-top: 0.35rem;
+  color: var(--ink-muted);
+  font-size: 0.78rem;
+  font-weight: 800;
+}
+
+.owner-agenda {
+  display: grid;
+  gap: 0.55rem;
+}
+
+.owner-agenda-row {
+  display: grid;
+  grid-template-columns: 8rem minmax(0, 1fr) auto;
+  gap: 0.6rem;
+  align-items: center;
+  padding: 0.7rem;
+  border: 1px solid var(--outline);
+  border-radius: 12px;
+  background: var(--surface);
+}
+
+.owner-agenda-row__time,
+.owner-agenda-row__meta {
+  color: var(--ink-muted);
+  font-size: 0.82rem;
+  font-weight: 700;
+}
+
+.owner-event-detail,
+.owner-student-profile {
+  display: grid;
+  gap: 0.6rem;
+  padding: 1rem;
+  border: 1px solid var(--outline);
+  border-radius: 14px;
+  background: var(--surface);
+}
+
+.owner-quick-create {
+  margin-top: 1rem;
+  padding-top: 1rem;
+  border-top: 1px solid var(--outline);
+}
+
+.owner-table-controls {
+  justify-content: space-between;
+  margin-bottom: 0.85rem;
+}
+
+.owner-table-controls label {
+  display: grid;
+  gap: 0.35rem;
+  min-width: min(280px, 100%);
+  font-weight: 800;
+}
+
+.owner-table-controls input,
+.owner-inline-fields input,
+.owner-inline-fields textarea {
+  width: 100%;
+  border: 1px solid var(--outline);
+  border-radius: 9px;
+  background: var(--surface);
+  color: var(--ink);
+  padding: 0.58rem 0.65rem;
+  font: inherit;
+  font-size: 0.86rem;
+}
+
+.owner-inline-fields textarea {
+  min-height: 4rem;
+}
+
+.owner-table-wrap {
+  min-width: 0;
+  overflow-x: auto;
+}
+
+.owner-table {
+  width: 100%;
+  min-width: 720px;
+  border-collapse: separate;
+  border-spacing: 0;
+  border: 1px solid var(--outline);
+  border-radius: 12px;
+  overflow: hidden;
+  background: var(--surface);
+}
+
+.owner-table th,
+.owner-table td {
+  padding: 0.72rem 0.75rem;
+  border-bottom: 1px solid var(--outline);
+  text-align: left;
+  vertical-align: top;
+  font-size: 0.88rem;
+  overflow-wrap: anywhere;
+}
+
+.owner-table th {
+  background: var(--surface-2);
+  color: var(--ink-muted);
+  font-size: 0.76rem;
+  font-weight: 900;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  white-space: nowrap;
+}
+
+.owner-table tr:last-child td {
+  border-bottom: 0;
+}
+
+.owner-inline-fields {
+  display: grid;
+  gap: 0.45rem;
+  min-width: 13rem;
+}
+
+.owner-student-profile {
+  margin-top: 1rem;
+}
+
+.owner-student-profile__stats {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.45rem;
+}
+
+.owner-student-profile__stats span {
+  display: inline-flex;
+  padding: 0.35rem 0.55rem;
+  border-radius: 999px;
+  background: var(--primary-faint);
+  color: var(--primary);
+  font-size: 0.8rem;
+  font-weight: 800;
+}
+
+.owner-student-profile__recent {
+  display: grid;
+  gap: 0.35rem;
+  padding-top: 0.75rem;
+  border-top: 1px solid var(--outline);
+}
+
 @media (max-width: 680px) {
   .course-page {
     padding-top: 2rem;
@@ -271,6 +772,116 @@
 
   .course-programs {
     grid-template-columns: minmax(0, 1fr);
+  }
+
+  .owner-menu-toggle {
+    width: 2.75rem;
+    min-height: 2.85rem;
+    padding: 0.55rem;
+    justify-content: center;
+  }
+
+  .owner-menu-toggle span:not([aria-hidden]) {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    overflow: hidden;
+    clip: rect(0, 0, 0, 0);
+    white-space: nowrap;
+  }
+
+  .owner-main {
+    padding-left: 1.75rem;
+  }
+
+  .owner-section-head,
+  .owner-calendar-toolbar,
+  .owner-calendar-workbench,
+  .owner-agenda-row {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .owner-section-head,
+  .owner-calendar-toolbar {
+    display: grid;
+  }
+
+  .owner-calendar-sync {
+    min-width: 0;
+  }
+
+  .owner-calendar-grid {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .owner-calendar-grid__weekday {
+    display: none;
+  }
+
+  .owner-calendar-cell {
+    min-height: auto;
+    border-right: 0;
+  }
+
+  .owner-calendar-cell.is-muted:empty {
+    display: none;
+  }
+
+  .owner-table {
+    display: block;
+    min-width: 0;
+    border: 0;
+    background: transparent;
+  }
+
+  .owner-table thead {
+    display: none;
+  }
+
+  .owner-table tbody,
+  .owner-table tr,
+  .owner-table td {
+    display: block;
+    width: 100%;
+  }
+
+  .owner-table tr {
+    margin-bottom: 0.75rem;
+    border: 1px solid var(--outline);
+    border-radius: 12px;
+    background: var(--surface);
+    overflow: hidden;
+  }
+
+  .owner-table td {
+    display: grid;
+    grid-template-columns: 7.5rem minmax(0, 1fr);
+    gap: 0.75rem;
+    border-bottom: 1px solid var(--outline);
+  }
+
+  .owner-table td::before {
+    content: attr(data-label);
+    color: var(--ink-muted);
+    font-size: 0.75rem;
+    font-weight: 900;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+  }
+}
+
+@media (max-width: 920px) {
+  .owner-section-head {
+    display: grid;
+  }
+
+  .owner-calendar-workbench {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .owner-calendar-sync {
+    width: 100%;
   }
 }
 

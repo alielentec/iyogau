@@ -12,6 +12,7 @@ import {
   normalizeCoveredArea,
   normalizeJournalComment,
   normalizeJournalEntry,
+  normalizeOwnerCalendarTime,
   normalizePrivateRequestInput,
   publicCoveredArea,
   publicCourse,
@@ -262,6 +263,24 @@ test('calendar view merges course sessions, private requests, confirmations, and
     calendarEvents(state).map((event) => event.eventType).sort(),
     ['confirmed_private_class', 'free_workshop', 'owner_blocked_time'],
   );
+});
+
+test('calendar view includes owner availability and sync metadata', () => {
+  const state = emptyCourseState();
+  state.ownerAvailabilityTimes.push(normalizeOwnerCalendarTime({
+    eventType: 'owner_availability',
+    title: 'Available for private classes',
+    startAt: '2026-07-04T10:00:00Z',
+    endAt: '2026-07-04T12:00:00Z',
+    googleEventId: 'google-event-1',
+    syncStatus: 'synced',
+  }, owner.id));
+
+  const event = calendarEvents(state)[0];
+  assert.equal(event.eventType, 'owner_availability');
+  assert.equal(event.sourceType, 'owner_availability');
+  assert.equal(event.googleEventId, 'google-event-1');
+  assert.equal(event.syncStatus, 'synced');
 });
 
 test('application status helper accepts the standard owner decisions', () => {

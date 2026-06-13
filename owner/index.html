@@ -75,33 +75,90 @@
         <button type="button" class="btn btn-primary" data-account-login data-account-login-action>Sign in</button>
       </section>
 
-      <div data-owner-content hidden>
-        <nav class="course-tabs" aria-label="Owner dashboard sections">
-          <a href="#calendar">Calendar</a>
-          <a href="#courses">Courses</a>
-          <a href="#applications">Applications</a>
-          <a href="#private">Private</a>
-          <a href="#journals">Journals</a>
-          <a href="#actions">Actions</a>
-        </nav>
+      <div class="owner-shell" data-owner-content hidden>
+        <button class="owner-menu-toggle" type="button" data-owner-sidebar-toggle aria-controls="owner-sidebar" aria-expanded="false">
+          <span aria-hidden="true">☰</span>
+          <span>Menu</span>
+        </button>
+        <div class="owner-sidebar-backdrop" data-owner-sidebar-backdrop hidden></div>
+        <aside class="owner-sidebar" id="owner-sidebar" data-owner-sidebar aria-label="Owner dashboard menu" aria-hidden="true">
+          <div class="owner-sidebar__brand">
+            <span class="brand"><span class="brand-i">i</span>Yoga<span class="brand-u">U</span></span>
+            <button type="button" class="owner-sidebar__close" data-owner-sidebar-close aria-label="Close owner menu">&times;</button>
+          </div>
+          <nav class="owner-sidebar__nav">
+            <a href="#calendar" data-owner-nav-link aria-current="page">Calendar</a>
+            <a href="#students" data-owner-nav-link>Students</a>
+            <a href="#courses" data-owner-nav-link>Courses</a>
+            <a href="#applications" data-owner-nav-link>Applications</a>
+            <a href="#journals" data-owner-nav-link>Journals</a>
+          </nav>
+        </aside>
 
-        <div class="course-dashboard">
-          <section class="course-panel" id="calendar">
-            <h2>Calendar</h2>
-            <form class="course-form" data-owner-block-form>
+        <div class="course-dashboard owner-main">
+          <section class="course-panel owner-panel owner-panel--calendar" id="calendar" tabindex="-1">
+            <div class="owner-section-head">
+              <div>
+                <h2>Owner Calendar</h2>
+                <p>Schedule iYogaU availability, unavailable time, classes, and synced owner events.</p>
+              </div>
+              <div class="owner-calendar-sync" data-google-calendar-status></div>
+            </div>
+
+            <div class="owner-calendar-toolbar" aria-label="Calendar controls">
+              <div class="owner-calendar-toolbar__range">
+                <button class="btn btn-secondary" type="button" data-owner-calendar-today>Today</button>
+                <button class="btn btn-secondary owner-icon-btn" type="button" data-owner-calendar-prev aria-label="Previous period">&lsaquo;</button>
+                <button class="btn btn-secondary owner-icon-btn" type="button" data-owner-calendar-next aria-label="Next period">&rsaquo;</button>
+                <strong data-owner-calendar-label>Calendar</strong>
+              </div>
+              <div class="owner-segmented" role="group" aria-label="Calendar view">
+                <button type="button" data-owner-calendar-view="month" aria-pressed="true">Month</button>
+                <button type="button" data-owner-calendar-view="week">Week</button>
+                <button type="button" data-owner-calendar-view="day">Day</button>
+                <button type="button" data-owner-calendar-view="list">List</button>
+              </div>
+            </div>
+
+            <div class="owner-calendar-workbench">
+              <div class="owner-calendar-board" data-owner-calendar-grid aria-live="polite"></div>
+              <aside class="owner-event-detail" data-owner-event-detail>
+                <h3>Event details</h3>
+                <p class="course-muted">Select a calendar item to review its source and sync status.</p>
+              </aside>
+            </div>
+
+            <form class="course-form owner-quick-create" data-owner-calendar-form>
+              <h3>Create calendar item</h3>
               <div class="course-form__grid">
-                <label>Title<input name="title" placeholder="Unavailable" /></label>
+                <label>Type
+                  <select name="eventType">
+                    <option value="owner_availability">Available</option>
+                    <option value="owner_blocked_time">Unavailable</option>
+                    <option value="free_workshop">Free workshop</option>
+                    <option value="group_course_session">Regular course session</option>
+                    <option value="confirmed_private_class">Private class</option>
+                  </select>
+                </label>
+                <label>Title<input name="title" placeholder="Available for private classes" required /></label>
                 <label>Start<input name="startAt" type="datetime-local" required /></label>
                 <label>End<input name="endAt" type="datetime-local" required /></label>
                 <label>Timezone<input name="timezone" value="America/Los_Angeles" /></label>
+                <label>Student email<input name="userEmail" placeholder="Private classes only" /></label>
+                <label>Capacity / group size<input name="capacity" type="number" min="1" placeholder="Optional" /></label>
               </div>
-              <button class="btn btn-secondary" type="submit">Block unavailable time</button>
+              <label>Notes<textarea name="notes" placeholder="Optional owner note"></textarea></label>
+              <button class="btn btn-secondary" type="submit">Save calendar item</button>
             </form>
-            <div class="course-list" data-owner-calendar-list></div>
           </section>
 
-          <section class="course-panel" id="courses">
-            <h2>Create course or workshop</h2>
+          <section class="course-panel owner-panel" id="courses" tabindex="-1">
+            <div class="owner-section-head">
+              <div>
+                <h2>Courses</h2>
+                <p>Create free workshops and regular group courses for online or covered offline areas.</p>
+              </div>
+            </div>
             <form class="course-form" data-owner-course-form>
               <div class="course-form__grid">
                 <label>Type
@@ -141,10 +198,10 @@
               <button class="btn btn-primary" type="submit">Save course</button>
             </form>
             <h3>Courses</h3>
-            <div class="course-list" data-owner-course-list></div>
+            <div class="owner-table-wrap" data-owner-course-list></div>
           </section>
 
-          <section class="course-panel">
+          <section class="course-panel owner-panel" id="covered-areas">
             <h2>Covered areas</h2>
             <form class="course-form" data-owner-area-form>
               <div class="course-form__grid">
@@ -155,31 +212,51 @@
               </div>
               <button class="btn btn-secondary" type="submit">Save covered area</button>
             </form>
-            <div class="course-list" data-owner-area-list></div>
+            <div class="owner-table-wrap" data-owner-area-list></div>
           </section>
 
-          <section class="course-panel" id="applications">
-            <h2>Applications</h2>
-            <div class="course-list" data-owner-application-list></div>
+          <section class="course-panel owner-panel" id="students" tabindex="-1">
+            <div class="owner-section-head">
+              <div>
+                <h2>Students</h2>
+                <p>Review registered users, applicants, active students, journals, and assigned actions.</p>
+              </div>
+            </div>
+            <div class="owner-table-controls">
+              <label>Search students<input data-owner-user-search placeholder="Name or email" /></label>
+              <div class="owner-segmented owner-segmented--compact" role="group" aria-label="Student filter">
+                <button type="button" data-owner-user-filter="all" aria-pressed="true">All</button>
+                <button type="button" data-owner-user-filter="user">Users</button>
+                <button type="button" data-owner-user-filter="applicant">Applicants</button>
+                <button type="button" data-owner-user-filter="student">Students</button>
+              </div>
+            </div>
+            <div class="owner-table-wrap" data-owner-user-list></div>
+            <aside class="owner-student-profile" data-owner-student-profile hidden></aside>
           </section>
 
-          <section class="course-panel" id="private">
-            <h2>Private requests</h2>
-            <div class="course-list" data-owner-private-list></div>
+          <section class="course-panel owner-panel" id="applications" tabindex="-1">
+            <div class="owner-section-head">
+              <div>
+                <h2>Applications</h2>
+                <p>Approve, reject, or waitlist course applications and review private class requests.</p>
+              </div>
+            </div>
+            <h3>Course applications</h3>
+            <div class="owner-table-wrap" data-owner-application-list></div>
+            <h3>Private requests</h3>
+            <div class="owner-table-wrap" data-owner-private-list></div>
           </section>
 
-          <section class="course-panel">
-            <h2>Users</h2>
-            <div class="course-list" data-owner-user-list></div>
-          </section>
-
-          <section class="course-panel" id="journals">
-            <h2>Journal review</h2>
-            <div class="course-list" data-owner-journal-list></div>
-          </section>
-
-          <section class="course-panel" id="actions">
-            <h2>Assign action item</h2>
+          <section class="course-panel owner-panel" id="journals" tabindex="-1">
+            <div class="owner-section-head">
+              <div>
+                <h2>Journals</h2>
+                <p>Review daily journals, comment on selected reflections, and assign action items.</p>
+              </div>
+            </div>
+            <div class="owner-table-wrap" data-owner-journal-list></div>
+            <h3>Assign action item</h3>
             <form class="course-form" data-owner-action-form>
               <div class="course-form__grid">
                 <label>User id<input name="userId" required /></label>
@@ -189,7 +266,7 @@
               <label>Description<textarea name="description"></textarea></label>
               <button class="btn btn-primary" type="submit">Assign action item</button>
             </form>
-            <div class="course-list" data-owner-action-list></div>
+            <div class="owner-table-wrap" data-owner-action-list></div>
           </section>
         </div>
       </div>

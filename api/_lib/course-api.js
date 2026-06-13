@@ -20,6 +20,7 @@ import {
   normalizeCoveredArea,
   normalizeJournalComment,
   normalizeJournalEntry,
+  normalizeOwnerCalendarTime,
   normalizeOwnerBlock,
   normalizePrivateRequestInput,
   publicCoveredArea,
@@ -28,6 +29,11 @@ import {
   updatePrivateRequest,
   updateStudentActionItem,
 } from './course-validation.js';
+import {
+  buildGoogleCalendarConnectUrl,
+  ownerGoogleCalendarStatus,
+  syncGoogleCalendarForOwner,
+} from './google-calendar-sync.js';
 import { requireOwnerSession, requireSession, sessionUserView } from './owner-auth.js';
 
 function withCourse(course, state) {
@@ -43,28 +49,56 @@ function ownerUsers(state) {
   const byId = new Map();
   function add(userId, email, name) {
     if (!userId) return;
-    const current = byId.get(userId) || { id: userId, email: '', name: '', applications: 0, privateRequests: 0, journals: 0, actionItems: 0 };
+    const current = byId.get(userId) || {
+      id: userId,
+      email: '',
+      name: '',
+      role: 'user',
+      applications: 0,
+      approvedApplications: 0,
+      privateRequests: 0,
+      confirmedPrivateRequests: 0,
+      journals: 0,
+      actionItems: 0,
+      lastActivityAt: '',
+    };
     if (email) current.email = email;
     if (name) current.name = name;
     byId.set(userId, current);
   }
+  function touch(userId, at) {
+    if (!userId || !at) return;
+    const current = byId.get(userId);
+    if (current && String(at) > String(current.lastActivityAt || '')) current.lastActivityAt = at;
+  }
   state.applications.forEach((item) => {
     add(item.userId, item.userEmail, item.userName);
-    byId.get(item.userId).applications += 1;
+    const current = byId.get(item.userId);
+    current.applications += 1;
+    if (item.status === 'approved') current.approvedApplications += 1;
+    touch(item.userId, item.updatedAt || item.createdAt);
   });
   state.privateRequests.forEach((item) => {
     add(item.userId, item.userEmail, item.userName);
-    byId.get(item.userId).privateRequests += 1;
+    const current = byId.get(item.userId);
+    current.privateRequests += 1;
+    if (item.status === 'confirmed') current.confirmedPrivateRequests += 1;
+    touch(item.userId, item.updatedAt || item.createdAt);
   });
   state.journalEntries.forEach((item) => {
     add(item.userId, item.userEmail, item.userName);
     byId.get(item.userId).journals += 1;
+    touch(item.userId, item.updatedAt || item.createdAt);
   });
   state.actionItems.forEach((item) => {
     add(item.userId);
     byId.get(item.userId).actionItems += 1;
+    touch(item.userId, item.updatedAt || item.createdAt);
   });
-  return Array.from(byId.values()).sort((a, b) => String(a.email || a.id).localeCompare(String(b.email || b.id)));
+  return Array.from(byId.values()).map((user) => ({
+    ...user,
+    role: user.approvedApplications || user.confirmedPrivateRequests ? 'student' : (user.applications || user.privateRequests ? 'applicant' : 'user'),
+  })).sort((a, b) => String(b.lastActivityAt || '').localeCompare(String(a.lastActivityAt || '')) || String(a.email || a.id).localeCompare(String(b.email || b.id)));
 }
 
 async function api(handler, req, res, owner = false) {
@@ -325,19 +359,144 @@ export async function ownerCalendarHandler(req, res) {
   return api(async (request, response, session) => {
     if (request.method === 'GET') {
       const state = await loadCourseState();
-      return sendJson(response, 200, { events: calendarEvents(state) });
+      return sendJson(response, 200, {
+        events: calendarEvents(state),
+        google: await ownerGoogleCalendarStatus(request, session),
+      });
     }
     requireSameOrigin(request);
+    const body = await readJson(request);
     if (request.method === 'POST') {
-      const body = await readJson(request);
       const payload = await mutateCourseState(async (state) => {
-        const block = normalizeOwnerBlock(body, session.user.id);
-        state.ownerBlockedTimes.push(block);
-        return { event: block };
+        const eventType = String(body.eventType || 'owner_blocked_time');
+        if (eventType === 'owner_availability' || eventType === 'owner_blocked_time') {
+          const event = normalizeOwnerCalendarTime(body.eventType ? body : { ...body, eventType: 'owner_blocked_time' }, session.user.id);
+          if (event.eventType === 'owner_availability') state.ownerAvailabilityTimes.push(event);
+          else state.ownerBlockedTimes.push(event);
+          return { event };
+        }
+        if (eventType === 'free_workshop' || eventType === 'group_course_session') {
+          const course = normalizeCourse({
+            courseType: eventType === 'free_workshop' ? 'free_workshop' : 'regular_group_course',
+            deliveryMode: body.deliveryMode || 'online',
+            title: body.title,
+            description: body.description || body.notes || 'Scheduled from the owner calendar.',
+            priceCents: body.priceCents || 0,
+            currency: body.currency || 'USD',
+            capacity: body.capacity || null,
+            coveredAreaId: body.coveredAreaId || '',
+            locationName: body.locationName || '',
+            onlineUrl: body.onlineUrl || '',
+            status: body.status || 'draft',
+          }, state, session.user.id);
+          const sessions = normalizeCourseSessions(course.id, [{
+            title: body.title,
+            startAt: body.startAt,
+            endAt: body.endAt,
+            timezone: body.timezone || 'America/Los_Angeles',
+          }]);
+          state.courses.push(course);
+          state.courseSessions.push(...sessions);
+          return { event: { ...sessions[0], eventType, courseId: course.id } };
+        }
+        if (eventType === 'confirmed_private_class') {
+          const privateRequest = normalizePrivateRequestInput({
+            deliveryMode: body.deliveryMode || 'online',
+            groupSize: body.groupSize || 1,
+            coveredAreaId: body.coveredAreaId || '',
+            locationName: body.locationName || '',
+            goals: body.title || 'Owner-created private class',
+            preferredDates: '',
+            notes: body.notes || '',
+          }, state, {
+            id: String(body.userId || body.userEmail || 'owner-created-private-student'),
+            email: body.userEmail || '',
+            name: body.userName || body.title || 'Private student',
+          });
+          const confirmed = updatePrivateRequest({
+            status: 'confirmed',
+            ownerResponse: body.ownerResponse || 'Confirmed by owner.',
+            confirmedStartAt: body.startAt,
+            confirmedEndAt: body.endAt,
+            timezone: body.timezone || 'America/Los_Angeles',
+          }, privateRequest);
+          state.privateRequests.push(confirmed);
+          return { event: confirmed };
+        }
+        throw new HttpError(400, 'Calendar event type is invalid.');
       });
       return sendJson(response, 201, payload);
     }
+    if (request.method === 'PUT') {
+      const payload = await mutateCourseState(async (state) => {
+        const id = String(body.id || '');
+        const collections = [state.ownerAvailabilityTimes, state.ownerBlockedTimes];
+        for (const collection of collections) {
+          const index = collection.findIndex((item) => item.id === id);
+          if (index >= 0) {
+            const event = normalizeOwnerCalendarTime(body.event || body, session.user.id, collection[index]);
+            collection.splice(index, 1);
+            if (event.eventType === 'owner_availability') state.ownerAvailabilityTimes.push(event);
+            else state.ownerBlockedTimes.push(event);
+            return { event };
+          }
+        }
+        throw new HttpError(404, 'Calendar event not found.');
+      });
+      return sendJson(response, 200, payload);
+    }
+    if (request.method === 'DELETE') {
+      const payload = await mutateCourseState(async (state) => {
+        const id = String(body.id || '');
+        const before = state.ownerAvailabilityTimes.length + state.ownerBlockedTimes.length;
+        state.ownerAvailabilityTimes = state.ownerAvailabilityTimes.filter((item) => item.id !== id);
+        state.ownerBlockedTimes = state.ownerBlockedTimes.filter((item) => item.id !== id);
+        if (before === state.ownerAvailabilityTimes.length + state.ownerBlockedTimes.length) {
+          throw new HttpError(404, 'Calendar event not found.');
+        }
+        return { deleted: true };
+      });
+      return sendJson(response, 200, payload);
+    }
     return sendJson(response, 405, { error: 'Method not allowed.' });
+  }, req, res, true);
+}
+
+export async function ownerGoogleCalendarStatusHandler(req, res) {
+  return api(async (request, response, session) => {
+    if (request.method !== 'GET') return sendJson(response, 405, { error: 'Method not allowed.' });
+    return sendJson(response, 200, await ownerGoogleCalendarStatus(request, session));
+  }, req, res, true);
+}
+
+export async function ownerGoogleCalendarConnectHandler(req, res) {
+  return api(async (request, response, session) => {
+    requireSameOrigin(request);
+    if (request.method !== 'POST') return sendJson(response, 405, { error: 'Method not allowed.' });
+    const body = await readJson(request);
+    return sendJson(response, 200, {
+      authUrl: buildGoogleCalendarConnectUrl(request, response, session, body.returnTo || '/owner/#calendar'),
+    });
+  }, req, res, true);
+}
+
+export async function ownerGoogleCalendarSyncHandler(req, res) {
+  return api(async (request, response, session) => {
+    requireSameOrigin(request);
+    if (request.method !== 'POST') return sendJson(response, 405, { error: 'Method not allowed.' });
+    return sendJson(response, 200, await syncGoogleCalendarForOwner(session));
+  }, req, res, true);
+}
+
+export async function ownerGoogleCalendarWebhookHandler(req, res) {
+  return api(async (request, response, session) => {
+    requireSameOrigin(request);
+    if (request.method !== 'POST') return sendJson(response, 405, { error: 'Method not allowed.' });
+    return sendJson(response, 202, {
+      accepted: true,
+      message: 'Webhook received. Manual sync is used in local development.',
+      owner: sessionUserView(session.user),
+    });
   }, req, res, true);
 }
 

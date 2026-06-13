@@ -9,7 +9,15 @@ const COURSE_STATUSES = new Set(['draft', 'published', 'cancelled', 'archived'])
 const APPLICATION_STATUSES = new Set(['pending', 'approved', 'rejected', 'waitlisted', 'cancelled']);
 const PRIVATE_REQUEST_STATUSES = new Set(['pending', 'proposed', 'confirmed', 'rejected', 'cancelled']);
 const ACTION_STATUSES = new Set(['open', 'done', 'reviewed']);
-const EVENT_TYPES = new Set(['free_workshop', 'group_course_session', 'private_class_request', 'confirmed_private_class', 'owner_blocked_time']);
+const EVENT_TYPES = new Set([
+  'owner_availability',
+  'owner_blocked_time',
+  'free_workshop',
+  'group_course_session',
+  'private_class_request',
+  'confirmed_private_class',
+]);
+const SYNC_STATUSES = new Set(['local_only', 'connected', 'pending', 'synced', 'conflict', 'error', 'disconnected']);
 
 function nowIso() {
   return new Date().toISOString();
@@ -85,6 +93,40 @@ function enumValue(value, allowed, fieldName, fallback) {
   return out;
 }
 
+function syncStatus(value, fallback = 'local_only') {
+  return enumValue(value, SYNC_STATUSES, 'syncStatus', fallback);
+}
+
+function calendarSync(input = {}, existing = null) {
+  const raw = input && typeof input === 'object' && !Array.isArray(input) ? input : {};
+  const prior = existing && typeof existing === 'object' && !Array.isArray(existing) ? existing : {};
+  const googleEventId = cleanString(raw.googleEventId, 180, prior.googleEventId || '');
+  const status = syncStatus(raw.syncStatus, prior.syncStatus || (googleEventId ? 'connected' : 'local_only'));
+  return {
+    googleCalendarId: cleanString(raw.googleCalendarId, 180, prior.googleCalendarId || ''),
+    googleEventId,
+    googleEtag: cleanString(raw.googleEtag, 240, prior.googleEtag || ''),
+    syncStatus: status,
+    syncSource: cleanString(raw.syncSource, 40, prior.syncSource || (googleEventId ? 'google' : 'website')),
+    lastSyncedAt: raw.lastSyncedAt ? isoDateTime(raw.lastSyncedAt, 'lastSyncedAt') : (prior.lastSyncedAt || ''),
+    googleUpdatedAt: raw.googleUpdatedAt ? isoDateTime(raw.googleUpdatedAt, 'googleUpdatedAt') : (prior.googleUpdatedAt || ''),
+    syncError: cleanString(raw.syncError, 500, prior.syncError || ''),
+  };
+}
+
+function withCalendarSync(record, input = {}, existing = null) {
+  const sync = calendarSync(input.google || input.calendarSync || input, existing?.calendarSync || existing || null);
+  return {
+    ...record,
+    calendarSync: sync,
+    googleCalendarId: sync.googleCalendarId,
+    googleEventId: sync.googleEventId,
+    syncStatus: sync.syncStatus,
+    lastSyncedAt: sync.lastSyncedAt,
+    googleUpdatedAt: sync.googleUpdatedAt,
+  };
+}
+
 function activeCoveredArea(state, coveredAreaId) {
   return state.coveredAreas.find((area) => area.id === coveredAreaId && area.active !== false) || null;
 }
@@ -155,7 +197,7 @@ export function normalizeCourseSessions(courseId, sessions, existingSessions = [
     const startAt = isoDateTime(session.startAt || existing?.startAt, 'startAt');
     const endAt = isoDateTime(session.endAt || existing?.endAt, 'endAt');
     if (Date.parse(endAt) <= Date.parse(startAt)) throw new HttpError(400, 'Session `endAt` must be after `startAt`.');
-    return {
+    return withCalendarSync({
       id: id(existing),
       courseId,
       title: cleanString(session.title, 140, existing?.title || ''),
@@ -165,7 +207,7 @@ export function normalizeCourseSessions(courseId, sessions, existingSessions = [
       sortOrder: index,
       createdAt: existing?.createdAt || nowIso(),
       updatedAt: nowIso(),
-    };
+    }, session, existing);
   });
 }
 
@@ -305,7 +347,7 @@ export function updatePrivateRequest(input, request) {
     if (!confirmedStartAt || !confirmedEndAt) throw new HttpError(400, 'Confirmed private classes require start and end times.');
     if (Date.parse(confirmedEndAt) <= Date.parse(confirmedStartAt)) throw new HttpError(400, 'Confirmed private class end must be after start.');
   }
-  return {
+  return withCalendarSync({
     ...request,
     status,
     ownerResponse: cleanString(input.ownerResponse, 2000, request.ownerResponse || ''),
@@ -313,25 +355,52 @@ export function updatePrivateRequest(input, request) {
     confirmedEndAt,
     timezone: timezone(input.timezone, request.timezone || 'America/Los_Angeles'),
     updatedAt: nowIso(),
-  };
+  }, input, request);
+}
+
+export function normalizeOwnerCalendarTime(input, ownerUserId, existing = null) {
+  if (!input || typeof input !== 'object' || Array.isArray(input)) throw new HttpError(400, 'Calendar time payload must be an object.');
+  const eventType = enumValue(input.eventType || input.type, new Set(['owner_availability', 'owner_blocked_time']), 'eventType', existing?.eventType || 'owner_blocked_time');
+  const startAt = isoDateTime(input.startAt, 'startAt');
+  const endAt = isoDateTime(input.endAt, 'endAt');
+  if (Date.parse(endAt) <= Date.parse(startAt)) throw new HttpError(400, 'Calendar time end must be after start.');
+  const now = nowIso();
+  return withCalendarSync({
+    id: id(existing),
+    eventType,
+    ownerUserId,
+    title: cleanString(input.title, 140, existing?.title || (eventType === 'owner_availability' ? 'Available' : 'Unavailable')),
+    startAt,
+    endAt,
+    timezone: timezone(input.timezone, existing?.timezone || 'America/Los_Angeles'),
+    notes: cleanString(input.notes, 1000, existing?.notes || ''),
+    createdAt: existing?.createdAt || now,
+    updatedAt: now,
+  }, input, existing);
 }
 
 export function normalizeOwnerBlock(input, ownerUserId) {
-  if (!input || typeof input !== 'object' || Array.isArray(input)) throw new HttpError(400, 'Calendar block payload must be an object.');
-  const startAt = isoDateTime(input.startAt, 'startAt');
-  const endAt = isoDateTime(input.endAt, 'endAt');
-  if (Date.parse(endAt) <= Date.parse(startAt)) throw new HttpError(400, 'Blocked time end must be after start.');
+  return normalizeOwnerCalendarTime({ ...input, eventType: 'owner_blocked_time' }, ownerUserId);
+}
+
+export function normalizeCalendarIntegration(input, ownerUserId, existing = null) {
+  if (!input || typeof input !== 'object' || Array.isArray(input)) throw new HttpError(400, 'Calendar integration payload must be an object.');
   const now = nowIso();
   return {
-    id: crypto.randomUUID(),
-    eventType: 'owner_blocked_time',
+    id: id(existing),
+    provider: 'google',
     ownerUserId,
-    title: cleanString(input.title, 140, 'Unavailable'),
-    startAt,
-    endAt,
-    timezone: timezone(input.timezone, 'America/Los_Angeles'),
-    notes: cleanString(input.notes, 1000),
-    createdAt: now,
+    ownerEmail: cleanString(input.ownerEmail, 160, existing?.ownerEmail || ''),
+    googleSubject: cleanString(input.googleSubject, 180, existing?.googleSubject || ''),
+    calendarId: cleanString(input.calendarId, 180, existing?.calendarId || ''),
+    calendarName: cleanString(input.calendarName, 180, existing?.calendarName || 'iYogaU Calendar'),
+    scopes: Array.isArray(input.scopes) ? input.scopes.map((scope) => cleanString(scope, 160)).filter(Boolean) : (existing?.scopes || []),
+    syncEnabled: input.syncEnabled === undefined ? (existing?.syncEnabled ?? false) : Boolean(input.syncEnabled),
+    tokenRef: cleanString(input.tokenRef, 220, existing?.tokenRef || ''),
+    encryptedRefreshToken: cleanString(input.encryptedRefreshToken, 3000, existing?.encryptedRefreshToken || ''),
+    lastSyncedAt: input.lastSyncedAt ? isoDateTime(input.lastSyncedAt, 'lastSyncedAt') : (existing?.lastSyncedAt || ''),
+    lastError: cleanString(input.lastError, 500, existing?.lastError || ''),
+    createdAt: existing?.createdAt || now,
     updatedAt: now,
   };
 }
@@ -420,6 +489,7 @@ export function calendarEvents(state) {
       deliveryMode: course.deliveryMode,
       status: course.status,
       courseId: course.id,
+      ...eventSyncFields(session),
     };
   }).filter(Boolean);
 
@@ -440,6 +510,7 @@ export function calendarEvents(state) {
         startAt: request.confirmedStartAt,
         endAt: request.confirmedEndAt,
         timezone: request.timezone,
+        ...eventSyncFields(request),
       }];
     }
     return [{
@@ -452,11 +523,31 @@ export function calendarEvents(state) {
     }];
   });
 
+  const availability = (state.ownerAvailabilityTimes || []).map((block) => ({
+    ...block,
+    sourceType: 'owner_availability',
+    sourceId: block.id,
+  }));
+
   const blocks = state.ownerBlockedTimes.map((block) => ({
     ...block,
     sourceType: 'owner_blocked_time',
     sourceId: block.id,
   }));
 
-  return sortByStartAt(courseEvents.concat(privateEvents, blocks)).filter((event) => EVENT_TYPES.has(event.eventType));
+  return sortByStartAt(courseEvents.concat(privateEvents, availability, blocks)).filter((event) => EVENT_TYPES.has(event.eventType));
+}
+
+export function eventSyncFields(event) {
+  const sync = calendarSync(event?.calendarSync || event || {});
+  return {
+    googleCalendarId: sync.googleCalendarId,
+    googleEventId: sync.googleEventId,
+    googleEtag: sync.googleEtag,
+    syncStatus: sync.syncStatus,
+    syncSource: sync.syncSource,
+    lastSyncedAt: sync.lastSyncedAt,
+    googleUpdatedAt: sync.googleUpdatedAt,
+    syncError: sync.syncError,
+  };
 }

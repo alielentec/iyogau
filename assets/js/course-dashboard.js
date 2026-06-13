@@ -277,6 +277,15 @@
     return out;
   }
 
+  var ownerUi = {
+    calendarDate: new Date(),
+    calendarView: 'month',
+    userFilter: 'all',
+    userSearch: '',
+    selectedEventId: '',
+    selectedUserId: '',
+  };
+
   function initStudentDashboard(root) {
     root.addEventListener('click', function (evt) {
       var apply = evt.target.closest('[data-apply-course]');
@@ -344,6 +353,7 @@
   }
 
   function renderOwner(root, state) {
+    root.__ownerState = state;
     var auth = $('[data-owner-auth]', root);
     var content = $('[data-owner-content]', root);
     if (!state.owner) {
@@ -355,110 +365,421 @@
     if (content) content.hidden = false;
 
     renderCoveredAreaOptions(root, state.coveredAreas);
-    renderOwnerList($('[data-owner-course-list]', root), state.courses, function (course) {
-      return course.title + ' - ' + courseMeta(course) + ' - ' + course.status;
-    });
-    renderOwnerList($('[data-owner-area-list]', root), state.coveredAreas, function (area) {
-      return area.name + ' - ' + area.country + (area.active === false ? ' - inactive' : '');
-    });
+    renderGoogleCalendarStatus(root, state.google || {});
+    renderOwnerCalendar(root, state);
+    renderOwnerCourses(root, state.courses);
+    renderOwnerAreas(root, state.coveredAreas);
+    renderOwnerUsers(root, state);
     renderApplications(root, state.applications);
     renderPrivateRequests(root, state.privateRequests);
-    renderOwnerList($('[data-owner-calendar-list]', root), state.events, function (event) {
-      return event.eventType + ' - ' + event.title + ' - ' + dateRange(event);
-    });
-    renderOwnerList($('[data-owner-user-list]', root), state.users, function (user) {
-      return (user.email || user.id) + ' - apps ' + user.applications + ', journals ' + user.journals + ', actions ' + user.actionItems;
-    });
     renderJournalReview(root, state.entries);
-    renderOwnerList($('[data-owner-action-list]', root), state.actionItems, function (item) {
-      return item.status + ' - ' + item.title + ' - ' + item.userId;
-    });
+    renderOwnerActions(root, state.actionItems);
+    renderStudentProfile(root, ownerUi.selectedUserId, state);
   }
 
-  function renderOwnerList(node, items, labeler) {
+  function renderGoogleCalendarStatus(root, google) {
+    var node = $('[data-google-calendar-status]', root);
+    if (!node) return;
+    node.innerHTML = '';
+    var status = el('div', { class: 'owner-sync-card' });
+    status.appendChild(statusPill(google.connected ? 'connected' : (google.configured ? 'pending' : 'not-configured')));
+    status.appendChild(el('strong', null, google.connected ? 'Google Calendar connected' : (google.configured ? 'Calendar ready to connect' : 'Calendar sync not configured')));
+    status.appendChild(el('span', null, google.connected
+      ? ((google.calendarName || 'iYogaU Calendar') + ' · ' + (google.lastSyncedAt ? 'Last sync ' + shortDateTime(google.lastSyncedAt) : 'Not synced yet'))
+      : (google.configured ? 'Connect Ali owner access to sync iYogaU events.' : 'Add Calendar OAuth variables to enable live sync.')));
+    var actions = el('div', { class: 'owner-sync-card__actions' });
+    if (google.configured && !google.connected) {
+      actions.appendChild(el('button', { type: 'button', class: 'btn btn-secondary', 'data-google-calendar-connect': '1' }, 'Connect Google Calendar'));
+    }
+    if (google.connected) {
+      actions.appendChild(el('button', { type: 'button', class: 'btn btn-secondary', 'data-google-calendar-sync': '1' }, 'Sync now'));
+    }
+    status.appendChild(actions);
+    if (google.lastError) status.appendChild(el('span', { class: 'owner-sync-card__error' }, google.lastError));
+    node.appendChild(status);
+  }
+
+  function renderOwnerCalendar(root, state) {
+    var label = $('[data-owner-calendar-label]', root);
+    var grid = $('[data-owner-calendar-grid]', root);
+    if (!grid) return;
+    var view = ownerUi.calendarView || 'month';
+    $all('[data-owner-calendar-view]', root).forEach(function (button) {
+      button.setAttribute('aria-pressed', button.getAttribute('data-owner-calendar-view') === view ? 'true' : 'false');
+    });
+    if (label) label.textContent = calendarRangeLabel(ownerUi.calendarDate, view);
+    grid.innerHTML = '';
+    var events = (state.events || []).slice().sort(function (a, b) {
+      return String(a.startAt || '').localeCompare(String(b.startAt || ''));
+    });
+    if (view === 'list') renderCalendarList(grid, events);
+    else renderCalendarCells(grid, events, view);
+    renderEventDetail(root, ownerUi.selectedEventId, state);
+  }
+
+  function renderCalendarCells(node, events, view) {
+    var days = calendarDays(ownerUi.calendarDate, view);
+    var board = el('div', { class: 'owner-calendar-grid owner-calendar-grid--' + view });
+    var headings = view === 'day' ? [] : ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
+    headings.forEach(function (day) {
+      board.appendChild(el('div', { class: 'owner-calendar-grid__weekday' }, day));
+    });
+    days.forEach(function (date) {
+      var key = dateKey(date);
+      var cell = el('div', { class: 'owner-calendar-cell' + (sameMonth(date, ownerUi.calendarDate) ? '' : ' is-muted') });
+      cell.appendChild(el('span', { class: 'owner-calendar-cell__date' }, String(date.getDate())));
+      events.filter(function (event) { return dateKey(new Date(event.startAt)) === key; }).slice(0, 4).forEach(function (event) {
+        cell.appendChild(calendarEventButton(event));
+      });
+      var hiddenCount = events.filter(function (event) { return dateKey(new Date(event.startAt)) === key; }).length - 4;
+      if (hiddenCount > 0) cell.appendChild(el('span', { class: 'owner-calendar-more' }, '+' + hiddenCount + ' more'));
+      board.appendChild(cell);
+    });
+    node.appendChild(board);
+  }
+
+  function renderCalendarList(node, events) {
+    var list = el('div', { class: 'owner-agenda' });
+    if (!events.length) {
+      list.appendChild(el('p', { class: 'course-muted' }, 'No calendar items yet.'));
+      node.appendChild(list);
+      return;
+    }
+    events.forEach(function (event) {
+      var row = el('article', { class: 'owner-agenda-row owner-agenda-row--' + eventClass(event.eventType) });
+      row.appendChild(el('span', { class: 'owner-agenda-row__time' }, shortDateTime(event.startAt)));
+      row.appendChild(calendarEventButton(event));
+      row.appendChild(el('span', { class: 'owner-agenda-row__meta' }, sourceLabel(event)));
+      list.appendChild(row);
+    });
+    node.appendChild(list);
+  }
+
+  function calendarEventButton(event) {
+    var button = el('button', {
+      type: 'button',
+      class: 'owner-event-chip owner-event-chip--' + eventClass(event.eventType),
+      'data-owner-calendar-event': event.id,
+      title: event.title || event.eventType,
+    });
+    button.appendChild(el('span', null, event.title || event.eventType));
+    button.appendChild(el('small', null, eventTime(event)));
+    return button;
+  }
+
+  function renderEventDetail(root, id, state) {
+    var node = $('[data-owner-event-detail]', root);
+    if (!node) return;
+    var event = (state.events || []).find(function (item) { return item.id === id; }) || null;
+    node.innerHTML = '';
+    node.appendChild(el('h3', null, event ? event.title : 'Event details'));
+    if (!event) {
+      node.appendChild(el('p', { class: 'course-muted' }, 'Select a calendar item to review its source and sync status.'));
+      return;
+    }
+    node.appendChild(statusPill(event.eventType));
+    node.appendChild(el('p', null, dateRange(event)));
+    node.appendChild(el('p', { class: 'course-muted' }, sourceLabel(event)));
+    node.appendChild(el('p', { class: 'course-muted' }, 'Sync: ' + (event.syncStatus || 'local_only') + (event.googleEventId ? ' · Google event connected' : '')));
+    if (event.sourceType === 'owner_availability' || event.sourceType === 'owner_blocked_time') {
+      var form = el('form', { class: 'course-form owner-event-edit', 'data-owner-event-edit': event.id });
+      var grid = el('div', { class: 'course-form__grid' });
+      var typeLabelEl = el('label', null, 'Type');
+      var type = el('select', { name: 'eventType' });
+      type.appendChild(el('option', { value: 'owner_availability' }, 'Available'));
+      type.appendChild(el('option', { value: 'owner_blocked_time' }, 'Unavailable'));
+      type.value = event.eventType;
+      typeLabelEl.appendChild(type);
+      grid.appendChild(typeLabelEl);
+      grid.appendChild(labelWithInput('Title', { name: 'title', value: event.title || '' }));
+      grid.appendChild(labelWithInput('Start', { name: 'startAt', type: 'datetime-local', value: localInputDateTime(event.startAt) }));
+      grid.appendChild(labelWithInput('End', { name: 'endAt', type: 'datetime-local', value: localInputDateTime(event.endAt) }));
+      grid.appendChild(labelWithInput('Timezone', { name: 'timezone', value: event.timezone || 'America/Los_Angeles' }));
+      form.appendChild(grid);
+      var notesLabel = el('label', null, 'Notes');
+      notesLabel.appendChild(el('textarea', { name: 'notes' }, event.notes || ''));
+      form.appendChild(notesLabel);
+      var actions = el('div', { class: 'owner-table-actions' });
+      actions.appendChild(el('button', { type: 'submit', class: 'btn btn-primary' }, 'Save event'));
+      actions.appendChild(el('button', { type: 'button', class: 'btn btn-secondary', 'data-owner-event-delete': event.id }, 'Delete'));
+      form.appendChild(actions);
+      node.appendChild(form);
+    } else {
+      var links = el('div', { class: 'owner-table-actions' });
+      if (event.courseId) links.appendChild(ownerSectionButton('Open course section', '#courses'));
+      if (event.requestId) links.appendChild(ownerSectionButton('Open applications', '#applications'));
+      node.appendChild(links);
+    }
+  }
+
+  function labelWithInput(text, attrs) {
+    var label = el('label', null, text);
+    label.appendChild(el('input', attrs));
+    return label;
+  }
+
+  function ownerSectionButton(text, hash) {
+    return el('button', { type: 'button', class: 'btn btn-secondary', 'data-owner-jump': hash }, text);
+  }
+
+  function renderOwnerCourses(root, courses) {
+    renderOwnerTable($('[data-owner-course-list]', root), 'Courses', [
+      { label: 'Title', render: function (course) { return course.title; } },
+      { label: 'Type', render: function (course) { return typeLabel(course.courseType); } },
+      { label: 'Mode', render: function (course) { return course.deliveryMode === 'offline' ? 'Offline' : 'Online'; } },
+      { label: 'Schedule', render: function (course) { return dateRange((course.sessions || [])[0]); } },
+      { label: 'Capacity', render: function (course) { return course.capacity || 'Open'; } },
+      { label: 'Status', render: function (course) { return statusPill(course.status); } },
+    ], courses, 'No courses yet.');
+  }
+
+  function renderOwnerAreas(root, areas) {
+    renderOwnerTable($('[data-owner-area-list]', root), 'Covered areas', [
+      { label: 'Name', render: function (area) { return area.name; } },
+      { label: 'City', render: function (area) { return [area.city, area.region, area.country].filter(Boolean).join(', ') || area.country; } },
+      { label: 'Radius', render: function (area) { return area.radiusKm ? area.radiusKm + ' km' : 'Not set'; } },
+      { label: 'Status', render: function (area) { return statusPill(area.active === false ? 'inactive' : 'active'); } },
+    ], areas, 'No covered areas yet.');
+  }
+
+  function renderOwnerUsers(root, state) {
+    var users = (state.users || []).filter(function (user) {
+      var role = ownerUserRole(user);
+      var query = ownerUi.userSearch.toLowerCase();
+      if (ownerUi.userFilter !== 'all' && role !== ownerUi.userFilter) return false;
+      if (!query) return true;
+      return String(user.email || '').toLowerCase().includes(query) ||
+        String(user.name || '').toLowerCase().includes(query) ||
+        String(user.id || '').toLowerCase().includes(query);
+    });
+    $all('[data-owner-user-filter]', root).forEach(function (button) {
+      button.setAttribute('aria-pressed', button.getAttribute('data-owner-user-filter') === ownerUi.userFilter ? 'true' : 'false');
+    });
+    renderOwnerTable($('[data-owner-user-list]', root), 'Students and users', [
+      { label: 'Person', render: function (user) { return user.name || user.email || user.id; } },
+      { label: 'Email', render: function (user) { return user.email || 'No email'; } },
+      { label: 'Status', render: function (user) { return statusPill(ownerUserRole(user)); } },
+      { label: 'Applications', render: function (user) { return String(user.applications || 0); } },
+      { label: 'Journals', render: function (user) { return String(user.journals || 0); } },
+      { label: 'Actions', render: function (user) { return String(user.actionItems || 0); } },
+      { label: 'Open', render: function (user) { return el('button', { type: 'button', class: 'btn btn-secondary', 'data-owner-open-user': user.id }, 'Profile'); } },
+    ], users, 'No registered user activity yet.');
+  }
+
+  function renderOwnerActions(root, items) {
+    renderOwnerTable($('[data-owner-action-list]', root), 'Action items', [
+      { label: 'Status', render: function (item) { return statusPill(item.status); } },
+      { label: 'Title', render: function (item) { return item.title; } },
+      { label: 'User', render: function (item) { return item.userId; } },
+      { label: 'Due', render: function (item) { return item.dueAt ? shortDateTime(item.dueAt) : 'No due date'; } },
+    ], items, 'No action items yet.');
+  }
+
+  function renderOwnerTable(node, caption, columns, items, emptyText) {
     if (!node) return;
     node.innerHTML = '';
     if (!items || !items.length) {
-      node.appendChild(el('p', { class: 'course-muted' }, 'No records yet.'));
+      node.appendChild(el('p', { class: 'course-muted' }, emptyText || 'No records yet.'));
       return;
     }
+    var table = el('table', { class: 'owner-table' });
+    table.appendChild(el('caption', { class: 'sr-only' }, caption));
+    var thead = el('thead');
+    var headRow = el('tr');
+    columns.forEach(function (column) { headRow.appendChild(el('th', { scope: 'col' }, column.label)); });
+    thead.appendChild(headRow);
+    table.appendChild(thead);
+    var tbody = el('tbody');
     items.forEach(function (item) {
-      var row = el('article', { class: 'course-row' });
-      row.appendChild(el('p', null, labeler(item)));
-      node.appendChild(row);
+      var tr = el('tr');
+      columns.forEach(function (column) {
+        var td = el('td', { 'data-label': column.label });
+        var value = column.render(item);
+        if (value instanceof Node) td.appendChild(value);
+        else td.textContent = value == null ? '' : String(value);
+        tr.appendChild(td);
+      });
+      tbody.appendChild(tr);
     });
+    table.appendChild(tbody);
+    node.appendChild(table);
   }
 
   function renderApplications(root, applications) {
     var node = $('[data-owner-application-list]', root);
-    if (!node) return;
-    node.innerHTML = '';
-    if (!applications.length) {
-      node.appendChild(el('p', { class: 'course-muted' }, 'No applications yet.'));
-      return;
-    }
-    applications.forEach(function (app) {
-      var row = el('article', { class: 'course-row' });
-      row.appendChild(statusPill(app.status));
-      row.appendChild(el('h3', null, (app.userEmail || app.userId) + ' - ' + (app.course ? app.course.title : 'Course')));
-      row.appendChild(el('p', null, app.goals || app.notes || app.ownerNote || 'No notes.'));
-      ['approved', 'waitlisted', 'rejected'].forEach(function (status) {
-        row.appendChild(el('button', { type: 'button', class: 'btn btn-secondary', 'data-owner-application': app.id, 'data-status': status }, status));
-      });
-      node.appendChild(row);
-    });
+    renderOwnerTable(node, 'Applications', [
+      { label: 'Applicant', render: function (app) { return app.userName || app.userEmail || app.userId; } },
+      { label: 'Course', render: function (app) { return app.course ? app.course.title : 'Course'; } },
+      { label: 'Status', render: function (app) { return statusPill(app.status); } },
+      { label: 'Notes', render: function (app) { return app.goals || app.notes || app.ownerNote || 'No notes'; } },
+      { label: 'Actions', render: function (app) {
+        var actions = el('div', { class: 'owner-table-actions' });
+        ['approved', 'waitlisted', 'rejected'].forEach(function (status) {
+          actions.appendChild(el('button', { type: 'button', class: 'btn btn-secondary', 'data-owner-application': app.id, 'data-status': status }, status));
+        });
+        return actions;
+      } },
+    ], applications, 'No applications yet.');
   }
 
   function renderPrivateRequests(root, requests) {
     var node = $('[data-owner-private-list]', root);
-    if (!node) return;
-    node.innerHTML = '';
-    if (!requests.length) {
-      node.appendChild(el('p', { class: 'course-muted' }, 'No private requests yet.'));
-      return;
-    }
-    requests.forEach(function (request) {
-      var row = el('article', { class: 'course-row' });
-      row.appendChild(statusPill(request.status));
-      row.appendChild(el('h3', null, (request.userEmail || request.userId) + ' - ' + request.groupSize + ' person private class'));
-      row.appendChild(el('p', null, request.goals || request.preferredDates || request.notes || 'No notes.'));
-      var response = el('input', { name: 'ownerResponse', placeholder: 'Owner response', 'data-private-response': request.id });
-      var start = el('input', { name: 'confirmedStartAt', type: 'datetime-local', 'data-private-start': request.id });
-      var end = el('input', { name: 'confirmedEndAt', type: 'datetime-local', 'data-private-end': request.id });
-      row.appendChild(response);
-      row.appendChild(start);
-      row.appendChild(end);
-      ['proposed', 'confirmed', 'rejected'].forEach(function (status) {
-        row.appendChild(el('button', { type: 'button', class: 'btn btn-secondary', 'data-owner-private': request.id, 'data-status': status }, status));
-      });
-      node.appendChild(row);
-    });
+    renderOwnerTable(node, 'Private requests', [
+      { label: 'Student', render: function (request) { return request.userName || request.userEmail || request.userId; } },
+      { label: 'Group', render: function (request) { return request.groupSize + ' person'; } },
+      { label: 'Mode', render: function (request) { return request.deliveryMode === 'offline' ? 'Offline' : 'Online'; } },
+      { label: 'Status', render: function (request) { return statusPill(request.status); } },
+      { label: 'Request', render: function (request) { return request.goals || request.preferredDates || request.notes || 'No notes'; } },
+      { label: 'Schedule', render: function (request) {
+        var box = el('div', { class: 'owner-inline-fields' });
+        box.appendChild(el('input', { name: 'ownerResponse', placeholder: 'Owner response', 'data-private-response': request.id }));
+        box.appendChild(el('input', { name: 'confirmedStartAt', type: 'datetime-local', 'data-private-start': request.id }));
+        box.appendChild(el('input', { name: 'confirmedEndAt', type: 'datetime-local', 'data-private-end': request.id }));
+        return box;
+      } },
+      { label: 'Actions', render: function (request) {
+        var actions = el('div', { class: 'owner-table-actions' });
+        ['proposed', 'confirmed', 'rejected'].forEach(function (status) {
+          actions.appendChild(el('button', { type: 'button', class: 'btn btn-secondary', 'data-owner-private': request.id, 'data-status': status }, status));
+        });
+        return actions;
+      } },
+    ], requests, 'No private requests yet.');
   }
 
   function renderJournalReview(root, entries) {
     var node = $('[data-owner-journal-list]', root);
+    renderOwnerTable(node, 'Journal review', [
+      { label: 'Student', render: function (entry) { return entry.userName || entry.userEmail || entry.userId; } },
+      { label: 'Date', render: function (entry) { return new Date(entry.createdAt).toLocaleDateString(); } },
+      { label: 'Entry', render: function (entry) { return entry.body; } },
+      { label: 'Review', render: function (entry) {
+        var box = el('div', { class: 'owner-inline-fields' });
+        box.appendChild(el('input', { placeholder: 'Selected sentence', 'data-comment-selected': entry.id }));
+        box.appendChild(el('textarea', { placeholder: 'Owner comment', 'data-comment-body': entry.id }));
+        return box;
+      } },
+      { label: 'Actions', render: function (entry) {
+        var actions = el('div', { class: 'owner-table-actions' });
+        actions.appendChild(el('button', { type: 'button', class: 'btn btn-secondary', 'data-owner-comment': entry.id }, 'Comment'));
+        actions.appendChild(el('button', { type: 'button', class: 'btn btn-secondary', 'data-owner-action-from-entry': entry.id, 'data-user-id': entry.userId }, 'Create action'));
+        return actions;
+      } },
+    ], entries, 'No journal entries yet.');
+  }
+
+  function renderStudentProfile(root, userId, state) {
+    var node = $('[data-owner-student-profile]', root);
     if (!node) return;
-    node.innerHTML = '';
-    if (!entries.length) {
-      node.appendChild(el('p', { class: 'course-muted' }, 'No journal entries yet.'));
+    if (!userId) {
+      node.hidden = true;
+      node.innerHTML = '';
       return;
     }
-    entries.forEach(function (entry) {
-      var row = el('article', { class: 'course-row course-row--journal' });
-      row.appendChild(el('h3', null, (entry.userEmail || entry.userId) + ' - ' + new Date(entry.createdAt).toLocaleDateString()));
-      row.appendChild(el('p', null, entry.body));
-      var selected = el('input', { placeholder: 'Selected sentence', 'data-comment-selected': entry.id });
-      var comment = el('textarea', { placeholder: 'Owner comment', 'data-comment-body': entry.id });
-      row.appendChild(selected);
-      row.appendChild(comment);
-      row.appendChild(el('button', { type: 'button', class: 'btn btn-secondary', 'data-owner-comment': entry.id }, 'Comment'));
-      row.appendChild(el('button', { type: 'button', class: 'btn btn-secondary', 'data-owner-action-from-entry': entry.id, 'data-user-id': entry.userId }, 'Create action item'));
-      node.appendChild(row);
-    });
+    var user = (state.users || []).find(function (item) { return item.id === userId; });
+    if (!user) {
+      node.hidden = true;
+      node.innerHTML = '';
+      return;
+    }
+    var apps = (state.applications || []).filter(function (item) { return item.userId === userId; });
+    var requests = (state.privateRequests || []).filter(function (item) { return item.userId === userId; });
+    var journals = (state.entries || []).filter(function (item) { return item.userId === userId; });
+    var actions = (state.actionItems || []).filter(function (item) { return item.userId === userId; });
+    node.hidden = false;
+    node.innerHTML = '';
+    node.appendChild(el('h3', null, user.name || user.email || user.id));
+    node.appendChild(el('p', { class: 'course-muted' }, (user.email || 'No email') + ' · ' + ownerUserRole(user)));
+    var stats = el('div', { class: 'owner-student-profile__stats' });
+    stats.appendChild(el('span', null, apps.length + ' applications'));
+    stats.appendChild(el('span', null, requests.length + ' private requests'));
+    stats.appendChild(el('span', null, journals.length + ' journals'));
+    stats.appendChild(el('span', null, actions.length + ' action items'));
+    node.appendChild(stats);
+    var recent = el('div', { class: 'owner-student-profile__recent' });
+    recent.appendChild(el('strong', null, 'Recent activity'));
+    recent.appendChild(el('p', null, journals[0] ? journals[0].body : 'No journal entries yet.'));
+    node.appendChild(recent);
+  }
+
+  function ownerUserRole(user) {
+    if (user.role) return user.role;
+    if (user.approvedApplications || user.confirmedPrivateRequests) return 'student';
+    if (user.applications || user.privateRequests) return 'applicant';
+    return 'user';
+  }
+
+  function calendarDays(anchor, view) {
+    if (view === 'day') return [startOfDay(anchor)];
+    if (view === 'week') {
+      var weekStart = startOfWeek(anchor);
+      return Array.from({ length: 7 }, function (_, index) { return addDays(weekStart, index); });
+    }
+    var start = startOfWeek(new Date(anchor.getFullYear(), anchor.getMonth(), 1));
+    return Array.from({ length: 42 }, function (_, index) { return addDays(start, index); });
+  }
+
+  function calendarRangeLabel(anchor, view) {
+    if (view === 'day') return anchor.toLocaleDateString(undefined, { month: 'long', day: 'numeric', year: 'numeric' });
+    if (view === 'week') {
+      var start = startOfWeek(anchor);
+      var end = addDays(start, 6);
+      return start.toLocaleDateString(undefined, { month: 'short', day: 'numeric' }) + ' - ' + end.toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' });
+    }
+    if (view === 'list') return 'Agenda';
+    return anchor.toLocaleDateString(undefined, { month: 'long', year: 'numeric' });
+  }
+
+  function startOfDay(date) {
+    return new Date(date.getFullYear(), date.getMonth(), date.getDate());
+  }
+
+  function startOfWeek(date) {
+    var day = date.getDay();
+    return addDays(startOfDay(date), -day);
+  }
+
+  function addDays(date, days) {
+    return new Date(date.getFullYear(), date.getMonth(), date.getDate() + days);
+  }
+
+  function addMonths(date, months) {
+    return new Date(date.getFullYear(), date.getMonth() + months, 1);
+  }
+
+  function dateKey(date) {
+    return [date.getFullYear(), String(date.getMonth() + 1).padStart(2, '0'), String(date.getDate()).padStart(2, '0')].join('-');
+  }
+
+  function sameMonth(a, b) {
+    return a.getFullYear() === b.getFullYear() && a.getMonth() === b.getMonth();
+  }
+
+  function eventClass(type) {
+    return String(type || 'event').replace(/_/g, '-');
+  }
+
+  function eventTime(event) {
+    if (!event.startAt) return '';
+    return new Date(event.startAt).toLocaleTimeString(undefined, { hour: 'numeric', minute: '2-digit' });
+  }
+
+  function shortDateTime(value) {
+    if (!value) return '';
+    var date = new Date(value);
+    return date.toLocaleDateString(undefined, { month: 'short', day: 'numeric' }) + ' ' + date.toLocaleTimeString(undefined, { hour: 'numeric', minute: '2-digit' });
+  }
+
+  function sourceLabel(event) {
+    if (event.sourceType === 'course_session') return 'Course session';
+    if (event.sourceType === 'private_request') return 'Private class';
+    if (event.sourceType === 'owner_availability') return 'Owner availability';
+    if (event.sourceType === 'owner_blocked_time') return 'Unavailable time';
+    return event.eventType || 'Calendar item';
   }
 
   function loadOwner(root) {
-    var state = { owner: false, courses: [], coveredAreas: [], applications: [], privateRequests: [], events: [], users: [], entries: [], actionItems: [] };
+    var state = { owner: false, courses: [], coveredAreas: [], applications: [], privateRequests: [], events: [], users: [], entries: [], actionItems: [], google: {} };
     return loadSession()
       .then(function (user) {
         if (!user) {
@@ -488,6 +809,7 @@
         state.applications = parts[1].applications || [];
         state.privateRequests = parts[2].privateRequests || [];
         state.events = parts[3].events || [];
+        state.google = parts[3].google || {};
         state.users = parts[4].users || [];
         state.entries = parts[5].entries || [];
         state.actionItems = parts[6].actionItems || [];
@@ -504,6 +826,14 @@
     if (!value) return '';
     var date = new Date(value);
     return Number.isNaN(date.getTime()) ? '' : date.toISOString();
+  }
+
+  function localInputDateTime(value) {
+    if (!value) return '';
+    var date = new Date(value);
+    if (Number.isNaN(date.getTime())) return '';
+    var pad = function (num) { return String(num).padStart(2, '0'); };
+    return date.getFullYear() + '-' + pad(date.getMonth() + 1) + '-' + pad(date.getDate()) + 'T' + pad(date.getHours()) + ':' + pad(date.getMinutes());
   }
 
   function ownerCoursePayload(form) {
@@ -534,6 +864,7 @@
   }
 
   function initOwnerDashboard(root) {
+    initOwnerSidebar(root);
     var areaForm = $('[data-owner-area-form]', root);
     if (areaForm) {
       areaForm.addEventListener('submit', function (evt) {
@@ -552,16 +883,22 @@
           .catch(function (err) { setDashboardMessage(root, err.message || 'Could not save course.', 'error'); });
       });
     }
-    var blockForm = $('[data-owner-block-form]', root);
-    if (blockForm) {
-      blockForm.addEventListener('submit', function (evt) {
+    var calendarForm = $('[data-owner-calendar-form]', root) || $('[data-owner-block-form]', root);
+    if (calendarForm) {
+      calendarForm.addEventListener('submit', function (evt) {
         evt.preventDefault();
-        var data = formJson(blockForm);
+        var data = formJson(calendarForm);
+        if (data.eventType === 'confirmed_private_class') {
+          data.userId = data.userEmail || 'owner-created-private-student';
+          data.userName = data.userEmail || 'Private student';
+          data.groupSize = data.capacity || 1;
+        }
+        if (data.eventType === 'group_course_session') data.courseType = 'regular_group_course';
         data.startAt = isoFromLocal(data.startAt);
         data.endAt = isoFromLocal(data.endAt);
         jsonFetch('/api/owner/calendar/', { method: 'POST', body: JSON.stringify(data) })
-          .then(function () { blockForm.reset(); setDashboardMessage(root, 'Blocked time saved.', 'success'); return loadOwner(root); })
-          .catch(function (err) { setDashboardMessage(root, err.message || 'Could not save blocked time.', 'error'); });
+          .then(function () { calendarForm.reset(); setDashboardMessage(root, 'Calendar item saved.', 'success'); return loadOwner(root); })
+          .catch(function (err) { setDashboardMessage(root, err.message || 'Could not save calendar item.', 'error'); });
       });
     }
     var actionForm = $('[data-owner-action-form]', root);
@@ -574,6 +911,116 @@
       });
     }
     root.addEventListener('click', function (evt) {
+      var nav = evt.target.closest('[data-owner-nav-link]');
+      if (nav) {
+        evt.preventDefault();
+        closeOwnerSidebar(root, true);
+        var target = $(nav.getAttribute('href'), root);
+        if (target) {
+          target.scrollIntoView({ behavior: 'smooth', block: 'start' });
+          target.focus({ preventScroll: true });
+          setOwnerActiveNav(root, nav.getAttribute('href'));
+          if (history.pushState) history.pushState(null, '', nav.getAttribute('href'));
+        }
+        return;
+      }
+      if (evt.target.closest('[data-owner-sidebar-toggle]')) {
+        evt.preventDefault();
+        setOwnerSidebar(root, true);
+        return;
+      }
+      if (evt.target.closest('[data-owner-sidebar-close]') || evt.target.closest('[data-owner-sidebar-backdrop]')) {
+        evt.preventDefault();
+        closeOwnerSidebar(root, true);
+        return;
+      }
+      var jump = evt.target.closest('[data-owner-jump]');
+      if (jump) {
+        var hash = jump.getAttribute('data-owner-jump');
+        var section = $(hash, root);
+        if (section) {
+          section.scrollIntoView({ behavior: 'smooth', block: 'start' });
+          setOwnerActiveNav(root, hash);
+          if (history.pushState) history.pushState(null, '', hash);
+        }
+        return;
+      }
+      var viewButton = evt.target.closest('[data-owner-calendar-view]');
+      if (viewButton) {
+        ownerUi.calendarView = viewButton.getAttribute('data-owner-calendar-view') || 'month';
+        renderOwnerCalendar(root, root.__ownerState || { events: [] });
+        return;
+      }
+      if (evt.target.closest('[data-owner-calendar-today]')) {
+        ownerUi.calendarDate = new Date();
+        renderOwnerCalendar(root, root.__ownerState || { events: [] });
+        return;
+      }
+      if (evt.target.closest('[data-owner-calendar-prev]') || evt.target.closest('[data-owner-calendar-next]')) {
+        var direction = evt.target.closest('[data-owner-calendar-prev]') ? -1 : 1;
+        if (ownerUi.calendarView === 'month') ownerUi.calendarDate = addMonths(ownerUi.calendarDate, direction);
+        else ownerUi.calendarDate = addDays(ownerUi.calendarDate, ownerUi.calendarView === 'day' ? direction : direction * 7);
+        renderOwnerCalendar(root, root.__ownerState || { events: [] });
+        return;
+      }
+      var eventButton = evt.target.closest('[data-owner-calendar-event]');
+      if (eventButton) {
+        ownerUi.selectedEventId = eventButton.getAttribute('data-owner-calendar-event');
+        renderEventDetail(root, ownerUi.selectedEventId, root.__ownerState || { events: [] });
+        return;
+      }
+      var filterButton = evt.target.closest('[data-owner-user-filter]');
+      if (filterButton) {
+        ownerUi.userFilter = filterButton.getAttribute('data-owner-user-filter') || 'all';
+        renderOwnerUsers(root, root.__ownerState || { users: [] });
+        return;
+      }
+      var openUser = evt.target.closest('[data-owner-open-user]');
+      if (openUser) {
+        ownerUi.selectedUserId = openUser.getAttribute('data-owner-open-user');
+        renderStudentProfile(root, ownerUi.selectedUserId, root.__ownerState || {});
+        var profile = $('[data-owner-student-profile]', root);
+        if (profile) profile.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+        return;
+      }
+      var connectCalendar = evt.target.closest('[data-google-calendar-connect]');
+      if (connectCalendar) {
+        jsonFetch('/api/owner/google-calendar/connect/', {
+          method: 'POST',
+          body: JSON.stringify({ returnTo: '/owner/#calendar' }),
+        }).then(function (json) {
+          if (json.authUrl) window.location.href = json.authUrl;
+        }).catch(function (err) {
+          setDashboardMessage(root, err.message || 'Could not connect Google Calendar.', 'error');
+        });
+        return;
+      }
+      var syncCalendar = evt.target.closest('[data-google-calendar-sync]');
+      if (syncCalendar) {
+        syncCalendar.disabled = true;
+        jsonFetch('/api/owner/google-calendar/sync/', { method: 'POST', body: JSON.stringify({}) })
+          .then(function (json) {
+            setDashboardMessage(root, 'Google Calendar synced: ' + (json.pushed || 0) + ' pushed, ' + (json.imported || 0) + ' imported.', 'success');
+            return loadOwner(root);
+          })
+          .catch(function (err) { setDashboardMessage(root, err.message || 'Could not sync Google Calendar.', 'error'); })
+          .finally(function () { syncCalendar.disabled = false; });
+        return;
+      }
+      var deleteEvent = evt.target.closest('[data-owner-event-delete]');
+      if (deleteEvent) {
+        jsonFetch('/api/owner/calendar/', {
+          method: 'DELETE',
+          body: JSON.stringify({ id: deleteEvent.getAttribute('data-owner-event-delete') }),
+        }).then(function () {
+          ownerUi.selectedEventId = '';
+          setDashboardMessage(root, 'Calendar event deleted.', 'success');
+          return loadOwner(root);
+        }).catch(function (err) {
+          setDashboardMessage(root, err.message || 'Could not delete calendar event.', 'error');
+        });
+        return;
+      }
       var app = evt.target.closest('[data-owner-application]');
       if (app) {
         jsonFetch('/api/owner/applications/', {
@@ -624,11 +1071,72 @@
           .catch(function (err) { setDashboardMessage(root, err.message || 'Could not create action item.', 'error'); });
       }
     });
+    root.addEventListener('submit', function (evt) {
+      var editForm = evt.target.closest('[data-owner-event-edit]');
+      if (!editForm) return;
+      evt.preventDefault();
+      var data = formJson(editForm);
+      data.id = editForm.getAttribute('data-owner-event-edit');
+      data.startAt = isoFromLocal(data.startAt);
+      data.endAt = isoFromLocal(data.endAt);
+      jsonFetch('/api/owner/calendar/', { method: 'PUT', body: JSON.stringify(data) })
+        .then(function (json) {
+          ownerUi.selectedEventId = json.event && json.event.id ? json.event.id : ownerUi.selectedEventId;
+          setDashboardMessage(root, 'Calendar event saved.', 'success');
+          return loadOwner(root);
+        })
+        .catch(function (err) { setDashboardMessage(root, err.message || 'Could not save calendar event.', 'error'); });
+    });
+    var userSearch = $('[data-owner-user-search]', root);
+    if (userSearch) {
+      userSearch.addEventListener('input', function () {
+        ownerUi.userSearch = userSearch.value || '';
+        renderOwnerUsers(root, root.__ownerState || { users: [] });
+      });
+    }
+    root.addEventListener('keydown', function (evt) {
+      if (evt.key === 'Escape') closeOwnerSidebar(root, true);
+    });
     window.addEventListener('iyogau:auth-state-changed', function (evt) {
       if (evt.detail && evt.detail.reason === 'loading') return;
       loadOwner(root);
     });
     loadOwner(root);
+  }
+
+  function initOwnerSidebar(root) {
+    closeOwnerSidebar(root, false);
+    setOwnerActiveNav(root, window.location.hash || '#calendar');
+  }
+
+  function setOwnerSidebar(root, open) {
+    var sidebar = $('[data-owner-sidebar]', root);
+    var toggle = $('[data-owner-sidebar-toggle]', root);
+    var backdrop = $('[data-owner-sidebar-backdrop]', root);
+    if (!sidebar || !toggle) return;
+    sidebar.classList.toggle('is-open', open);
+    sidebar.setAttribute('aria-hidden', open ? 'false' : 'true');
+    toggle.setAttribute('aria-expanded', open ? 'true' : 'false');
+    if (backdrop) backdrop.hidden = !open;
+    $all('a, button', sidebar).forEach(function (control) {
+      control.tabIndex = open ? 0 : -1;
+    });
+  }
+
+  function closeOwnerSidebar(root, focusToggle) {
+    setOwnerSidebar(root, false);
+    if (focusToggle) {
+      var toggle = $('[data-owner-sidebar-toggle]', root);
+      if (toggle) toggle.focus();
+    }
+  }
+
+  function setOwnerActiveNav(root, href) {
+    $all('[data-owner-nav-link]', root).forEach(function (link) {
+      var active = link.getAttribute('href') === href;
+      if (active) link.setAttribute('aria-current', 'page');
+      else link.removeAttribute('aria-current');
+    });
   }
 
   function ready(fn) {

@@ -21,6 +21,8 @@ const COLLECTIONS = [
   'applications',
   'privateRequests',
   'ownerBlockedTimes',
+  'ownerAvailabilityTimes',
+  'calendarIntegrations',
   'journalEntries',
   'journalComments',
   'actionItems',
