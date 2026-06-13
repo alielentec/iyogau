@@ -12,6 +12,7 @@ const MINUTE_LIMIT = 5;
 const DAY_LIMIT = 20;
 // Cap the Map size so a flood of unique IPs cannot OOM the instance.
 const MAX_TRACKED_IPS = 10_000;
+const LOCALHOST_ORIGIN_RE = /^http:\/\/(localhost|127\.0\.0\.1)(:\d+)?$/i;
 
 const buckets = new Map();
 
@@ -73,6 +74,29 @@ export function checkRateLimit(ip) {
     minuteLimit: MINUTE_LIMIT, minuteRemaining: MINUTE_LIMIT - b.minuteCount,
     dayLimit: DAY_LIMIT, dayRemaining: DAY_LIMIT - b.dayCount,
   };
+}
+
+function isProdLikeEnv() {
+  const v = process.env.VERCEL_ENV;
+  if (v) return v === 'production' || v === 'preview';
+  return process.env.NODE_ENV === 'production';
+}
+
+function isLoopbackIp(ip) {
+  if (!ip || typeof ip !== 'string') return false;
+  const clean = ip.split('%')[0].trim().toLowerCase();
+  return clean === '127.0.0.1' ||
+    clean === '::1' ||
+    clean === '0:0:0:0:0:0:0:1' ||
+    clean === '::ffff:127.0.0.1';
+}
+
+export function shouldBypassLocalRateLimit(ip, origin, secFetchSite) {
+  if (isProdLikeEnv()) return false;
+  if (!isLoopbackIp(ip)) return false;
+  return secFetchSite === 'same-origin' ||
+    !origin ||
+    LOCALHOST_ORIGIN_RE.test(origin);
 }
 
 // Anonymize IPv4 by zeroing the last octet; IPv6 by keeping the first 48 bits

@@ -2,12 +2,14 @@
 // All validation errors throw a ValidationError, which the handler turns
 // into a 400 response with a descriptive message.
 
+import { DEFAULT_AYANAMSA, SUPPORTED_AYANAMSAS, isSupportedAyanamsa } from './ayanamsa.js';
+
 export class ValidationError extends Error {
   constructor(message) { super(message); this.name = 'ValidationError'; }
 }
 
 const DATE_RE = /^\d{4}-\d{2}-\d{2}$/;
-const TIME_RE = /^([01]\d|2[0-3]):[0-5]\d$/;
+const TIME_RE = /^([01]\d|2[0-3]):[0-5]\d(?::[0-5]\d)?$/;
 // Fixed UTC offset format: ±H:MM or ±HH:MM (e.g. "+05:30", "-08:00", "+9:00").
 // When tz matches this, we use the offset directly and ignore any IANA DST
 // rules — the user has told us exactly how many minutes ahead of (or behind)
@@ -78,12 +80,12 @@ function parseOffsetMinutes(tz) {
 // Fixed-offset path: single subtraction, no iteration needed, no DST risk.
 export function localToUTC(dateStr, timeStr, tz) {
   const [y, mo, d] = dateStr.split('-').map(Number);
-  const [hh, mm] = timeStr.split(':').map(Number);
+  const [hh, mm, ss = 0] = timeStr.split(':').map(Number);
   const fixedOffset = parseOffsetMinutes(tz);
   if (fixedOffset !== null) {
-    return new Date(Date.UTC(y, mo - 1, d, hh, mm, 0) - fixedOffset * 60_000);
+    return new Date(Date.UTC(y, mo - 1, d, hh, mm, ss) - fixedOffset * 60_000);
   }
-  const wallUtc = Date.UTC(y, mo - 1, d, hh, mm, 0);
+  const wallUtc = Date.UTC(y, mo - 1, d, hh, mm, ss);
   // First guess: treat input as if it were UTC.
   let utcGuess = wallUtc;
   for (let i = 0; i < 2; i++) {
@@ -196,7 +198,7 @@ export function validateInput(body) {
     timeFinal = '12:00';
   } else {
     if (typeof time !== 'string' || !TIME_RE.test(time)) {
-      throw new ValidationError('`time` must be a string in HH:MM 24-hour format, or set `unknownTime: true`.');
+      throw new ValidationError('`time` must be a string in HH:MM or HH:MM:SS 24-hour format, or set `unknownTime: true`.');
     }
   }
 
@@ -233,16 +235,16 @@ export function validateInput(body) {
 
   let ayanamsaFinal;
   if (traditionFinal === 'sidereal') {
-    ayanamsaFinal = ayanamsa === undefined ? 'lahiri' : ayanamsa;
-    if (ayanamsaFinal !== 'lahiri') {
-      throw new ValidationError('`ayanamsa` must be "lahiri" (the only supported value in v1).');
+    ayanamsaFinal = ayanamsa === undefined ? DEFAULT_AYANAMSA : ayanamsa;
+    if (!isSupportedAyanamsa(ayanamsaFinal)) {
+      throw new ValidationError(`\`ayanamsa\` must be one of: ${SUPPORTED_AYANAMSAS.map((a) => `"${a}"`).join(', ')}.`);
     }
   } else {
     // tropical — ayanamsa is meaningless. Reject explicit values rather
     // than silently dropping them; the user almost certainly intended to
-    // request sidereal Lahiri.
+    // request a supported sidereal ayanamsa.
     if (ayanamsa !== undefined) {
-      throw new ValidationError('`ayanamsa` is not valid for tropical tradition. Omit `ayanamsa` for tropical, or set `tradition: "sidereal"` to use Lahiri.');
+      throw new ValidationError('`ayanamsa` is not valid for tropical tradition. Omit `ayanamsa` for tropical, or set `tradition: "sidereal"` to use a supported sidereal ayanamsa.');
     }
     ayanamsaFinal = null;
   }
