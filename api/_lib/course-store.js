@@ -1,6 +1,7 @@
 import fs from 'node:fs/promises';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
+import crypto from 'node:crypto';
 
 import { HttpError } from './api-utils.js';
 import { isProdLikeEnv } from './runtime-env.js';
@@ -9,6 +10,9 @@ const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const ROOT = path.resolve(__dirname, '../..');
 const LOCAL_STORE_PATH = path.join(ROOT, '.data', 'course-store.json');
 const STORE_KEY = 'iyogau:courses:v1';
+const LOCK_KEY = `${STORE_KEY}:lock`;
+const LOCK_TTL_MS = 8000;
+const LOCK_ATTEMPTS = 8;
 
 const COLLECTIONS = [
   'coveredAreas',
@@ -21,6 +25,8 @@ const COLLECTIONS = [
   'journalComments',
   'actionItems',
 ];
+
+let localMutationQueue = Promise.resolve();
 
 export function emptyCourseState() {
   return COLLECTIONS.reduce((acc, key) => {
@@ -77,7 +83,7 @@ export async function loadCourseState() {
     try {
       return normalizeState(JSON.parse(raw));
     } catch {
-      return emptyCourseState();
+      throw new HttpError(500, 'Course storage data is invalid; refusing to overwrite it.');
     }
   }
   try {
@@ -99,6 +105,55 @@ export async function saveCourseState(state) {
   await fs.mkdir(path.dirname(LOCAL_STORE_PATH), { recursive: true });
   await fs.writeFile(LOCAL_STORE_PATH, JSON.stringify(safeState, null, 2));
   return safeState;
+}
+
+export async function mutateCourseState(mutator) {
+  if (typeof mutator !== 'function') throw new TypeError('mutator must be a function');
+  if (upstashConfigured()) return mutateCourseStateWithLock(mutator);
+
+  const run = localMutationQueue.then(async () => {
+    const state = await loadCourseState();
+    const result = await mutator(state);
+    await saveCourseState(state);
+    return result;
+  });
+  localMutationQueue = run.catch(() => {});
+  return run;
+}
+
+async function mutateCourseStateWithLock(mutator) {
+  const token = await acquireCourseLock();
+  try {
+    const state = await loadCourseState();
+    const result = await mutator(state);
+    await saveCourseState(state);
+    return result;
+  } finally {
+    await releaseCourseLock(token);
+  }
+}
+
+async function acquireCourseLock() {
+  const token = crypto.randomUUID();
+  for (let attempt = 0; attempt < LOCK_ATTEMPTS; attempt += 1) {
+    const result = await upstashCommand(['SET', LOCK_KEY, token, 'NX', 'PX', LOCK_TTL_MS]);
+    if (result === 'OK') return token;
+    await delay(50 * (attempt + 1));
+  }
+  throw new HttpError(409, 'Course data is busy. Try again shortly.');
+}
+
+async function releaseCourseLock(token) {
+  try {
+    const current = await upstashCommand(['GET', LOCK_KEY]);
+    if (current === token) await upstashCommand(['DEL', LOCK_KEY]);
+  } catch {
+    // Lock expiry prevents permanent deadlock if release fails.
+  }
+}
+
+function delay(ms) {
+  return new Promise((resolve) => setTimeout(resolve, ms));
 }
 
 export function sortByUpdatedAt(items) {

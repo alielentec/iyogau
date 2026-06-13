@@ -2,6 +2,7 @@ import { HttpError } from './api-utils.js';
 import { getSession } from './auth-session.js';
 
 const DEFAULT_OWNER_EMAIL = 'ali.elentec@gmail.com';
+const DEFAULT_OWNER_EMAIL_PROVIDERS = ['google', 'apple'];
 
 export function ownerEmails() {
   const raw = process.env.IYOGAU_OWNER_EMAILS || DEFAULT_OWNER_EMAIL;
@@ -11,9 +12,38 @@ export function ownerEmails() {
     .filter(Boolean);
 }
 
+export function ownerSubjects() {
+  const raw = process.env.IYOGAU_OWNER_SUBJECTS || '';
+  return raw
+    .split(',')
+    .map((subject) => subject.trim())
+    .filter(Boolean);
+}
+
+export function trustedOwnerEmailProviders() {
+  const raw = process.env.IYOGAU_OWNER_EMAIL_PROVIDERS || DEFAULT_OWNER_EMAIL_PROVIDERS.join(',');
+  return raw
+    .split(',')
+    .map((provider) => provider.trim().toLowerCase())
+    .filter((provider) => provider && provider !== 'password');
+}
+
 export function isOwnerUser(user) {
   const email = String(user?.email || '').trim().toLowerCase();
-  return Boolean(email && ownerEmails().includes(email));
+  const provider = String(user?.provider || '').trim().toLowerCase();
+  const id = String(user?.id || user?.sub || '').trim();
+  if (!provider || !id) return false;
+
+  const subjects = ownerSubjects();
+  if (subjects.length) {
+    return subjects.includes(id) || subjects.includes(`${provider}:${id}`);
+  }
+
+  return Boolean(
+    email &&
+    ownerEmails().includes(email) &&
+    trustedOwnerEmailProviders().includes(provider),
+  );
 }
 
 export function requireSession(req) {

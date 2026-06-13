@@ -3,6 +3,8 @@ import test from 'node:test';
 
 import { HttpError } from './api-utils.js';
 import {
+  assertCourseCapacityCanChange,
+  assertCoveredAreaCanChange,
   calendarEvents,
   normalizeActionItem,
   normalizeApplicationInput,
@@ -11,6 +13,8 @@ import {
   normalizeJournalComment,
   normalizeJournalEntry,
   normalizePrivateRequestInput,
+  publicCoveredArea,
+  publicCourse,
   updateApplicationStatus,
   updatePrivateRequest,
   updateStudentActionItem,
@@ -98,6 +102,79 @@ test('course applications waitlist when approved capacity is already full', () =
   const application = normalizeApplicationInput({ courseId: course.id }, state, user);
   assert.equal(application.status, 'waitlisted');
   assert.equal(application.userId, user.id);
+});
+
+test('public course payload redacts owner-only meeting data', () => {
+  const state = stateWithArea();
+  state.coveredAreas[0].notes = 'Owner-only meeting instructions';
+  state.coveredAreas[0].createdAt = '2026-01-01T00:00:00.000Z';
+  const course = normalizeCourse({
+    courseType: 'regular_group_course',
+    deliveryMode: 'offline',
+    coveredAreaId: state.coveredAreas[0].id,
+    title: 'Offline course',
+    description: 'A course',
+    status: 'published',
+  }, state, owner.id);
+  const withArea = { ...course, onlineUrl: 'https://example.com/private-meeting', coveredArea: state.coveredAreas[0] };
+  const exposed = publicCourse(withArea);
+  assert.equal(exposed.onlineUrl, undefined);
+  assert.equal(exposed.createdBy, undefined);
+  assert.equal(exposed.coveredArea.notes, undefined);
+  assert.equal(exposed.coveredArea.createdAt, undefined);
+  assert.equal(exposed.coveredArea.name, 'California Bay Area');
+  assert.deepEqual(publicCoveredArea(state.coveredAreas[0]), exposed.coveredArea);
+});
+
+test('course capacity cannot be reduced below existing approved applications', () => {
+  const state = stateWithArea();
+  const course = normalizeCourse({
+    courseType: 'regular_group_course',
+    deliveryMode: 'online',
+    title: 'Online course',
+    description: 'A course',
+    capacity: 1,
+    status: 'published',
+  }, state, owner.id);
+  state.courses.push(course);
+  state.applications.push(
+    { id: 'app-1', courseId: course.id, userId: 'u1', status: 'approved' },
+    { id: 'app-2', courseId: course.id, userId: 'u2', status: 'approved' },
+  );
+  assert.throws(
+    () => assertCourseCapacityCanChange(state, { ...course, capacity: 1 }),
+    /capacity cannot be lower/,
+  );
+  assert.doesNotThrow(() => assertCourseCapacityCanChange(state, { ...course, capacity: 2 }));
+});
+
+test('covered areas cannot be deactivated while active offline records depend on them', () => {
+  const state = stateWithArea();
+  const area = state.coveredAreas[0];
+  const course = normalizeCourse({
+    courseType: 'regular_group_course',
+    deliveryMode: 'offline',
+    title: 'Offline course',
+    description: 'A course',
+    coveredAreaId: area.id,
+    status: 'published',
+  }, state, owner.id);
+  state.courses.push(course);
+  assert.throws(
+    () => assertCoveredAreaCanChange(state, { ...area, active: false }),
+    /active offline course/,
+  );
+  state.courses[0] = { ...course, status: 'archived' };
+  state.privateRequests.push(normalizePrivateRequestInput({
+    deliveryMode: 'offline',
+    coveredAreaId: area.id,
+    groupSize: 1,
+    goals: 'Practice',
+  }, state, user));
+  assert.throws(
+    () => assertCoveredAreaCanChange(state, { ...area, active: false }),
+    /active private request/,
+  );
 });
 
 test('student action item updates are isolated by user id', () => {

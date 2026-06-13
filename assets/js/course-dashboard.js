@@ -459,30 +459,45 @@
 
   function loadOwner(root) {
     var state = { owner: false, courses: [], coveredAreas: [], applications: [], privateRequests: [], events: [], users: [], entries: [], actionItems: [] };
-    return Promise.all([
-      jsonFetch('/api/owner/courses/'),
-      jsonFetch('/api/owner/applications/'),
-      jsonFetch('/api/owner/private-requests/'),
-      jsonFetch('/api/owner/calendar/'),
-      jsonFetch('/api/owner/users/'),
-      jsonFetch('/api/owner/journal-comments/'),
-      jsonFetch('/api/owner/action-items/'),
-    ]).then(function (parts) {
-      state.owner = true;
-      state.courses = parts[0].courses || [];
-      state.coveredAreas = parts[0].coveredAreas || [];
-      state.applications = parts[1].applications || [];
-      state.privateRequests = parts[2].privateRequests || [];
-      state.events = parts[3].events || [];
-      state.users = parts[4].users || [];
-      state.entries = parts[5].entries || [];
-      state.actionItems = parts[6].actionItems || [];
-      renderOwner(root, state);
-    }).catch(function (err) {
-      state.owner = false;
-      renderOwner(root, state);
-      setDashboardMessage(root, err.status === 403 ? 'Owner access is required for this dashboard.' : (err.message || 'Could not load owner dashboard.'), 'error');
-    });
+    return loadSession()
+      .then(function (user) {
+        if (!user) {
+          renderOwner(root, state);
+          setDashboardMessage(root, 'Sign in with the owner account to manage courses.', null);
+          return null;
+        }
+        return jsonFetch('/api/owner/courses/');
+      })
+      .then(function (ownerGate) {
+        if (!ownerGate) return null;
+        return Promise.all([
+          Promise.resolve(ownerGate),
+          jsonFetch('/api/owner/applications/'),
+          jsonFetch('/api/owner/private-requests/'),
+          jsonFetch('/api/owner/calendar/'),
+          jsonFetch('/api/owner/users/'),
+          jsonFetch('/api/owner/journal-comments/'),
+          jsonFetch('/api/owner/action-items/'),
+        ]);
+      })
+      .then(function (parts) {
+        if (!parts) return;
+        state.owner = true;
+        state.courses = parts[0].courses || [];
+        state.coveredAreas = parts[0].coveredAreas || [];
+        state.applications = parts[1].applications || [];
+        state.privateRequests = parts[2].privateRequests || [];
+        state.events = parts[3].events || [];
+        state.users = parts[4].users || [];
+        state.entries = parts[5].entries || [];
+        state.actionItems = parts[6].actionItems || [];
+        renderOwner(root, state);
+      })
+      .catch(function (err) {
+        state.owner = false;
+        renderOwner(root, state);
+        setDashboardMessage(root, err.status === 403 ? 'Owner access is required for this dashboard.' : (err.message || 'Could not load owner dashboard.'), 'error');
+      });
   }
 
   function isoFromLocal(value) {
@@ -609,7 +624,10 @@
           .catch(function (err) { setDashboardMessage(root, err.message || 'Could not create action item.', 'error'); });
       }
     });
-    window.addEventListener('iyogau:auth-state-changed', function () { loadOwner(root); });
+    window.addEventListener('iyogau:auth-state-changed', function (evt) {
+      if (evt.detail && evt.detail.reason === 'loading') return;
+      loadOwner(root);
+    });
     loadOwner(root);
   }
 

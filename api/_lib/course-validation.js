@@ -177,10 +177,55 @@ export function courseWithSessions(state, course) {
   };
 }
 
+export function publicCoveredArea(area) {
+  if (!area) return null;
+  return {
+    id: area.id,
+    name: area.name,
+    country: area.country,
+    region: area.region,
+    city: area.city,
+    radiusKm: area.radiusKm,
+    active: area.active !== false,
+  };
+}
+
 export function publicCourse(course) {
   const out = { ...course };
   delete out.createdBy;
+  delete out.onlineUrl;
+  if (out.coveredArea) out.coveredArea = publicCoveredArea(out.coveredArea);
   return out;
+}
+
+export function assertCourseCapacityCanChange(state, course) {
+  if (!course.capacity) return;
+  const approvedCount = state.applications.filter((item) => (
+    item.courseId === course.id && item.status === 'approved'
+  )).length;
+  if (approvedCount > course.capacity) {
+    throw new HttpError(409, 'Course capacity cannot be lower than existing approved applications.');
+  }
+}
+
+export function assertCoveredAreaCanChange(state, area) {
+  if (area.active !== false) return;
+  const activeCourse = state.courses.find((course) => (
+    course.coveredAreaId === area.id &&
+    course.deliveryMode === 'offline' &&
+    !['archived', 'cancelled'].includes(course.status)
+  ));
+  if (activeCourse) {
+    throw new HttpError(409, 'Covered area is used by an active offline course.');
+  }
+  const activeRequest = state.privateRequests.find((request) => (
+    request.coveredAreaId === area.id &&
+    request.deliveryMode === 'offline' &&
+    !['cancelled', 'rejected'].includes(request.status)
+  ));
+  if (activeRequest) {
+    throw new HttpError(409, 'Covered area is used by an active private request.');
+  }
 }
 
 export function normalizeApplicationInput(input, state, user) {

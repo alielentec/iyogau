@@ -2,6 +2,7 @@ import crypto from 'node:crypto';
 import { promisify } from 'node:util';
 
 import { HttpError } from './api-utils.js';
+import { ownerEmails } from './owner-auth.js';
 import { getPasswordAccount, savePasswordAccount } from './profile-store.js';
 import { checkRateLimit, shouldBypassLocalRateLimit } from './ratelimit.js';
 
@@ -27,6 +28,9 @@ export function normalizePassword(password) {
 export async function createPasswordAccount(input) {
   const email = normalizeEmail(input.email);
   const password = normalizePassword(input.password);
+  if (ownerEmails().includes(email)) {
+    throw new HttpError(403, 'Owner email must use a trusted OAuth sign-in provider.');
+  }
   const existing = await getPasswordAccount(email);
   if (existing) throw new HttpError(409, 'An account already exists for this email.');
   const now = new Date().toISOString();

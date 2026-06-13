@@ -122,6 +122,7 @@
 
     var signInDialog = null;
     var signInDialogMode = 'login';
+    var signInLastFocus = null;
 
     function setMessage(text, kind) {
       if (!message) return;
@@ -237,8 +238,8 @@
         '  <div class="site-auth-modal__providers" data-auth-provider-list></div>',
         '  <div class="site-auth-modal__divider"><span>or use email</span></div>',
         '  <div class="site-auth-modal__tabs" role="tablist" aria-label="Email account mode">',
-        '    <button type="button" data-auth-mode="login" class="is-active">Sign in</button>',
-        '    <button type="button" data-auth-mode="signup">Create account</button>',
+        '    <button type="button" role="tab" aria-selected="true" data-auth-mode="login" class="is-active">Sign in</button>',
+        '    <button type="button" role="tab" aria-selected="false" data-auth-mode="signup">Create account</button>',
         '  </div>',
         '  <form class="site-auth-form" data-auth-password-form novalidate>',
         '    <label data-auth-name-wrap hidden>Name<input name="name" type="text" autocomplete="name" maxlength="80" /></label>',
@@ -255,6 +256,7 @@
       overlay.addEventListener('click', function (evt) {
         if (evt.target === overlay) closeSignInDialog();
       });
+      overlay.addEventListener('keydown', handleSignInDialogKeydown);
       $('[data-auth-close]', overlay).addEventListener('click', closeSignInDialog);
       $all('[data-auth-mode]', overlay).forEach(function (btn) {
         btn.addEventListener('click', function () {
@@ -274,7 +276,10 @@
       signInDialogMode = mode === 'signup' ? 'signup' : 'login';
       var dialog = ensureSignInDialog();
       $all('[data-auth-mode]', dialog).forEach(function (btn) {
-        btn.classList.toggle('is-active', btn.getAttribute('data-auth-mode') === signInDialogMode);
+        var selected = btn.getAttribute('data-auth-mode') === signInDialogMode;
+        btn.classList.toggle('is-active', selected);
+        btn.setAttribute('aria-selected', selected ? 'true' : 'false');
+        btn.setAttribute('tabindex', selected ? '0' : '-1');
       });
       var nameWrap = $('[data-auth-name-wrap]', dialog);
       var password = $('[name="password"]', dialog);
@@ -309,15 +314,53 @@
 
     function openSignInDialog() {
       renderSignInDialog();
-      ensureSignInDialog().hidden = false;
+      var dialog = ensureSignInDialog();
+      signInLastFocus = document.activeElement;
+      dialog.hidden = false;
       loginControls.forEach(function (control) { control.setAttribute('aria-expanded', 'true'); });
       closeMenu();
       closeProviderMenu();
+      focusFirstDialogControl(dialog);
     }
 
     function closeSignInDialog() {
       if (signInDialog) signInDialog.hidden = true;
       loginControls.forEach(function (control) { control.setAttribute('aria-expanded', 'false'); });
+      if (signInLastFocus && typeof signInLastFocus.focus === 'function') {
+        try { signInLastFocus.focus(); } catch (err) {}
+      }
+      signInLastFocus = null;
+    }
+
+    function dialogFocusables(dialog) {
+      return $all('a[href], button:not([disabled]), input:not([disabled]), textarea:not([disabled]), select:not([disabled]), [tabindex]:not([tabindex="-1"])', dialog)
+        .filter(function (node) {
+          return !node.hidden && node.offsetParent !== null;
+        });
+    }
+
+    function focusFirstDialogControl(dialog) {
+      var focusables = dialogFocusables(dialog);
+      if (focusables[0]) focusables[0].focus();
+    }
+
+    function handleSignInDialogKeydown(evt) {
+      if (evt.key === 'Escape') {
+        closeSignInDialog();
+        return;
+      }
+      if (evt.key !== 'Tab') return;
+      var focusables = dialogFocusables(evt.currentTarget);
+      if (!focusables.length) return;
+      var first = focusables[0];
+      var last = focusables[focusables.length - 1];
+      if (evt.shiftKey && document.activeElement === first) {
+        evt.preventDefault();
+        last.focus();
+      } else if (!evt.shiftKey && document.activeElement === last) {
+        evt.preventDefault();
+        first.focus();
+      }
     }
 
     function setAuthDialogMessage(text, kind) {
@@ -1109,6 +1152,7 @@
             return;
           }
           setSignedIn(json.user, { reason: 'session-signed-in' });
+          if (headerOnly) return;
           return refreshProfiles(true);
         })
         .catch(function () {

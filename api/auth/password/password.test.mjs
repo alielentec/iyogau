@@ -9,6 +9,7 @@ const ENV_KEYS = [
   'IYOGAU_SESSION_SECRET',
   'UPSTASH_REDIS_REST_URL',
   'UPSTASH_REDIS_REST_TOKEN',
+  'IYOGAU_OWNER_EMAILS',
   'NODE_ENV',
   'VERCEL_ENV',
 ];
@@ -157,6 +158,31 @@ test('password login rejects wrong passwords and accepts the stored hash', async
     assert.equal(accepted.payload.user.provider, 'password');
     const session = sessionFromSetCookie(accepted.getHeader('Set-Cookie'));
     assert.equal(session.user.email, 'person@example.test');
+  } finally {
+    restoreFetch();
+    restoreEnv(env);
+  }
+});
+
+test('password signup rejects configured owner emails', async () => {
+  const env = snapshotEnv();
+  const restoreFetch = mockUpstash();
+  try {
+    process.env.NODE_ENV = 'test';
+    delete process.env.VERCEL_ENV;
+    process.env.IYOGAU_SESSION_SECRET = 'test-session-secret-for-password-auth-12345';
+    process.env.UPSTASH_REDIS_REST_URL = 'https://upstash.example.test';
+    process.env.UPSTASH_REDIS_REST_TOKEN = 'upstash-token';
+    process.env.IYOGAU_OWNER_EMAILS = 'owner@example.test';
+
+    const res = createResponse();
+    await signupHandler(createRequest({
+      email: 'owner@example.test',
+      password: 'correct horse password',
+    }), res);
+
+    assert.equal(res.statusCode, 403);
+    assert.deepEqual(res.payload, { error: 'Owner email must use a trusted OAuth sign-in provider.' });
   } finally {
     restoreFetch();
     restoreEnv(env);

@@ -6,6 +6,7 @@
   "description": "iYogaU — Inner Transformation Yoga. Marketing site + serverless natal chart API.",
   "homepage": "https://iyogau.com",
   "scripts": {
+    "test": "node --test",
     "build:locales": "node scripts/build-locales.js",
     "build:og": "python3 scripts/generate-og.py",
     "inject:meta": "python3 scripts/inject-meta.py"
