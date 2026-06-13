@@ -12,6 +12,14 @@ function isFiniteNumber(value) {
   return typeof value === 'number' && Number.isFinite(value);
 }
 
+function isNullIsland(lat, lon) {
+  return Math.abs(lat) < 0.000001 && Math.abs(lon) < 0.000001;
+}
+
+function comparableText(value) {
+  return String(value || '').trim().toLowerCase().replace(/\s+/g, ' ');
+}
+
 function cleanString(value, maxLen, fallback = '') {
   if (value == null) return fallback;
   const out = String(value).trim();
@@ -97,6 +105,9 @@ export function normalizeProfileInput(input, existing = null) {
   if (!isFiniteNumber(profile.lon) || profile.lon < -180 || profile.lon > 180) {
     throw new HttpError(400, '`lon` must be a number between -180 and 180.');
   }
+  if (isNullIsland(profile.lat, profile.lon)) {
+    throw new HttpError(400, '`lat` and `lon` cannot both be 0. Select a resolved birthplace or enter accurate coordinates.');
+  }
 
   return profile;
 }
@@ -123,4 +134,47 @@ export function assertSingleSelfProfile(profiles, candidate) {
   if (candidate.profileType !== 'self') return;
   const conflict = profiles.find((p) => p.profileType === 'self' && p.id !== candidate.id);
   if (conflict) throw new HttpError(409, 'Only one My Profile record is allowed. Update the existing self profile instead.');
+}
+
+export function assertNoDuplicateProfile(profiles, candidate) {
+  const candidateKey = [
+    comparableText(candidate.displayName),
+    candidate.birthDate,
+    candidate.unknownTime ? 'unknown' : candidate.birthTime,
+    comparableText(candidate.birthplaceName),
+  ].join('|');
+  const conflict = profiles.find((profile) => {
+    if (profile.id === candidate.id) return false;
+    const profileKey = [
+      comparableText(profile.displayName),
+      profile.birthDate,
+      profile.unknownTime ? 'unknown' : profile.birthTime,
+      comparableText(profile.birthplaceName),
+    ].join('|');
+    return profileKey === candidateKey;
+  });
+  if (conflict) {
+    throw new HttpError(409, 'A saved profile with the same name, birth date, birth time, and birthplace already exists.');
+  }
+}
+
+function duplicateIdentity(profile) {
+  return [
+    comparableText(profile.displayName),
+    profile.birthDate,
+    profile.unknownTime ? 'unknown' : profile.birthTime,
+    comparableText(profile.birthplaceName),
+  ].join('|');
+}
+
+export function profileDuplicateIdentityChanged(existing, candidate) {
+  if (!existing) return true;
+  return duplicateIdentity(existing) !== duplicateIdentity(candidate);
+}
+
+export function demoteOtherSelfProfiles(profiles, selfProfileId) {
+  return profiles.map((profile) => {
+    if (profile.id === selfProfileId || profile.profileType !== 'self') return profile;
+    return { ...profile, profileType: 'other' };
+  });
 }

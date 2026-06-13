@@ -1417,7 +1417,7 @@
         responseCache = {};
         pendingFetches = {};
         lastSourceKey = '';
-        document.querySelectorAll('[data-astrocarto][data-astrocarto-loaded="1"]').forEach(function (p) {
+        document.querySelectorAll('[data-astrocarto]').forEach(function (p) {
           p.removeAttribute('data-astrocarto-loaded');
           clearCityTimingResults(p);
           // Re-load eagerly only if the tab is currently visible.

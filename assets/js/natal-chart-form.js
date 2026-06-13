@@ -75,7 +75,11 @@
   var latEl       = $in('-lat');
   var lonEl       = $in('-lon');
   var tzSelect    = $in('-tz-select');
-  var consentEl   = $in('-consent');
+  var useOffsetEl = $in('-tz-offset-enable');
+  var offsetSignEl = $in('-tz-offset-sign');
+  var offsetHoursEl = $in('-tz-offset-hours');
+  var offsetMinutesEl = $in('-tz-offset-minutes');
+  var offsetRowEl = form.querySelector('.tz-offset-input-row');
   var submitBtn   = $in('-submit');
   var errorEl     = $in('-error');
   var resultsEl   = $rs('-results');
@@ -403,7 +407,23 @@
   function setTimezone(tz) {
     if (!tz) return;
     populateTzSelect();
+    var offsetMatch = /^([+-])(\d{1,2}):(\d{2})$/.exec(tz);
+    if (offsetMatch && useOffsetEl && offsetSignEl && offsetHoursEl && offsetMinutesEl) {
+      offsetSignEl.value = offsetMatch[1];
+      offsetHoursEl.value = String(parseInt(offsetMatch[2], 10));
+      offsetMinutesEl.value = offsetMatch[3];
+      useOffsetEl.checked = true;
+      if (offsetRowEl) offsetRowEl.hidden = false;
+      if (tzSelect) tzSelect.disabled = true;
+      revalidate();
+      return;
+    }
+    if (useOffsetEl) {
+      useOffsetEl.checked = false;
+      if (offsetRowEl) offsetRowEl.hidden = true;
+    }
     if (tzSelect) {
+      tzSelect.disabled = false;
       // If the resolved IANA zone isn't already in our option list
       // (rare — only happens when Intl.supportedValuesOf is missing AND
       // the fallback list doesn't include this zone), inject it so the
@@ -421,7 +441,17 @@
   // ---------- validation ----------
 
   function currentTz() {
+    if (useOffsetEl && useOffsetEl.checked && offsetSignEl && offsetHoursEl && offsetMinutesEl) {
+      var sign = offsetSignEl.value === '-' ? '-' : '+';
+      var hours = String(Math.max(0, Math.min(14, parseInt(offsetHoursEl.value, 10) || 0))).padStart(2, '0');
+      var minutes = String(Math.max(0, Math.min(59, parseInt(offsetMinutesEl.value, 10) || 0))).padStart(2, '0');
+      return sign + hours + ':' + minutes;
+    }
     return (tzSelect && tzSelect.value) || '';
+  }
+
+  function isNullIsland(lat, lon) {
+    return Math.abs(lat) < 0.000001 && Math.abs(lon) < 0.000001;
   }
 
   function isValid() {
@@ -433,9 +463,9 @@
     var lon = parseFloat(lonEl.value);
     if (!isFinite(lat) || lat < -66.563 || lat > 66.563) return false;
     if (!isFinite(lon) || lon < -180 || lon > 180) return false;
+    if (isNullIsland(lat, lon)) return false;
     var tz = currentTz();
     if (!tz || !(/^[+-]\d{1,2}:\d{2}$/.test(tz) || /[A-Za-z]+\/[A-Za-z_]+/.test(tz))) return false;
-    if (!consentEl.checked) return false;
     return true;
   }
 
@@ -444,11 +474,17 @@
   // The lat/lon inputs are user-editable now, so we have to revalidate on
   // their input event too — otherwise the submit button stays in whatever
   // state selectCity() left it in, even if the user types nonsense.
-  [dateEl, timeEl, placeEl, latEl, lonEl, tzSelect, consentEl].forEach(function (el) {
+  [dateEl, timeEl, placeEl, latEl, lonEl, tzSelect, useOffsetEl, offsetSignEl, offsetHoursEl, offsetMinutesEl].forEach(function (el) {
     if (!el) return;
     el.addEventListener('input', revalidate);
     el.addEventListener('change', revalidate);
   });
+  if (useOffsetEl) {
+    useOffsetEl.addEventListener('change', function () {
+      if (offsetRowEl) offsetRowEl.hidden = !useOffsetEl.checked;
+      if (tzSelect) tzSelect.disabled = useOffsetEl.checked;
+    });
+  }
 
   // ---------- errors ----------
 
@@ -470,7 +506,7 @@
     // failed to attach its own submit handler for any reason, this stops
     // the browser from native-POSTing the form (which would clobber the
     // SPA state and possibly leak the name field into the URL).
-    if (cfg.formId === 'home-natal-form') {
+    if (cfg.formId === 'home-natal-form' && form.hasAttribute('data-home-inline')) {
       e.preventDefault();
       return;
     }
@@ -478,9 +514,9 @@
     e.preventDefault();
     clearError();
 
-    if (!consentEl.checked || !isValid()) {
+    if (!isValid()) {
       showError(t('natal.form.error.required',
-        'Please complete every required field, including consent.'));
+        'Please complete every required field.'));
       return;
     }
 
@@ -522,6 +558,13 @@
       })
       .then(function (model) {
         renderResults(model);
+        try {
+          if (window.__astrocarto && typeof window.__astrocarto.setNatalSource === 'function') {
+            window.__astrocarto.setNatalSource(payload);
+          } else {
+            window.__astrocartoPending = payload;
+          }
+        } catch (err) {}
       })
       .catch(function (err) {
         showError(t('natal.form.error.api',
@@ -724,7 +767,7 @@
   // a city — populate the tz <select>, select the right zone, reveal the
   // location-detail fieldset, and re-run validation. This lets the
   // landing page render Steve Jobs's chart with a form that's already
-  // populated and one-click-from-valid (user only has to tick consent).
+  // populated and ready to calculate.
   if (placeEl && placeEl.dataset && placeEl.dataset.resolved === '1') {
     var defaultTz = form.getAttribute('data-default-tz');
     if (defaultTz) setTimezone(defaultTz);
@@ -751,7 +794,7 @@
   // this file's onReady IIFE fires). Letting the binder also auto-render
   // produces a visible double-render on slow devices and an extra
   // render-cycle of work everywhere else.
-  if (cfg.formId === 'home-natal-form') {
+  if (cfg.formId === 'home-natal-form' && form.hasAttribute('data-home-inline')) {
     return;
   }
   try {

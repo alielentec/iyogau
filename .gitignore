@@ -35,3 +35,6 @@ Fast Flow Rate Estimation*
 # debug screenshots
 natal-calc-section.png
 *.debug.png
+
+# Preserved local-only reference material after cleanup
+_archive/local-only/

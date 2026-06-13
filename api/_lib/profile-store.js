@@ -9,9 +9,14 @@ const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const ROOT = path.resolve(__dirname, '../..');
 const LOCAL_STORE_PATH = path.join(ROOT, '.data', 'profile-store.json');
 const KEY_PREFIX = 'iyogau:profiles:';
+const ACCOUNT_KEY_PREFIX = 'iyogau:accounts:';
 
 function userKey(userId) {
   return KEY_PREFIX + encodeURIComponent(userId);
+}
+
+function accountKey(email) {
+  return ACCOUNT_KEY_PREFIX + encodeURIComponent(email);
 }
 
 function upstashConfigured() {
@@ -59,6 +64,10 @@ function assertStorageAvailable() {
   }
 }
 
+export function profileStorageAvailable() {
+  return upstashConfigured() || !isProdLikeEnv();
+}
+
 export async function listProfiles(userId) {
   assertStorageAvailable();
   if (upstashConfigured()) {
@@ -87,6 +96,36 @@ export async function saveProfiles(userId, profiles) {
   data.users[userId] = { profiles: safeProfiles };
   await localWriteAll(data);
   return safeProfiles;
+}
+
+export async function getPasswordAccount(email) {
+  assertStorageAvailable();
+  if (upstashConfigured()) {
+    const raw = await upstashCommand(['GET', accountKey(email)]);
+    if (!raw) return null;
+    try {
+      const parsed = JSON.parse(raw);
+      return parsed && typeof parsed === 'object' ? parsed : null;
+    } catch {
+      return null;
+    }
+  }
+  const data = await localReadAll();
+  return data.accounts?.[email] || null;
+}
+
+export async function savePasswordAccount(email, account) {
+  assertStorageAvailable();
+  const safeAccount = { ...account, email };
+  if (upstashConfigured()) {
+    await upstashCommand(['SET', accountKey(email), JSON.stringify(safeAccount)]);
+    return safeAccount;
+  }
+  const data = await localReadAll();
+  data.accounts = data.accounts || {};
+  data.accounts[email] = safeAccount;
+  await localWriteAll(data);
+  return safeAccount;
 }
 
 export function sortProfiles(profiles) {

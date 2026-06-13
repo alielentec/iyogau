@@ -30,6 +30,10 @@ function isFiniteNumber(x) {
   return typeof x === 'number' && Number.isFinite(x);
 }
 
+function isNullIsland(lat, lon) {
+  return Math.abs(lat) < 0.000001 && Math.abs(lon) < 0.000001;
+}
+
 function maxDateString() {
   // today + 1 day, in UTC. We're permissive about future dates by one day
   // so timezones west of UTC can still submit "tomorrow" in their locale.
@@ -216,6 +220,9 @@ export function validateInput(body) {
   }
   if (!isFiniteNumber(lon) || lon < -180 || lon > 180) {
     throw new ValidationError('`lon` must be a finite number between -180 and 180.');
+  }
+  if (isNullIsland(lat, lon)) {
+    throw new ValidationError('`lat` and `lon` cannot both be 0. Select a resolved birthplace or enter accurate coordinates.');
   }
   // Reject polar latitudes where the ecliptic-rising-point formula is
   // mathematically singular and the chart concept is poorly defined.

@@ -1,3 +1,5 @@
+import { isProdLikeEnv } from './runtime-env.js';
+
 const MAX_JSON_BYTES = 32 * 1024;
 const LOCALHOST_RE = /^https?:\/\/(localhost|127\.0\.0\.1)(:\d+)?$/i;
 const ALLOWED_ORIGIN = 'https://iyogau.com';
@@ -13,7 +15,8 @@ export class HttpError extends Error {
 
 export function pickSameOrigin(req) {
   const origin = req.headers.origin || '';
-  if (origin === ALLOWED_ORIGIN || VERCEL_PREVIEW_RE.test(origin) || LOCALHOST_RE.test(origin)) return origin;
+  if (origin === ALLOWED_ORIGIN || VERCEL_PREVIEW_RE.test(origin)) return origin;
+  if (!isProdLikeEnv() && LOCALHOST_RE.test(origin)) return origin;
   return '';
 }
 
@@ -51,13 +54,22 @@ export function requireSameOrigin(req) {
 }
 
 export async function readJson(req) {
-  if (req.body && typeof req.body === 'object' && !Buffer.isBuffer(req.body)) return req.body;
   const contentType = String(req.headers['content-type'] || '').toLowerCase();
   if (!contentType.includes('application/json')) {
     throw new HttpError(415, 'Content-Type must be application/json.');
   }
+  if (req.body && typeof req.body === 'object' && !Buffer.isBuffer(req.body)) {
+    const raw = JSON.stringify(req.body);
+    if (Buffer.byteLength(raw, 'utf8') > MAX_JSON_BYTES) {
+      throw new HttpError(413, 'Request body is too large.');
+    }
+    return req.body;
+  }
   let raw = '';
   if (typeof req.body === 'string') {
+    if (Buffer.byteLength(req.body, 'utf8') > MAX_JSON_BYTES) {
+      throw new HttpError(413, 'Request body is too large.');
+    }
     raw = req.body;
   } else {
     const chunks = [];

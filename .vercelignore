@@ -1,0 +1,12 @@
+_archive/
+.claude/
+.data/
+.env
+.env.*
+.vercel/
+node_modules/
+Fast Flow Rate Estimation*
+stich/
+stitch/
+*.debug.png
+natal-calc-section.png

@@ -24,6 +24,10 @@ function isFiniteNumber(x) {
   return typeof x === 'number' && Number.isFinite(x);
 }
 
+function isNullIsland(lat, lon) {
+  return Math.abs(lat) < 0.000001 && Math.abs(lon) < 0.000001;
+}
+
 function maxDateString() {
   const d = new Date(Date.now() + 24 * 60 * 60 * 1000);
   return d.toISOString().slice(0, 10);
@@ -46,7 +50,7 @@ function parseOffsetMinutes(tz) {
 
 const ALLOWED_TOP_FIELDS = new Set([
   // base chart fields
-  'date', 'time', 'tz', 'lat', 'lon', 'tradition', 'ayanamsa',
+  'date', 'time', 'tz', 'lat', 'lon', 'tradition', 'ayanamsa', 'unknownTime',
   // astrocarto-specific
   'mode', 'resolution', 'currentResidence', 'targetDate', 'targetLocation', 'includeHeat',
 ]);
@@ -108,7 +112,7 @@ export function validateAstrocartoInput(body) {
     }
   }
 
-  const { date, time, tz, lat, lon, tradition, ayanamsa, mode, resolution, currentResidence, targetDate, targetLocation, includeHeat } = body;
+  const { date, time, tz, lat, lon, tradition, ayanamsa, unknownTime, mode, resolution, currentResidence, targetDate, targetLocation, includeHeat } = body;
 
   // ── Base chart fields (parity with validate.js) ──
   if (typeof date !== 'string' || !DATE_RE.test(date)) {
@@ -134,6 +138,9 @@ export function validateAstrocartoInput(body) {
   // and a 4-minute time uncertainty shifts MC/IC lines by ~1° of longitude
   // (~111 km at the equator). We do NOT accept `unknownTime: true`. The frontend
   // should gate the astrocarto feature behind a known-time prompt.
+  if (unknownTime === true) {
+    throw new ValidationError('Astrocartography, relocation, soulmate, and soulmate timing require a known birth time.');
+  }
   if (typeof time !== 'string' || !TIME_RE.test(time)) {
     throw new ValidationError('`time` must be a string in HH:MM or HH:MM:SS 24-hour format. Astrocartography requires a known birth time.');
   }
@@ -151,6 +158,9 @@ export function validateAstrocartoInput(body) {
   }
   if (!isFiniteNumber(lon) || lon < -180 || lon > 180) {
     throw new ValidationError('`lon` must be a finite number between -180 and 180.');
+  }
+  if (isNullIsland(lat, lon)) {
+    throw new ValidationError('`lat` and `lon` cannot both be 0. Select a resolved birthplace or enter accurate coordinates.');
   }
   if (lat > 66.563 || lat < -66.563) {
     throw new ValidationError('Births above the Arctic or below the Antarctic Circle (lat outside ±66.563°) are not currently supported — the ascendant is mathematically undefined in those regions.');
@@ -214,6 +224,9 @@ export function validateAstrocartoInput(body) {
     if (!isFiniteNumber(tLon) || tLon < -180 || tLon > 180) {
       throw new ValidationError('`targetLocation.lon` must be a finite number between -180 and 180.');
     }
+    if (isNullIsland(tLat, tLon)) {
+      throw new ValidationError('`targetLocation.lat` and `targetLocation.lon` cannot both be 0. Select a resolved city or enter accurate coordinates.');
+    }
     targetLocationFinal = { lat: tLat, lon: tLon };
     if (typeof targetLocation.country === 'string' && targetLocation.country.length <= 64) {
       targetLocationFinal.country = targetLocation.country;
@@ -256,6 +269,9 @@ export function validateAstrocartoInput(body) {
     }
     if (!isFiniteNumber(rLon) || rLon < -180 || rLon > 180) {
       throw new ValidationError('`currentResidence.lon` must be a finite number between -180 and 180.');
+    }
+    if (isNullIsland(rLat, rLon)) {
+      throw new ValidationError('`currentResidence.lat` and `currentResidence.lon` cannot both be 0. Select a resolved city or enter accurate coordinates.');
     }
     currentResidenceFinal = { lat: rLat, lon: rLon };
     if (typeof currentResidence.country === 'string' && currentResidence.country.length <= 64) {

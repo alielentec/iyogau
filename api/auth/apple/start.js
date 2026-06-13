@@ -1,4 +1,4 @@
-import { buildGoogleAuthRedirect } from '../../_lib/google-oauth.js';
+import { buildProviderAuthRedirect } from '../../_lib/oauth-providers.js';
 import { HttpError, sendError } from '../../_lib/api-utils.js';
 
 export default async function handler(req, res) {
@@ -6,7 +6,7 @@ export default async function handler(req, res) {
     if (req.method !== 'GET') throw new HttpError(405, 'Method not allowed.');
     const url = new URL(req.url || '/', `http://${req.headers.host || 'localhost'}`);
     const returnTo = url.searchParams.get('returnTo') || '/#natal-calc';
-    const location = buildGoogleAuthRedirect(req, res, returnTo);
+    const location = buildProviderAuthRedirect(req, res, 'apple', returnTo);
     res.statusCode = 302;
     res.setHeader('Location', location);
     res.end();
