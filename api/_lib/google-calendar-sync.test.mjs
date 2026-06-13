@@ -6,6 +6,7 @@ import {
   googlePushResultFields,
   isIYogaUGoogleEvent,
   shouldImportGoogleEvent,
+  upsertImportedGoogleEvent,
 } from './google-calendar-sync.js';
 import { emptyCourseState } from './course-store.js';
 
@@ -77,4 +78,44 @@ test('deleted Google event marks local sync disconnected without deleting local 
   assert.equal(fields.syncStatus, 'disconnected');
   assert.equal(fields.googleCalendarId, 'iyogau-calendar');
   assert.match(fields.syncError, /deleted/);
+});
+
+test('Google import updates an existing local event by googleEventId', () => {
+  const state = emptyCourseState();
+  state.ownerAvailabilityTimes.push({
+    id: 'availability-1',
+    eventType: 'owner_availability',
+    ownerUserId: 'owner-1',
+    title: 'Old title',
+    startAt: '2026-07-01T10:00:00.000Z',
+    endAt: '2026-07-01T11:00:00.000Z',
+    timezone: 'America/Los_Angeles',
+    googleEventId: 'google-event-1',
+    createdAt: '2026-06-01T00:00:00.000Z',
+    updatedAt: '2026-06-01T00:00:00.000Z',
+  });
+
+  const status = upsertImportedGoogleEvent(state, {
+    id: 'google-event-1',
+    etag: 'etag-2',
+    updated: '2026-07-01T09:00:00.000Z',
+    summary: '[iYogaU] Updated availability',
+    start: { dateTime: '2026-07-02T12:00:00.000Z', timeZone: 'America/Los_Angeles' },
+    end: { dateTime: '2026-07-02T13:00:00.000Z', timeZone: 'America/Los_Angeles' },
+    extendedProperties: {
+      private: {
+        iyogau: '1',
+        iyogauType: 'owner_availability',
+      },
+    },
+  }, { id: 'owner-1' }, { calendarId: 'iyogau-calendar' }, '2026-07-02T00:00:00.000Z');
+
+  assert.equal(status, 'updated');
+  assert.equal(state.ownerAvailabilityTimes.length, 1);
+  assert.equal(state.ownerBlockedTimes.length, 0);
+  assert.equal(state.ownerAvailabilityTimes[0].id, 'availability-1');
+  assert.equal(state.ownerAvailabilityTimes[0].title, 'Updated availability');
+  assert.equal(state.ownerAvailabilityTimes[0].startAt, '2026-07-02T12:00:00.000Z');
+  assert.equal(state.ownerAvailabilityTimes[0].googleEventId, 'google-event-1');
+  assert.equal(state.ownerAvailabilityTimes[0].calendarSync.syncSource, 'google');
 });

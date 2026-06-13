@@ -141,11 +141,11 @@ export async function syncGoogleCalendarForOwner(session) {
     });
   }
 
-  const imported = await listImportableGoogleEvents(integration, accessToken);
+  const googleEvents = await listImportableGoogleEvents(integration, accessToken);
   const now = new Date().toISOString();
   const result = await mutateCourseState(async (nextState) => {
     pushed.forEach((item) => applyPushedSync(nextState, item, integration, now));
-    imported.forEach((event) => importGoogleEvent(nextState, event, session.user, integration, now));
+    const googleResults = googleEvents.map((event) => upsertImportedGoogleEvent(nextState, event, session.user, integration, now));
     const current = ownerIntegration(nextState, session.user);
     if (current) {
       const index = nextState.calendarIntegrations.findIndex((item) => item.id === current.id);
@@ -158,7 +158,8 @@ export async function syncGoogleCalendarForOwner(session) {
     }
     return {
       pushed: pushed.length,
-      imported: imported.length,
+      imported: googleResults.filter((status) => status === 'imported').length,
+      updated: googleResults.filter((status) => status === 'updated').length,
       lastSyncedAt: now,
     };
   });
@@ -351,15 +352,15 @@ function applyPushedSync(state, item, integration, now) {
   }
 }
 
-function importGoogleEvent(state, event, user, integration, now) {
-  if (!shouldImportGoogleEvent(state, event)) return;
+export function upsertImportedGoogleEvent(state, event, user, integration, now) {
+  if (!isIYogaUGoogleEvent(event) || !event?.id) return 'skipped';
   const props = event.extendedProperties?.private || {};
   const eventType = props.iyogauType || typeFromGoogleSummary(event.summary);
-  if (!IMPORTABLE_TYPES.has(eventType)) return;
+  if (!IMPORTABLE_TYPES.has(eventType)) return 'skipped';
   const googleEventId = event.id || '';
   const startAt = event.start?.dateTime || event.start?.date || '';
   const endAt = event.end?.dateTime || event.end?.date || startAt;
-  if (!startAt || !endAt) return;
+  if (!startAt || !endAt) return 'skipped';
   const title = cleanGoogleTitle(event.summary || 'iYogaU event');
   const common = {
     eventType,
@@ -376,11 +377,33 @@ function importGoogleEvent(state, event, user, integration, now) {
     lastSyncedAt: now,
     googleUpdatedAt: event.updated || '',
   };
+  const existing = findGoogleEventRecord(state, googleEventId);
+  if (existing) {
+    if (existing.kind === 'owner_availability' || existing.kind === 'owner_blocked_time') {
+      existing.collection.splice(existing.index, 1);
+      const record = normalizeOwnerCalendarTime(common, user.id, existing.record);
+      if (eventType === 'owner_availability') state.ownerAvailabilityTimes.push(record);
+      else state.ownerBlockedTimes.push(record);
+      return 'updated';
+    }
+    if (existing.kind === 'course_session') {
+      const session = normalizeCourseSessions(existing.record.courseId, [common], [existing.record])[0];
+      existing.collection[existing.index] = session;
+      const course = state.courses.find((item) => item.id === existing.record.courseId);
+      if (course && (eventType === 'free_workshop' || eventType === 'group_course_session')) {
+        course.courseType = eventType === 'free_workshop' ? 'free_workshop' : 'regular_group_course';
+        course.title = title;
+        course.updatedAt = now;
+      }
+      return 'updated';
+    }
+    return 'skipped';
+  }
   if (eventType === 'owner_availability' || eventType === 'owner_blocked_time') {
     const record = normalizeOwnerCalendarTime(common, user.id);
     if (eventType === 'owner_availability') state.ownerAvailabilityTimes.push(record);
     else state.ownerBlockedTimes.push(record);
-    return;
+    return 'imported';
   }
   const course = normalizeCourse({
     courseType: eventType === 'free_workshop' ? 'free_workshop' : 'regular_group_course',
@@ -393,14 +416,26 @@ function importGoogleEvent(state, event, user, integration, now) {
   const sessions = normalizeCourseSessions(course.id, [common]);
   state.courses.push(course);
   state.courseSessions.push(...sessions);
+  return 'imported';
 }
 
 function hasGoogleEvent(state, googleEventId) {
+  return Boolean(findGoogleEventRecord(state, googleEventId));
+}
+
+function findGoogleEventRecord(state, googleEventId) {
   const matches = (item) => item.googleEventId === googleEventId || item.calendarSync?.googleEventId === googleEventId;
-  return state.courseSessions.some(matches) ||
-    state.privateRequests.some(matches) ||
-    state.ownerBlockedTimes.some(matches) ||
-    (state.ownerAvailabilityTimes || []).some(matches);
+  const collections = [
+    { kind: 'course_session', collection: state.courseSessions },
+    { kind: 'private_request', collection: state.privateRequests },
+    { kind: 'owner_blocked_time', collection: state.ownerBlockedTimes },
+    { kind: 'owner_availability', collection: state.ownerAvailabilityTimes || [] },
+  ];
+  for (const entry of collections) {
+    const index = entry.collection.findIndex(matches);
+    if (index >= 0) return { ...entry, index, record: entry.collection[index] };
+  }
+  return null;
 }
 
 function typeFromGoogleSummary(summary = '') {
