@@ -159,6 +159,49 @@
     } catch (e) { return fallback; }
   }
 
+  function isPrivateWorkspaceMount() {
+    return cfg.formId === 'home-natal-form' && !!document.querySelector('.natal-workspace');
+  }
+
+  function signedOutResultsMessage() {
+    return t('natal.results.signedOutEmpty',
+      'Sign in to select a saved birth profile and calculate private chart results.');
+  }
+
+  function setWheelVisible(visible) {
+    if (!wheelEl) return;
+    var wrap = wheelEl.closest ? wheelEl.closest('.natal-wheel-wrap') : wheelEl.parentNode;
+    if (wrap) wrap.hidden = !visible;
+    if (visible) {
+      wheelEl.removeAttribute('aria-hidden');
+    } else {
+      wheelEl.textContent = '';
+      wheelEl.setAttribute('aria-hidden', 'true');
+    }
+  }
+
+  function renderEmptyState(target, message) {
+    if (!target) return;
+    target.textContent = '';
+    target.appendChild(elt('p', { 'class': 'natal-empty natal-empty--signed-out' }, message));
+  }
+
+  function clearRenderedResultsForSignedOut() {
+    if (!isPrivateWorkspaceMount()) return;
+    var msg = signedOutResultsMessage();
+    clearError();
+    if (resultsEl) {
+      resultsEl.hidden = false;
+      resultsEl.setAttribute('aria-busy', 'false');
+      resultsEl.classList.add('natal-results--signed-out');
+    }
+    setWheelVisible(false);
+    renderEmptyState(metaEl, msg);
+    renderEmptyState(planetsEl || tablesEl, msg);
+    if (aspectsEl && aspectsEl !== (planetsEl || tablesEl)) renderEmptyState(aspectsEl, msg);
+    if (tablesEl && tablesEl !== planetsEl && tablesEl !== aspectsEl) renderEmptyState(tablesEl, msg);
+  }
+
   // ---------- "time unknown" checkbox ----------
 
   if (timeUnk && timeEl) {
@@ -629,6 +672,8 @@
 
   function renderResults(model) {
     if (!resultsEl) return;
+    resultsEl.classList.remove('natal-results--signed-out');
+    setWheelVisible(true);
 
     // Wheel
     if (window.NatalWheel && wheelEl) {
@@ -794,19 +839,36 @@
   // this file's onReady IIFE fires). Letting the binder also auto-render
   // produces a visible double-render on slow devices and an extra
   // render-cycle of work everywhere else.
+  function renderDefaultData() {
+    if (cfg.formId === 'home-natal-form' && form.hasAttribute('data-home-inline')) {
+      return false;
+    }
+    var defaultDataEl = document.getElementById(cfg.resultPrefix + '-default-data');
+    if (!defaultDataEl || !defaultDataEl.textContent) return false;
+    var defaultModel = JSON.parse(defaultDataEl.textContent);
+    // Mark the results section as not the result of a submit, so the
+    // post-render code skips the scroll-into-view.
+    resultsEl.dataset.initialRender = '1';
+    renderResults(defaultModel);
+    delete resultsEl.dataset.initialRender;
+    return true;
+  }
+
+  window.addEventListener('iyogau:auth-state-changed', function (evt) {
+    if (!isPrivateWorkspaceMount()) return;
+    var authenticated = !!(evt.detail && evt.detail.authenticated);
+    if (authenticated) {
+      try { renderDefaultData(); } catch (err) {}
+    } else {
+      clearRenderedResultsForSignedOut();
+    }
+  });
+
   if (cfg.formId === 'home-natal-form' && form.hasAttribute('data-home-inline')) {
     return;
   }
   try {
-    var defaultDataEl = document.getElementById(cfg.resultPrefix + '-default-data');
-    if (defaultDataEl && defaultDataEl.textContent) {
-      var defaultModel = JSON.parse(defaultDataEl.textContent);
-      // Mark the results section as not the result of a submit, so the
-      // post-render code skips the scroll-into-view.
-      resultsEl.dataset.initialRender = '1';
-      renderResults(defaultModel);
-      delete resultsEl.dataset.initialRender;
-    }
+    renderDefaultData();
   } catch (err) {
     if (window.console && console.warn) {
       console.warn('[natal] default-data render failed:', err);

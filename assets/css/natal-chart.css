@@ -1389,6 +1389,18 @@
   border: 1px dashed var(--outline);
   border-radius: 10px;
 }
+.natal-empty--signed-out {
+  font-style: normal;
+  font-weight: 600;
+}
+.astrocarto-map > .natal-empty--signed-out {
+  position: absolute;
+  inset: 1rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin: 0;
+}
 
 /* =====================================================================
  * Compactness pass (CSS only — per user preference, no fields hidden).

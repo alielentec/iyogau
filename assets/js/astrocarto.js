@@ -1114,6 +1114,52 @@
     }
   }
 
+  function isPrivateWorkspace() {
+    return !!document.querySelector('.natal-workspace');
+  }
+
+  function signedOutMapMessage() {
+    return tr('natal.astrocarto.errorSignedOut',
+      'Sign in to select a saved birth profile and calculate this private map.');
+  }
+
+  function clearAstrocartoPanel(panel, message) {
+    if (!panel) return;
+    panel.removeAttribute('data-astrocarto-loaded');
+    panel.removeAttribute('data-astrocarto-target-date');
+    panel.removeAttribute('data-astrocarto-timeline-start');
+    panel.removeAttribute('data-astrocarto-timeline-end');
+    panel.setAttribute('aria-busy', 'false');
+    var loader = panel.querySelector('[data-astrocarto-loader]');
+    if (loader) loader.hidden = true;
+    var err = panel.querySelector('[data-astrocarto-error]');
+    if (err) {
+      err.hidden = true;
+      err.textContent = '';
+    }
+    var mapEl = panel.querySelector('[data-astrocarto-map]');
+    if (mapEl) {
+      mapEl.setAttribute('aria-busy', 'false');
+      removeAllChildren(mapEl);
+      mapEl.appendChild(htmlEl('p', { class: 'natal-empty natal-empty--signed-out' },
+        message || signedOutMapMessage()));
+    }
+    var legendEl = panel.querySelector('[data-astrocarto-legend]');
+    if (legendEl) removeAllChildren(legendEl);
+    clearCityTimingResults(panel);
+  }
+
+  function clearNatalSource(message) {
+    responseCache = {};
+    pendingFetches = {};
+    lastSourceKey = '';
+    if (window.__astrocarto) window.__astrocarto.payload = null;
+    if (window.__astrocartoPending) delete window.__astrocartoPending;
+    document.querySelectorAll('[data-astrocarto]').forEach(function (panel) {
+      clearAstrocartoPanel(panel, message);
+    });
+  }
+
   function messageFromApiError(err) {
     if (!err || !err.message) return null;
     var text = String(err.message);
@@ -1300,6 +1346,10 @@
     var mapEl = panel.querySelector('[data-astrocarto-map]');
     var legendEl = panel.querySelector('[data-astrocarto-legend]');
     if (!mapEl) return;
+    if (isPrivateWorkspace() && !(window.__astrocarto && window.__astrocarto.payload)) {
+      clearAstrocartoPanel(panel);
+      return;
+    }
     var targetDate = timingTargetDateForPanel(panel);
     setBusy(panel, true);
     fetchAstrocarto(mode, { targetDate: targetDate })
@@ -1404,28 +1454,34 @@
 
   // ---------- Public API ----------
 
-  window.__astrocarto = window.__astrocarto || {
-    payload: null,
-    setNatalSource: function (payload) {
-      if (!payload) return;
-      var newKey = canonicalKey(payload);
-      var oldKey = window.__astrocarto.payload ? canonicalKey(window.__astrocarto.payload) : '';
-      window.__astrocarto.payload = payload;
-      if (newKey !== oldKey) {
-        // Source changed — invalidate caches and force any already-loaded
-        // panels to refresh on next activation.
-        responseCache = {};
-        pendingFetches = {};
-        lastSourceKey = '';
-        document.querySelectorAll('[data-astrocarto]').forEach(function (p) {
-          p.removeAttribute('data-astrocarto-loaded');
-          clearCityTimingResults(p);
-          // Re-load eagerly only if the tab is currently visible.
-          if (!p.hidden) loadAndRenderInto(p);
-        });
-      }
+  window.__astrocarto = window.__astrocarto || {};
+  window.__astrocarto.payload = window.__astrocarto.payload || null;
+  window.__astrocarto.setNatalSource = function (payload) {
+    if (!payload) return;
+    var newKey = canonicalKey(payload);
+    var oldKey = window.__astrocarto.payload ? canonicalKey(window.__astrocarto.payload) : '';
+    window.__astrocarto.payload = payload;
+    if (newKey !== oldKey) {
+      // Source changed — invalidate caches and force any already-loaded
+      // panels to refresh on next activation.
+      responseCache = {};
+      pendingFetches = {};
+      lastSourceKey = '';
+      document.querySelectorAll('[data-astrocarto]').forEach(function (p) {
+        p.removeAttribute('data-astrocarto-loaded');
+        clearCityTimingResults(p);
+        // Re-load eagerly only if the tab is currently visible.
+        if (!p.hidden) loadAndRenderInto(p);
+      });
     }
   };
+  window.__astrocarto.clearNatalSource = clearNatalSource;
+
+  window.addEventListener('iyogau:auth-state-changed', function (evt) {
+    if (!isPrivateWorkspace()) return;
+    if (evt.detail && evt.detail.authenticated) return;
+    clearNatalSource();
+  });
 
   // ---------- Auto-bind ----------
 

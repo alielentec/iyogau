@@ -38,7 +38,7 @@ test('public sign-in CTA sits in the method gateway, not chart result header', (
 test('public homepage loads public cards before the shared astrocartography scripts', () => {
   const publicScript = homepage.indexOf('/assets/js/public-astrology.js?v=2');
   const worldData = homepage.indexOf('/assets/data/world-continents.js?v=3');
-  const astroScript = homepage.indexOf('/assets/js/astrocarto.js?v=15');
+  const astroScript = homepage.indexOf('/assets/js/astrocarto.js?v=17');
   assert.ok(publicScript > 0, 'public astrology script must be present');
   assert.ok(worldData > publicScript, 'world data must load after public preset publisher');
   assert.ok(astroScript > worldData, 'astrocartography renderer must load after world data');

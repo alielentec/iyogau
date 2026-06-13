@@ -375,6 +375,25 @@
       globalStatus.title = title || text || '';
     }
 
+    function broadcastProfilesUpdated() {
+      try {
+        window.dispatchEvent(new CustomEvent('iyogau:profiles-updated', {
+          detail: { profiles: state.profiles.slice(), authenticated: !!state.user },
+        }));
+      } catch (err) {}
+    }
+
+    function broadcastAuthState(authenticated, reason) {
+      try {
+        window.dispatchEvent(new CustomEvent('iyogau:auth-state-changed', {
+          detail: {
+            authenticated: !!authenticated,
+            reason: reason || (authenticated ? 'signed-in' : 'signed-out'),
+          },
+        }));
+      } catch (err) {}
+    }
+
     function setLoginControlText(control, fullText, compactText) {
       if (!control.getAttribute('data-account-login-initial-text')) {
         control.setAttribute('data-account-login-initial-text', control.textContent.trim());
@@ -464,7 +483,8 @@
       }
     }
 
-    function setSignedOut() {
+    function setSignedOut(options) {
+      options = options || {};
       state.user = null;
       state.profiles = [];
       state.activeId = null;
@@ -476,9 +496,14 @@
       if (body) body.hidden = true;
       renderProfiles();
       configureLoginControl();
+      if (options.broadcast !== false) {
+        broadcastProfilesUpdated();
+        broadcastAuthState(false, options.reason || 'signed-out');
+      }
     }
 
-    function setSignedIn(user) {
+    function setSignedIn(user, options) {
+      options = options || {};
       state.user = user;
       setControlsHidden(loginChromeControls, true);
       configureSignedInActionControls();
@@ -491,6 +516,9 @@
       setGlobalStatus('Signed in: ' + (user.name || user.email), accountLabel(user));
       if (status) {
         status.textContent = 'Signed in as ' + accountLabel(user) + '. Select which birth profile the chart should use.';
+      }
+      if (options.broadcast !== false) {
+        broadcastAuthState(true, options.reason || 'signed-in');
       }
     }
 
@@ -917,11 +945,7 @@
         .then(function (json) {
           state.profiles = Array.isArray(json.profiles) ? json.profiles : [];
           renderProfiles();
-          try {
-            window.dispatchEvent(new CustomEvent('iyogau:profiles-updated', {
-              detail: { profiles: state.profiles.slice() },
-            }));
-          } catch (err) {}
+          broadcastProfilesUpdated();
           var self = selfProfile();
           if (!headerOnly && autoLoadSelf && self && !state.autoLoadedSelf) {
             state.autoLoadedSelf = true;
@@ -1066,7 +1090,7 @@
 
     function initSession() {
       state.authConfig.loading = true;
-      setSignedOut();
+      setSignedOut({ broadcast: false, reason: 'loading' });
       jsonFetch('/api/auth/config/')
         .then(function (json) {
           state.authConfig = {
@@ -1080,8 +1104,11 @@
           return jsonFetch('/api/auth/session/');
         })
         .then(function (json) {
-          if (!json.authenticated) return;
-          setSignedIn(json.user);
+          if (!json.authenticated) {
+            setSignedOut({ reason: 'session-signed-out' });
+            return;
+          }
+          setSignedIn(json.user, { reason: 'session-signed-in' });
           return refreshProfiles(true);
         })
         .catch(function () {
@@ -1092,7 +1119,7 @@
             passwordAuthAvailable: false,
             loading: false,
           };
-          setSignedOut();
+          setSignedOut({ reason: 'session-error' });
         });
     }
 
@@ -1136,7 +1163,7 @@
         closeMenu();
         jsonFetch('/api/auth/logout/', { method: 'POST', body: '{}' })
           .then(function () {
-            setSignedOut();
+            setSignedOut({ reason: 'logout' });
             setMessage('', null);
           })
           .catch(function (err) { setMessage(err.message || 'Could not sign out.', 'error'); });

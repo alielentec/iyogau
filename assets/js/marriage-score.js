@@ -68,6 +68,16 @@
       return profiles.find(function (profile) { return profile.id === id; }) || null;
     }
 
+    function showSignedOutState() {
+      profiles = [];
+      populateSelectors();
+      if (resultEl) {
+        resultEl.textContent = '';
+        resultEl.appendChild(el('p', { class: 'natal-empty natal-empty--signed-out' },
+          'Sign in to use saved profiles for marriage scoring.'));
+      }
+    }
+
     function renderProfile(side) {
       var select = side === 'a' ? selectA : selectB;
       var profile = profileById(select && select.value);
@@ -133,12 +143,7 @@
       return jsonFetch('/api/auth/session/')
         .then(function (session) {
           if (!session.authenticated) {
-            profiles = [];
-            populateSelectors();
-            if (resultEl) {
-              resultEl.textContent = '';
-              resultEl.appendChild(el('p', { class: 'natal-empty' }, 'Sign in to use saved profiles for marriage scoring.'));
-            }
+            showSignedOutState();
             return null;
           }
           return jsonFetch('/api/profiles/');
@@ -223,6 +228,13 @@
     window.addEventListener('iyogau:profiles-updated', function (evt) {
       profiles = Array.isArray(evt.detail && evt.detail.profiles) ? evt.detail.profiles : profiles;
       populateSelectors();
+    });
+    window.addEventListener('iyogau:auth-state-changed', function (evt) {
+      if (evt.detail && evt.detail.authenticated) {
+        refreshProfiles();
+        return;
+      }
+      showSignedOutState();
     });
     refreshProfiles();
   }
