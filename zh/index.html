@@ -67,6 +67,7 @@
 <link rel="preload" as="style" href="/assets/css/styles.css" />
 <link rel="stylesheet" href="/assets/css/styles.css" />
 <link rel="stylesheet" href="/assets/css/natal-chart.css?v=49" />
+<link rel="stylesheet" href="/assets/css/course-dashboard.css?v=1" />
 
 <!-- Schema.org -->
 <script type="application/ld+json">
@@ -195,6 +196,7 @@
                 <span class="site-account__summary-name" data-account-menu-name>Account</span>
                 <span class="site-account__summary-email" data-account-menu-email></span>
               </div>
+              <a href="/dashboard/" role="menuitem" data-account-menu-link>Course dashboard</a>
               <a href="/natal-chart/#natal-calc" role="menuitem" data-account-menu-link>Saved profiles</a>
               <button type="button" role="menuitem" data-account-export-all disabled>Export birth data</button>
               <button type="button" role="menuitem" class="site-account__danger" data-account-delete-all disabled>Delete saved birth data</button>
@@ -204,7 +206,7 @@
           </div>
         </div>
 
-        <a href="#cta" class="btn btn-primary" data-i18n="nav.cta">Start Your Journey</a>
+        <a href="/dashboard/" class="btn btn-primary" data-i18n="nav.cta">Start Your Journey</a>
 
         <button class="menu-toggle" type="button" aria-label="Menu" aria-expanded="false" data-i18n-attr="aria-label:ui.menu">
           <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="18" x2="21" y2="18"/></svg>
@@ -240,7 +242,7 @@
            Placed between the two primary CTAs so it gets visual attention
            without competing with the course-application path. -->
       <a href="#natal-calc" class="btn btn-secondary" data-i18n="hero.cta_natal">Try Free Vedic Natal Chart</a>
-      <a href="#cta" class="btn btn-ghost" data-i18n="hero.cta2">Apply Now</a>
+      <a href="/dashboard/" class="btn btn-ghost" data-i18n="hero.cta2">Apply Now</a>
     </div>
     <div class="trust-badges">
       <span><span class="trust-dot"></span><span data-i18n="hero.trust1">Taught across Korea, China, and USA</span></span>
@@ -362,24 +364,48 @@
       <p data-i18n="course.sub">A 63-day immersive journey of self-discovery and inner connection.</p>
     </div>
 
-    <div class="course-hero">
-      <div class="price-tag">
-        <small data-i18n="course.price_label">Investment</small>
-        <span data-price-usd="5000">$5,000</span>
-        <small class="fx-note" data-fx-note></small>
-      </div>
-      <p style="max-width:680px;margin:0 auto 1rem;color:var(--ink-muted);" data-i18n="course.intro">Yoga, derived from the Sanskrit yuj, meaning 'to join' or 'to unite,' is about uniting with your inner universe.</p>
-      <div class="course-stats">
-        <div>
-          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
-          <strong data-i18n="course.duration">63 days</strong>
+    <div class="course-programs" data-course-public>
+      <article class="course-card course-card--program">
+        <div class="course-card__head">
+          <span class="course-card__type">Free Workshop</span>
+          <span class="course-card__mode">Online or offline</span>
         </div>
-        <div>
-          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87M16 3.13a4 4 0 0 1 0 7.75"/></svg>
-          <strong data-i18n="course.participants">177+ Participants</strong>
+        <h3>Introductory workshop</h3>
+        <p class="course-card__desc">A public first-contact session for discovery, method introduction, and deciding whether structured guidance is right for you.</p>
+        <p class="course-card__meta">Optional capacity limit. Offline workshops are offered only in covered cities and areas.</p>
+        <a class="btn btn-secondary" href="/dashboard/">Register or RSVP</a>
+      </article>
+
+      <article class="course-card course-card--program">
+        <div class="course-card__head">
+          <span class="course-card__type">Regular Group Course</span>
+          <span class="course-card__mode">Online or offline</span>
         </div>
+        <h3>Scheduled cohort course</h3>
+        <p class="course-card__desc">Owner-created cohorts with a fixed calendar, capacity, application review, and guided daily practice.</p>
+        <p class="course-card__meta">Offline cohorts can be created only inside owner-approved cities or areas.</p>
+        <a class="btn btn-primary" href="/dashboard/">Apply for a cohort</a>
+      </article>
+
+      <article class="course-card course-card--program">
+        <div class="course-card__head">
+          <span class="course-card__type">Private / Private Group</span>
+          <span class="course-card__mode">1 to 3 people</span>
+        </div>
+        <h3>Private class request</h3>
+        <p class="course-card__desc">Request one-on-one guidance or a private group class. The owner reviews goals, dates, location, and confirms the final schedule.</p>
+        <p class="course-card__meta">Online available. Offline requests must be inside covered service areas.</p>
+        <a class="btn btn-secondary" href="/dashboard/#private">Request private class</a>
+      </article>
+
+      <div class="course-scheduled">
+        <div>
+          <h3>Scheduled public courses</h3>
+          <p>Published workshops and cohorts appear here when the owner opens registration.</p>
+        </div>
+        <div class="course-grid" data-public-course-list></div>
       </div>
-      <a href="#cta" class="btn btn-primary" data-i18n="course.cta">Apply for Inner Transformation</a>
+
       <p class="health-notice"><span data-i18n="course.health_notice">Yoga is a physical practice. Consult a qualified physician before beginning, especially if you have any medical condition, are pregnant, or are recovering from injury. iYogaU programs are educational and not a substitute for medical care. Read our</span> <a href="/health-disclaimer/" data-i18n="course.health_notice_link">Health Disclaimer &amp; Liability Waiver</a>.</p>
     </div>
 
@@ -743,7 +769,7 @@
   <div class="container">
     <h2 data-i18n="cta.title">Are you ready to transform your life from within?</h2>
     <p data-i18n="cta.sub">The journey is disciplined, structured, and free from external distractions.</p>
-    <a href="mailto:hello@iyogau.com?subject=Inner%20Transformation%20Application" class="btn btn-primary" data-i18n="cta.btn">Apply for Inner Transformation</a>
+    <a href="/dashboard/" class="btn btn-primary" data-i18n="cta.btn">Apply for Inner Transformation</a>
   </div>
 </section>
 
@@ -811,6 +837,7 @@
 <script src="/assets/js/natal-chart-tabs.js?v=10" defer></script>
 <script src="/assets/js/account-profiles.js?v=25" defer></script>
 <script src="/assets/js/public-astrology.js?v=2" defer></script>
+<script src="/assets/js/course-dashboard.js?v=1" defer></script>
 <script src="/assets/data/world-continents.js?v=3" defer></script>
 <script src="/assets/js/astrocarto.js?v=17" defer></script>
 </body>
