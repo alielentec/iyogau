@@ -693,7 +693,7 @@
 
 .owner-table {
   width: 100%;
-  min-width: 720px;
+  min-width: 920px;
   border-collapse: separate;
   border-spacing: 0;
   border: 1px solid var(--outline);
@@ -724,6 +724,31 @@
 
 .owner-table tr:last-child td {
   border-bottom: 0;
+}
+
+.owner-table-row--clickable {
+  cursor: pointer;
+}
+
+.owner-table-row--clickable:hover td,
+.owner-table-row--clickable:focus-visible td {
+  background: color-mix(in srgb, var(--primary-faint) 35%, transparent);
+}
+
+.owner-link-button {
+  padding: 0;
+  border: 0;
+  background: transparent;
+  color: var(--primary);
+  font: inherit;
+  font-weight: 800;
+  text-align: left;
+  cursor: pointer;
+}
+
+.owner-link-button:hover,
+.owner-link-button:focus-visible {
+  text-decoration: underline;
 }
 
 .owner-inline-fields {

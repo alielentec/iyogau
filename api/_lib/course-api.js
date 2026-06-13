@@ -45,7 +45,7 @@ function userCourseSummary(state, courseId) {
   return course ? withCourse(course, state) : null;
 }
 
-function ownerUsers(state) {
+export function ownerUsers(state) {
   const byId = new Map();
   function add(userId, email, name) {
     if (!userId) return;
@@ -56,11 +56,15 @@ function ownerUsers(state) {
       role: 'user',
       applications: 0,
       approvedApplications: 0,
+      courses: 0,
+      activeCourses: 0,
       privateRequests: 0,
       confirmedPrivateRequests: 0,
       journals: 0,
       actionItems: 0,
       lastActivityAt: '',
+      _courseIds: new Set(),
+      _activeCourseIds: new Set(),
     };
     if (email) current.email = email;
     if (name) current.name = name;
@@ -75,7 +79,12 @@ function ownerUsers(state) {
     add(item.userId, item.userEmail, item.userName);
     const current = byId.get(item.userId);
     current.applications += 1;
-    if (item.status === 'approved') current.approvedApplications += 1;
+    if (item.status === 'approved') {
+      current.approvedApplications += 1;
+      if (item.courseId) current._courseIds.add(item.courseId);
+      const course = state.courses.find((candidate) => candidate.id === item.courseId);
+      if (course && !['cancelled', 'archived'].includes(course.status)) current._activeCourseIds.add(item.courseId);
+    }
     touch(item.userId, item.updatedAt || item.createdAt);
   });
   state.privateRequests.forEach((item) => {
@@ -96,8 +105,19 @@ function ownerUsers(state) {
     touch(item.userId, item.updatedAt || item.createdAt);
   });
   return Array.from(byId.values()).map((user) => ({
-    ...user,
+    id: user.id,
+    email: user.email,
+    name: user.name,
     role: user.approvedApplications || user.confirmedPrivateRequests ? 'student' : (user.applications || user.privateRequests ? 'applicant' : 'user'),
+    applications: user.applications,
+    approvedApplications: user.approvedApplications,
+    courses: user._courseIds.size + user.confirmedPrivateRequests,
+    activeCourses: user._activeCourseIds.size + user.confirmedPrivateRequests,
+    privateRequests: user.privateRequests,
+    confirmedPrivateRequests: user.confirmedPrivateRequests,
+    journals: user.journals,
+    actionItems: user.actionItems,
+    lastActivityAt: user.lastActivityAt,
   })).sort((a, b) => String(b.lastActivityAt || '').localeCompare(String(a.lastActivityAt || '')) || String(a.email || a.id).localeCompare(String(b.email || b.id)));
 }
 

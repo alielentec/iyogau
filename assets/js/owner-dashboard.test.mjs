@@ -25,6 +25,12 @@ test('owner dashboard exposes calendar views, sync controls, and student filters
   assert.match(ownerPage, /data-owner-calendar-view="list"/);
   assert.match(ownerPage, /data-google-calendar-status/);
   assert.match(ownerPage, /data-owner-user-filter="student"/);
+  assert.match(ownerPage, /data-owner-user-filter="active_student"/);
+  assert.match(dashboardJs, /label:\s*'Courses'/);
+  assert.match(dashboardJs, /label:\s*'Last activity'/);
+  assert.match(dashboardJs, /owner-table-row--clickable/);
+  assert.match(dashboardJs, /label:\s*'Submitted'/);
+  assert.match(dashboardJs, /label:\s*'Review status'/);
   assert.match(dashboardJs, /\/api\/owner\/google-calendar\/connect\//);
   assert.match(dashboardJs, /\/api\/owner\/google-calendar\/sync\//);
 });
