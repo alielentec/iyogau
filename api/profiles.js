@@ -9,7 +9,13 @@ import {
   setJsonHeaders,
 } from './_lib/api-utils.js';
 import { listProfiles, saveProfiles, sortProfiles } from './_lib/profile-store.js';
-import { assertSingleSelfProfile, normalizeProfileInput, toClientProfile } from './_lib/profile-validation.js';
+import {
+  assertNoDuplicateProfile,
+  demoteOtherSelfProfiles,
+  normalizeProfileInput,
+  profileDuplicateIdentityChanged,
+  toClientProfile,
+} from './_lib/profile-validation.js';
 
 export default async function handler(req, res) {
   try {
@@ -30,8 +36,11 @@ export default async function handler(req, res) {
       const body = await readJson(req);
       const existingProfiles = await listProfiles(session.user.id);
       const profile = normalizeProfileInput(body);
-      assertSingleSelfProfile(existingProfiles, profile);
-      const saved = await saveProfiles(session.user.id, existingProfiles.concat(profile));
+      assertNoDuplicateProfile(existingProfiles, profile);
+      const nextProfiles = profile.profileType === 'self'
+        ? demoteOtherSelfProfiles(existingProfiles, profile.id).concat(profile)
+        : existingProfiles.concat(profile);
+      const saved = await saveProfiles(session.user.id, nextProfiles);
       return sendJson(res, 201, { profile: toClientProfile(saved.find((p) => p.id === profile.id)) });
     }
 
@@ -43,8 +52,14 @@ export default async function handler(req, res) {
       const existing = existingProfiles.find((p) => p.id === id);
       if (!existing) throw new HttpError(404, 'Profile not found.');
       const updated = normalizeProfileInput(body.profile || body, existing);
-      assertSingleSelfProfile(existingProfiles, updated);
-      const saved = await saveProfiles(session.user.id, existingProfiles.map((p) => p.id === id ? updated : p));
+      if (profileDuplicateIdentityChanged(existing, updated)) {
+        assertNoDuplicateProfile(existingProfiles, updated);
+      }
+      const nextProfiles = existingProfiles.map((p) => p.id === id ? updated : p);
+      const saved = await saveProfiles(
+        session.user.id,
+        updated.profileType === 'self' ? demoteOtherSelfProfiles(nextProfiles, updated.id) : nextProfiles,
+      );
       return sendJson(res, 200, { profile: toClientProfile(saved.find((p) => p.id === id)) });
     }
 

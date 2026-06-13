@@ -35,3 +35,47 @@ test('malformed second-level birth times still fail validation', () => {
     /HH:MM or HH:MM:SS/,
   );
 });
+
+test('natal and astrocartography validators reject unresolved 0,0 coordinates', () => {
+  assert.throws(
+    () => validateInput({ ...aliBase, lat: 0, lon: 0 }),
+    /cannot both be 0/,
+  );
+  assert.throws(
+    () => validateAstrocartoInput({ ...aliBase, lat: 0, lon: 0, mode: 'relocation' }),
+    /cannot both be 0/,
+  );
+});
+
+test('astrocartography location inputs reject unresolved 0,0 coordinates', () => {
+  assert.throws(
+    () => validateAstrocartoInput({
+      ...aliBase,
+      mode: 'soulmate_timing',
+      targetDate: '2030-06-09',
+      targetLocation: { lat: 0, lon: 0 },
+    }),
+    /targetLocation.*cannot both be 0/,
+  );
+  assert.throws(
+    () => validateAstrocartoInput({
+      ...aliBase,
+      mode: 'immigration',
+      currentResidence: { lat: 0, lon: 0 },
+    }),
+    /currentResidence.*cannot both be 0/,
+  );
+});
+
+test('unknown birth time blocks exact astrocartography tools', () => {
+  assert.throws(
+    () => validateAstrocartoInput({
+      ...aliBase,
+      unknownTime: true,
+      mode: 'soulmate_timing',
+      resolution: 'medium',
+      targetDate: '2030-06-09',
+    }),
+    /require a known birth time/,
+  );
+});

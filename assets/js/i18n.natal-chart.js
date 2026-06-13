@@ -55,14 +55,14 @@
           profileHeading: 'Saved profiles',
           profileStatusSignedOut: 'Sign in from the header to save birth profiles.',
           profileSaveTitle: 'Save current form',
-          profileSaveButton: 'Save profile',
-          profileUpdateButton: 'Update',
+          profileSaveButton: 'Save as',
+          profileUpdateButton: 'Save',
           profileDuplicateButton: 'Duplicate',
           profileExportButton: 'Export',
           profileDeleteButton: 'Delete',
           name: 'Your name (optional)',
           'name.help': 'For your reference only — not sent to our server.',
-          steveJobsNote: 'Currently showing Steve Jobs’s chart. Edit any field below and your own chart will appear in the Natal Chart tab.',
+          steveJobsNote: 'Currently showing Ali’s chart. Edit any field below and your own chart will appear in the Natal Chart tab.',
           date: 'Birth date',
           time: 'Birth time',
           'time.unknown': 'I don’t know my birth time',
@@ -79,12 +79,10 @@
             legend: 'Fine-tune location (optional)',
             help: 'Auto-filled from the city you picked. Adjust if needed.'
           },
-          consent: 'I consent to processing my birth details (date, time, place) for this natal chart calculation.',
-          'consent.link': 'See our Privacy Policy.',
           submit: 'Calculate Natal Chart',
           submitting: 'Calculating…',
           error: {
-            required: 'Please complete every required field, including consent.',
+            required: 'Please complete every required field.',
             api: 'Sorry — we could not compute your chart. Please check your details and try again.'
           }
         },
@@ -96,7 +94,8 @@
           relocation: 'Relocation',
           immigration: 'Immigration',
           soulmate: 'Soulmate',
-          soulmateTiming: 'Soulmate Timing'
+          soulmateTiming: 'Soulmate Timing',
+          marriageScore: 'Marriage Score'
         },
         astrocarto: {
           loading: 'Computing astrocartography map…',
@@ -152,10 +151,10 @@
         },
         results: {
           heading: 'Your sidereal natal chart',
-          defaultCaption: 'Currently showing: Steve Jobs · 24 Feb 1955 · San Francisco',
-          defaultName: 'Steve Jobs',
+          defaultCaption: 'Currently showing: Ali · 09 Jun 1985 · Hamedan',
+          defaultName: 'Ali',
           placeFallback: 'your chart',
-          steveJobsAttrib: 'Steve Jobs birth data: Astro-Databank, AA-rated.',
+          steveJobsAttrib: 'Ali birth data: user-provided verification data, Hamedan, Iran.',
           aspectsEmpty: 'No major aspects within standard orbs for this chart.',
           ascendant: 'Ascendant',
           midheaven: 'Midheaven',
@@ -197,7 +196,7 @@
         presets: {
           legendHeading: 'Or pick a famous person',
           legendHelp: 'Loads a published natal chart. Edit any birth field to clear and use your own data.',
-          placeholder: 'Steve Jobs',
+          placeholder: 'Ali',
           currentlyShowing: "Currently showing {name}'s chart. Edit any field below and your own chart will appear in the Natal Chart tab.",
           attribution: '{name} birth data: {source}',
           ratingWarning: 'Time unreliable ({rating}-rated) — chart shown for reference; Ascendant and houses may not be accurate.',
@@ -295,14 +294,14 @@
           profileHeading: '저장된 프로필',
           profileStatusSignedOut: '출생 프로필을 저장하려면 헤더에서 로그인하세요.',
           profileSaveTitle: '현재 입력 저장',
-          profileSaveButton: '프로필 저장',
-          profileUpdateButton: '업데이트',
+          profileSaveButton: '다른 이름으로 저장',
+          profileUpdateButton: '저장',
           profileDuplicateButton: '복제',
           profileExportButton: '내보내기',
           profileDeleteButton: '삭제',
           name: '이름 (선택)',
           'name.help': '참고용입니다 — 서버로 전송되지 않습니다.',
-          steveJobsNote: '현재 스티브 잡스의 차트를 표시 중입니다. 아래 항목을 수정하면 베다 차트 탭에 본인의 차트가 표시됩니다.',
+          steveJobsNote: '현재 Ali의 차트를 표시 중입니다. 아래 항목을 수정하면 베다 차트 탭에 본인의 차트가 표시됩니다.',
           date: '출생일',
           time: '출생 시각',
           'time.unknown': '출생 시각을 모릅니다',
@@ -319,12 +318,10 @@
             legend: '위치 세부 조정 (선택 사항)',
             help: '선택하신 도시를 기반으로 자동 입력됩니다. 필요하면 직접 조정하세요.'
           },
-          consent: '이 출생 차트 계산을 위해 내 출생 정보(날짜, 시각, 장소)의 처리에 동의합니다.',
-          'consent.link': '개인정보 처리방침 보기',
           submit: '출생 차트 계산하기',
           submitting: '계산 중…',
           error: {
-            required: '동의를 포함해 필수 항목을 모두 입력해 주세요.',
+            required: '필수 항목을 모두 입력해 주세요.',
             api: '죄송합니다. 차트를 계산할 수 없었습니다. 입력 정보를 확인하고 다시 시도해 주세요.'
           }
         },
@@ -336,7 +333,8 @@
           relocation: '이주',
           immigration: '이민',
           soulmate: '소울메이트',
-          soulmateTiming: '소울메이트 타이밍'
+          soulmateTiming: '소울메이트 타이밍',
+          marriageScore: '결혼 점수'
         },
         astrocarto: {
           loading: '점성지리도(astrocartography) 지도를 계산하는 중…',
@@ -392,10 +390,10 @@
         },
         results: {
           heading: '당신의 베다 출생 차트',
-          defaultCaption: '현재 표시: 스티브 잡스 · 1955년 2월 24일 · 샌프란시스코',
-          defaultName: '스티브 잡스',
+          defaultCaption: '현재 표시: Ali · 1985년 6월 9일 · 하메단',
+          defaultName: 'Ali',
           placeFallback: '귀하의 차트',
-          steveJobsAttrib: '스티브 잡스 출생 정보: Astro-Databank, AA 등급.',
+          steveJobsAttrib: 'Ali 출생 정보: 사용자 제공 검증 데이터, 하메단, 이란.',
           aspectsEmpty: '표준 오브 범위 내에 주요 각도가 없습니다.',
           ascendant: '상승궁 (Asc)',
           midheaven: '천정 (MC)',
@@ -455,7 +453,7 @@
         presets: {
           legendHeading: '또는 유명 인물 선택',
           legendHelp: '공개된 출생 차트를 불러옵니다. 출생 정보를 수정하면 본인 데이터로 전환됩니다.',
-          placeholder: '스티브 잡스',
+          placeholder: 'Ali',
           currentlyShowing: '현재 {name}의 차트를 표시 중입니다. 아래 항목을 수정하면 베다 차트 탭에 본인의 차트가 표시됩니다.',
           attribution: '{name} 출생 정보: {source}',
           ratingWarning: '출생 시각 신뢰도 낮음 ({rating}등급) — 참고용 차트입니다. 어센던트 및 하우스 정보가 정확하지 않을 수 있습니다.',
@@ -553,14 +551,14 @@
           profileHeading: '已保存资料',
           profileStatusSignedOut: '请从页眉登录以保存出生资料。',
           profileSaveTitle: '保存当前表单',
-          profileSaveButton: '保存资料',
-          profileUpdateButton: '更新',
+          profileSaveButton: '另存为',
+          profileUpdateButton: '保存',
           profileDuplicateButton: '复制',
           profileExportButton: '导出',
           profileDeleteButton: '删除',
           name: '姓名（选填）',
           'name.help': '仅供您参考 — 不会发送到我们的服务器。',
-          steveJobsNote: '当前显示的是史蒂夫·乔布斯的星盘。修改下面任意字段后，您自己的星盘将出现在"吠陀星盘"标签页。',
+          steveJobsNote: '当前显示的是 Ali 的星盘。修改下面任意字段后，您自己的星盘将出现在"吠陀星盘"标签页。',
           date: '出生日期',
           time: '出生时间',
           'time.unknown': '我不知道自己的出生时间',
@@ -577,12 +575,10 @@
             legend: '微调位置（可选）',
             help: '根据您选择的城市自动填充。如需调整请修改。'
           },
-          consent: '我同意为了本次出生星盘计算而处理我的出生资料（日期、时间、地点）。',
-          'consent.link': '查看隐私政策',
           submit: '计算出生星盘',
           submitting: '正在计算…',
           error: {
-            required: '请填写所有必填项目并勾选同意项。',
+            required: '请填写所有必填项目。',
             api: '抱歉 — 无法计算您的星盘。请检查资料后重试。'
           }
         },
@@ -594,7 +590,8 @@
           relocation: '迁居',
           immigration: '移民',
           soulmate: '灵魂伴侣',
-          soulmateTiming: '灵魂伴侣时机'
+          soulmateTiming: '灵魂伴侣时机',
+          marriageScore: '婚姻评分'
         },
         astrocarto: {
           loading: '正在计算占星地理（astrocartography）地图…',
@@ -649,10 +646,10 @@
           editedIntro: '下方星盘是根据您输入的出生信息计算的。计算采用恒星黄道（吠陀）方法在我们服务器上完成，您输入的信息不会被保存、出售或转发给任何第三方。'
         },
         results: {
-          defaultCaption: '当前显示：史蒂夫·乔布斯 · 1955 年 2 月 24 日 · 旧金山',
-          defaultName: '史蒂夫·乔布斯',
+          defaultCaption: '当前显示：Ali · 1985 年 6 月 9 日 · 哈马丹',
+          defaultName: 'Ali',
           placeFallback: '您的星盘',
-          steveJobsAttrib: '史蒂夫·乔布斯出生数据：Astro-Databank，AA 级。',
+          steveJobsAttrib: 'Ali 出生数据：用户提供的校准数据，伊朗哈马丹。',
           aspectsEmpty: '本星盘在标准容许度内没有主要相位。',
           heading: '您的吐吃师出生星盘',  // TODO native-review
           ascendant: '上升点 (Asc)',
@@ -709,7 +706,7 @@
         presets: {
           legendHeading: '或选择一位名人',
           legendHelp: '加载已公开的出生星盘。修改任意出生字段即可切换到您自己的数据。',
-          placeholder: '史蒂夫·乔布斯',
+          placeholder: 'Ali',
           currentlyShowing: '当前显示的是 {name} 的星盘。修改下方任意字段，您自己的星盘将出现在"吠陀星盘"标签页。',
           attribution: '{name} 出生数据：{source}',
           ratingWarning: '出生时间不可靠（{rating}级）— 仅供参考，上升点与宫位可能不准确。',

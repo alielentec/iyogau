@@ -6,6 +6,7 @@ const SESSION_COOKIE = 'iyogau_session';
 const OAUTH_STATE_COOKIE = 'iyogau_oauth_state';
 const SESSION_MAX_AGE_SECONDS = 60 * 60 * 24 * 30;
 const STATE_MAX_AGE_SECONDS = 60 * 10;
+const SESSION_PROVIDERS = new Set(['google', 'apple', 'kakao', 'naver', 'password']);
 
 function secret() {
   const value = process.env.IYOGAU_SESSION_SECRET || process.env.SESSION_SECRET;
@@ -107,12 +108,13 @@ function clearCookie(res, name, req) {
 }
 
 export function setSessionCookie(req, res, user) {
+  const provider = user.provider || 'google';
   const token = signToken({
     sub: user.sub,
     email: user.email,
     name: user.name || '',
     picture: user.picture || '',
-    provider: 'google',
+    provider,
   }, SESSION_MAX_AGE_SECONDS);
   setCookie(res, SESSION_COOKIE, token, req, SESSION_MAX_AGE_SECONDS);
 }
@@ -124,14 +126,14 @@ export function clearSessionCookie(req, res) {
 export function getSession(req) {
   const token = parseCookies(req)[SESSION_COOKIE];
   const payload = verifyToken(token);
-  if (!payload || !payload.sub || payload.provider !== 'google') return null;
+  if (!payload || !payload.sub || !SESSION_PROVIDERS.has(payload.provider)) return null;
   return {
     user: {
       id: String(payload.sub),
       email: payload.email || '',
       name: payload.name || '',
       picture: payload.picture || '',
-      provider: 'google',
+      provider: payload.provider,
     },
   };
 }
@@ -154,7 +156,7 @@ export function verifyOAuthState(req, res, nonce) {
   };
 }
 
-function sanitizeReturnTo(value) {
+export function sanitizeReturnTo(value) {
   if (!value || typeof value !== 'string') return '/#natal-calc';
   if (!value.startsWith('/')) return '/#natal-calc';
   if (value.startsWith('//')) return '/#natal-calc';

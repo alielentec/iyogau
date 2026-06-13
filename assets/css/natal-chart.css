@@ -42,6 +42,33 @@
   font-size: 0.9rem;
   white-space: nowrap;
 }
+.natal-header-actions {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+}
+.natal-workspace .natal-page__inner {
+  gap: 1rem;
+}
+.natal-hero--compact {
+  max-width: 68ch;
+}
+.natal-hero--compact h1 {
+  margin-bottom: 0.35rem;
+}
+.natal-account--workspace {
+  margin: 0;
+}
+.natal-form--unified {
+  margin-top: 0.5rem;
+}
+.natal-profile-save--inline {
+  grid-column: 1 / -1;
+  padding: 0.75rem;
+  background: var(--surface);
+  border: 1px solid var(--outline);
+  border-radius: 8px;
+}
 
 /* --- Page container ------------------------------------------------ */
 .natal-page {
@@ -297,6 +324,30 @@
   min-width: 14rem;
 }
 
+.natal-form-actions {
+  align-items: flex-start;
+  flex-direction: row;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  padding-top: 0.75rem;
+  border-top: 1px solid var(--outline);
+}
+
+.natal-form-actions .natal-profile-save__actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+}
+
+.natal-form-actions .natal-error,
+.natal-form-actions .natal-profile-message {
+  flex: 1 0 100%;
+}
+
+.natal-form-actions .natal-profile-message[hidden] {
+  display: none;
+}
+
 .natal-error {
   margin: 0;
   padding: 0.625rem 0.875rem;
@@ -340,6 +391,455 @@
   line-height: 1.35;
   text-overflow: ellipsis;
 }
+.natal-public-picker {
+  display: flex;
+  min-width: 0;
+  flex-direction: column;
+  gap: 0.75rem;
+  padding: 0.875rem;
+  background: var(--surface-2);
+  border: 1px solid var(--outline);
+  border-radius: 8px;
+}
+.natal-public-picker__head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+}
+.natal-public-picker__head strong {
+  display: block;
+  color: var(--ink);
+  font-size: 0.95rem;
+  line-height: 1.25;
+}
+.natal-public-picker__head p {
+  margin: 0.25rem 0 0;
+  color: var(--ink-muted);
+  font-size: 0.86rem;
+  line-height: 1.45;
+}
+.natal-public-cards {
+  display: grid;
+  max-width: 100%;
+  min-width: 0;
+  grid-auto-columns: minmax(13.25rem, 16rem);
+  grid-auto-flow: column;
+  gap: 0.625rem;
+  overflow-x: auto;
+  padding-bottom: 0.125rem;
+  overscroll-behavior-inline: contain;
+  scroll-snap-type: x proximity;
+}
+.natal-public-card {
+  display: grid;
+  grid-template-columns: 2.75rem minmax(0, 1fr);
+  gap: 0.625rem;
+  align-items: center;
+  min-height: 4.375rem;
+  padding: 0.625rem;
+  color: var(--ink);
+  text-align: left;
+  background: var(--surface);
+  border: 1px solid var(--outline);
+  border-radius: 8px;
+  cursor: pointer;
+  scroll-snap-align: start;
+}
+.natal-public-card:hover,
+.natal-public-card:focus-visible {
+  border-color: var(--primary);
+  outline: none;
+  box-shadow: 0 0 0 3px var(--primary-faint);
+}
+.natal-public-card.is-active {
+  border-color: var(--primary);
+  box-shadow: inset 3px 0 0 var(--primary);
+}
+.natal-public-card__media {
+  position: relative;
+  display: grid;
+  width: 2.75rem;
+  height: 2.75rem;
+  overflow: hidden;
+  color: var(--primary);
+  background: var(--primary-faint);
+  border: 1px solid var(--outline);
+  border-radius: 8px;
+  place-items: center;
+}
+.natal-public-card__media img {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+.natal-public-card__initials {
+  font-size: 0.85rem;
+  font-weight: 800;
+  letter-spacing: 0.02em;
+}
+.natal-public-card__body {
+  display: flex;
+  min-width: 0;
+  flex-direction: column;
+  gap: 0.2rem;
+}
+.natal-public-card__body strong,
+.natal-public-card__body span {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.natal-public-card__body strong {
+  font-size: 0.9rem;
+  line-height: 1.2;
+}
+.natal-public-card__body span {
+  color: var(--ink-muted);
+  font-size: 0.76rem;
+  line-height: 1.25;
+}
+
+.natal-public-chart {
+  min-height: 0;
+  max-height: none;
+  overflow: visible;
+}
+
+.natal-public-chart .natal-results {
+  display: grid;
+  gap: 1rem;
+  padding: clamp(1rem, 2.5vw, 1.5rem);
+  border: 1px solid var(--outline);
+  border-radius: 8px;
+  background: var(--surface);
+  box-shadow: var(--shadow-sm);
+}
+
+.natal-public-chart__head {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 1rem;
+}
+
+.natal-public-chart__head > div {
+  width: 100%;
+}
+
+.natal-public-chart__head .natal-chart-title {
+  margin: 0 0 0.25rem;
+  font-size: clamp(1.4rem, 2.2vw, 1.9rem);
+  line-height: 1.15;
+}
+
+.natal-public-chart__head .natal-default-caption,
+.natal-public-chart .natal-attribution,
+.natal-public-chart__status {
+  margin: 0;
+  color: var(--ink-muted);
+  font-size: 0.9rem;
+  line-height: 1.45;
+}
+
+.natal-public-chart__status[data-state="error"] {
+  color: var(--danger, #a63a3a);
+}
+
+.natal-public-chart .natal-wheel-wrap {
+  max-width: min(42rem, 100%);
+  margin-inline: auto;
+}
+
+.natal-public-map {
+  gap: 1rem;
+  padding: clamp(1rem, 2.5vw, 1.5rem);
+  border: 1px solid var(--outline);
+  border-radius: 8px;
+  background: var(--surface);
+  box-shadow: var(--shadow-sm);
+}
+
+.natal-public-map__head {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 1rem;
+}
+
+.natal-public-map__head h3 {
+  margin: 0 0 0.25rem;
+  color: var(--ink);
+  font-size: clamp(1.25rem, 2vw, 1.65rem);
+  line-height: 1.15;
+}
+
+.natal-public-map__head p {
+  margin: 0;
+  color: var(--ink-muted);
+  font-size: 0.9rem;
+  line-height: 1.45;
+}
+
+.natal-public-map .astrocarto-map {
+  max-width: none;
+}
+
+.natal-public-gateway .natal-page__inner {
+  display: grid;
+  gap: clamp(1rem, 2vw, 1.5rem);
+}
+
+.natal-public-gateway__head {
+  max-width: 54rem;
+}
+
+.natal-method-note {
+  display: grid;
+  grid-template-columns: minmax(0, 1.7fr) minmax(16rem, 0.9fr);
+  gap: 1rem;
+  padding: clamp(1rem, 2vw, 1.25rem);
+  border: 1px solid var(--outline);
+  border-radius: 8px;
+  background: color-mix(in srgb, var(--surface) 82%, transparent);
+}
+
+.natal-method-note strong {
+  display: block;
+  margin-bottom: 0.35rem;
+  color: var(--ink);
+  font-size: 0.92rem;
+  line-height: 1.25;
+}
+
+.natal-method-note p {
+  margin: 0;
+  color: var(--ink-muted);
+  font-size: 0.92rem;
+  line-height: 1.55;
+}
+
+.natal-method-note__private {
+  display: grid;
+  align-content: start;
+  justify-items: start;
+  gap: 0.75rem;
+  padding-left: 1rem;
+  border-left: 1px solid var(--outline);
+}
+
+.natal-method-note__private .btn {
+  min-height: 2.5rem;
+  padding-inline: 1.1rem;
+}
+
+.natal-public-gateway .natal-tabpanel {
+  min-height: 0;
+  max-height: none;
+  overflow: visible;
+}
+
+.natal-tool-panel {
+  display: grid;
+  grid-template-columns: minmax(0, 1.1fr) minmax(17rem, 0.72fr);
+  gap: clamp(1.25rem, 3vw, 2rem);
+  align-items: center;
+  padding: clamp(1.1rem, 2.5vw, 1.75rem);
+  border: 1px solid var(--outline);
+  border-radius: 8px;
+  background: var(--surface);
+  box-shadow: var(--shadow-sm);
+}
+
+.natal-tool-panel__copy {
+  min-width: 0;
+}
+
+.natal-tool-panel h3 {
+  margin: 0 0 0.5rem;
+  color: var(--ink);
+  font-size: clamp(1.35rem, 2.2vw, 1.75rem);
+  line-height: 1.15;
+}
+
+.natal-tool-panel p {
+  margin: 0;
+  color: var(--ink-muted);
+  font-size: 1rem;
+  line-height: 1.6;
+}
+
+.natal-tool-list {
+  display: grid;
+  gap: 0.55rem;
+  margin: 1rem 0 0;
+  padding: 0;
+  list-style: none;
+}
+
+.natal-tool-list li {
+  position: relative;
+  padding-left: 1.1rem;
+  color: var(--ink);
+  font-size: 0.94rem;
+  line-height: 1.45;
+}
+
+.natal-tool-list li::before {
+  content: "";
+  position: absolute;
+  top: 0.62em;
+  left: 0;
+  width: 0.42rem;
+  height: 0.42rem;
+  border-radius: 999px;
+  background: var(--primary);
+}
+
+.natal-tool-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.65rem;
+  margin-top: 1.2rem;
+}
+
+.natal-tool-actions .btn {
+  min-height: 2.55rem;
+}
+
+.natal-tool-visual,
+.natal-tool-map-preview {
+  position: relative;
+  min-height: 18rem;
+  overflow: hidden;
+  border: 1px solid var(--outline);
+  border-radius: 8px;
+  background:
+    radial-gradient(circle at 34% 26%, color-mix(in srgb, var(--primary) 18%, transparent), transparent 34%),
+    linear-gradient(145deg, color-mix(in srgb, var(--surface-2) 86%, white), var(--surface));
+}
+
+.natal-tool-visual {
+  display: grid;
+  place-items: center;
+}
+
+.natal-tool-visual svg {
+  width: min(15.5rem, 76%);
+  color: color-mix(in srgb, var(--primary) 78%, var(--ink));
+  fill: none;
+  stroke: currentColor;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  stroke-width: 2.2;
+}
+
+.natal-tool-visual svg circle:nth-of-type(2),
+.natal-tool-visual svg line {
+  opacity: 0.34;
+}
+
+.natal-tool-visual svg path {
+  opacity: 0.72;
+  stroke-width: 3;
+}
+
+.natal-tool-map-preview__grid {
+  position: absolute;
+  inset: 0;
+  background-image:
+    linear-gradient(color-mix(in srgb, var(--primary) 20%, transparent) 1px, transparent 1px),
+    linear-gradient(90deg, color-mix(in srgb, var(--primary) 20%, transparent) 1px, transparent 1px);
+  background-size: 2rem 2rem;
+  opacity: 0.5;
+}
+
+.natal-tool-map-preview__heat {
+  position: absolute;
+  inset: 18% 6% 16% 8%;
+  border-radius: 48% 52% 42% 58%;
+  background:
+    radial-gradient(circle at 34% 58%, rgba(255, 132, 55, 0.78), transparent 30%),
+    radial-gradient(circle at 62% 46%, rgba(255, 218, 82, 0.72), transparent 32%),
+    radial-gradient(circle at 72% 62%, rgba(47, 195, 181, 0.48), transparent 38%);
+  filter: saturate(1.08);
+}
+
+.natal-tool-map-preview__line {
+  position: absolute;
+  top: -18%;
+  bottom: -18%;
+  width: 0.2rem;
+  border-radius: 999px;
+  background: color-mix(in srgb, var(--primary) 70%, #c96f4a);
+  opacity: 0.82;
+  transform-origin: center;
+}
+
+.natal-tool-map-preview__line--one {
+  left: 34%;
+  transform: rotate(12deg);
+}
+
+.natal-tool-map-preview__line--two {
+  right: 28%;
+  transform: rotate(-24deg);
+  background: #c77a3d;
+}
+
+.natal-tool-map-preview__line--three {
+  left: 28%;
+  transform: rotate(-18deg);
+  background: #c86d9a;
+}
+
+.natal-tool-map-preview__line--four {
+  right: 26%;
+  transform: rotate(21deg);
+  background: #4d9b8e;
+}
+
+.natal-tool-map-preview--soulmate .natal-tool-map-preview__heat {
+  background:
+    radial-gradient(circle at 44% 40%, rgba(211, 106, 154, 0.72), transparent 32%),
+    radial-gradient(circle at 68% 58%, rgba(255, 218, 82, 0.66), transparent 30%),
+    radial-gradient(circle at 28% 68%, rgba(60, 191, 179, 0.5), transparent 36%);
+}
+
+@media (max-width: 760px) {
+  .natal-public-chart__head {
+    align-items: stretch;
+    flex-direction: column;
+  }
+
+  .natal-method-note,
+  .natal-tool-panel {
+    grid-template-columns: 1fr;
+  }
+
+  .natal-method-note__private {
+    padding-top: 1rem;
+    padding-left: 0;
+    border-top: 1px solid var(--outline);
+    border-left: 0;
+  }
+
+  .natal-method-note__private .btn {
+    width: 100%;
+  }
+
+  .natal-tool-visual,
+  .natal-tool-map-preview {
+    min-height: 13rem;
+  }
+
+  .natal-tool-actions .btn {
+    width: 100%;
+  }
+}
+
 .natal-account {
   margin: 0 0 1rem;
   padding: clamp(0.875rem, 1.8vw, 1.25rem);
@@ -367,8 +867,7 @@
   color: var(--ink-muted);
 }
 .natal-account__actions,
-.natal-profile-save__actions,
-.natal-profile-card__actions {
+.natal-profile-save__actions {
   display: flex;
   flex-wrap: wrap;
   gap: 0.5rem;
@@ -505,6 +1004,13 @@
   line-height: 1.45;
 }
 @media (max-width: 640px) {
+  .natal-public-picker__head {
+    align-items: stretch;
+    flex-direction: column;
+  }
+  .natal-public-cards {
+    grid-auto-columns: minmax(12rem, 82vw);
+  }
   .natal-profile-strip {
     align-items: stretch;
     flex-direction: column;
@@ -735,6 +1241,10 @@
 /* Per-planet degree + minute text inside the wheel */
 .luna-degree {
   fill: var(--ink);
+  stroke: var(--surface);
+  stroke-width: 0.32px;
+  stroke-linejoin: round;
+  paint-order: stroke fill;
   font-family: "Manrope", system-ui, sans-serif;
   font-weight: 500;
 }
@@ -1088,6 +1598,18 @@
 }
 .btn-secondary:active {
   transform: translateY(1px);
+}
+
+.natal-workspace .natal-profile-danger {
+  color: #8f1d1d;
+  border-color: color-mix(in srgb, #8f1d1d 55%, var(--outline));
+}
+
+.natal-workspace .natal-profile-danger:hover,
+.natal-workspace .natal-profile-danger:focus-visible {
+  color: var(--surface);
+  background: #8f1d1d;
+  border-color: #8f1d1d;
 }
 
 /* =====================================================================
@@ -1876,6 +2398,50 @@
  * Input Data workflow
  * =================================================================== */
 
+.natal-page.natal-workspace {
+  padding-block: 1rem 2rem;
+}
+
+.natal-workspace .natal-page__inner {
+  gap: 0.875rem;
+}
+
+.site-account [hidden],
+.natal-account [hidden] {
+  display: none !important;
+}
+
+.natal-workspace .natal-hero--compact h1 {
+  font-size: clamp(1.5rem, 1.1rem + 1.2vw, 2rem);
+}
+
+.natal-workspace .natal-hero--compact .lead {
+  font-size: 0.95rem;
+  line-height: 1.45;
+}
+
+.natal-workspace .natal-tabs {
+  margin-bottom: 0.5rem;
+}
+
+.natal-workspace .natal-tab {
+  padding: 0.45rem 0.7rem;
+  font-size: 0.8rem;
+}
+
+.natal-workspace .natal-tabpanel {
+  min-height: 0;
+  padding-block: 0.25rem;
+}
+
+.natal-workspace .btn {
+  min-height: 34px;
+  padding: 0.42rem 0.7rem;
+  border-radius: 7px;
+  font-size: 0.8125rem;
+  line-height: 1.2;
+}
+
 .natal-input-workspace {
   display: grid;
   gap: 1rem;
@@ -1922,6 +2488,532 @@
 
 .natal-account--side {
   background: var(--surface);
+}
+
+.natal-account--workspace {
+  padding: 0.875rem;
+}
+
+.natal-account__header h2 {
+  margin: 0.1rem 0 0.25rem;
+  color: var(--ink);
+  font-family: "Noto Serif", serif;
+  font-size: clamp(1.2rem, 1rem + 0.7vw, 1.5rem);
+  line-height: 1.2;
+}
+
+.natal-account--workspace .natal-account__body {
+  margin-top: 0.75rem;
+}
+
+.natal-profile-workbench {
+  display: grid;
+  gap: 0.875rem;
+  align-items: start;
+}
+
+.natal-profile-library,
+.natal-profile-save--inline {
+  background: var(--surface);
+  border: 1px solid var(--outline);
+  border-radius: 8px;
+}
+
+.natal-profile-library {
+  display: grid;
+  gap: 0.65rem;
+  padding: 0.7rem;
+}
+
+.natal-profile-library__head,
+.natal-profile-editor__top,
+.natal-form-head--profile {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 0.75rem;
+}
+
+.natal-profile-library__head h3,
+.natal-profile-editor__top h3,
+.natal-form-head--profile h3 {
+  margin: 0 0 0.15rem;
+  color: var(--ink);
+  font-size: 0.98rem;
+  line-height: 1.2;
+}
+
+.natal-profile-library__head p,
+.natal-profile-editor__top p,
+.natal-form-head--profile p {
+  margin: 0;
+  color: var(--ink-muted);
+  font-size: 0.78rem;
+  line-height: 1.35;
+}
+
+.natal-profile-search {
+  display: grid;
+  gap: 0.25rem;
+  color: var(--ink);
+  font-size: 0.78rem;
+  font-weight: 700;
+}
+
+.natal-profile-search input {
+  width: 100%;
+  min-height: 34px;
+  padding: 0.4rem 0.55rem;
+  color: var(--ink);
+  background: var(--surface-2);
+  border: 1px solid var(--outline);
+  border-radius: 7px;
+  font: inherit;
+  font-size: 0.85rem;
+}
+
+.natal-profile-list--all {
+  max-height: 32rem;
+  overflow: auto;
+  padding-right: 0.1rem;
+}
+
+.natal-form--compact {
+  gap: 0.65rem;
+}
+
+.natal-form-subhead {
+  grid-column: 1 / -1;
+  display: flex;
+  align-items: center;
+  gap: 0.65rem;
+  margin-top: 0.1rem;
+  color: var(--ink-muted);
+  font-size: 0.72rem;
+  font-weight: 800;
+  letter-spacing: 0.055em;
+  line-height: 1;
+  text-transform: uppercase;
+}
+
+.natal-form-subhead::after {
+  content: "";
+  flex: 1 1 auto;
+  height: 1px;
+  background: var(--outline);
+}
+
+.natal-form--compact .natal-profile-save--inline {
+  padding: 0.7rem;
+}
+
+.natal-form--compact .natal-profile-save__grid {
+  grid-template-columns: 1fr;
+  gap: 0.55rem;
+}
+
+.natal-profile-save__self {
+  align-self: end;
+  min-height: 36px;
+  padding: 0.42rem 0.55rem;
+  background: var(--surface-2);
+  border: 1px solid var(--outline);
+  border-radius: 7px;
+}
+
+.natal-profile-save label.inline-check,
+.natal-profile-save__self,
+.natal-profile-save__consent {
+  align-items: flex-start;
+  flex-direction: row;
+  gap: 0.5rem;
+}
+
+.natal-profile-save__self {
+  align-items: center;
+  align-self: stretch;
+}
+
+.natal-profile-save__primary-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+}
+
+.natal-profile-save__actions .btn,
+.natal-profile-save__primary-actions .btn,
+.natal-profile-library__head .btn {
+  min-height: 32px;
+  padding: 0.35rem 0.65rem;
+  font-size: 0.8rem;
+}
+
+.natal-workspace .btn:disabled,
+.natal-workspace .btn[disabled] {
+  cursor: not-allowed;
+  opacity: 0.5;
+  box-shadow: none;
+}
+
+.natal-workspace .btn-primary:disabled,
+.natal-workspace .btn-primary[disabled] {
+  background: var(--outline);
+  border-color: var(--outline);
+  color: var(--ink-muted);
+}
+
+.natal-profile-save__notes {
+  display: flex;
+  flex-direction: column;
+  gap: 0.22rem;
+  color: var(--ink);
+  font-size: 0.8rem;
+  font-weight: 700;
+}
+
+.natal-form--compact .natal-field {
+  gap: 0.22rem;
+}
+
+.natal-workspace .natal-field > label,
+.natal-workspace .natal-field > .label-text {
+  font-size: 0.8rem;
+}
+
+.natal-workspace .natal-field input[type="text"],
+.natal-workspace .natal-field input[type="date"],
+.natal-workspace .natal-field input[type="time"],
+.natal-workspace .natal-field input[type="number"],
+.natal-workspace .natal-field select,
+.natal-profile-save input,
+.natal-profile-save textarea,
+.natal-profile-save__notes textarea {
+  min-height: 36px;
+  padding: 0.42rem 0.55rem;
+  border-radius: 7px;
+  font-size: 0.86rem;
+  color: var(--ink);
+  background: var(--surface);
+  border: 1px solid var(--outline);
+  font: inherit;
+}
+
+.natal-workspace .natal-field .help {
+  font-size: 0.75rem;
+  line-height: 1.3;
+}
+
+.natal-profile-save textarea,
+.natal-profile-save__notes textarea {
+  min-height: 3rem;
+  resize: vertical;
+}
+
+.natal-workspace .natal-loc-detail {
+  padding: 0.65rem;
+}
+
+.natal-workspace .natal-field--submit {
+  margin-top: 0.15rem;
+  padding-top: 0.65rem;
+  border-top: 1px solid var(--outline);
+}
+
+.natal-workspace .natal-form-actions {
+  display: flex;
+  align-items: center;
+  flex-direction: row;
+  flex-wrap: wrap;
+  gap: 0.5rem 0.625rem;
+}
+
+.natal-workspace .natal-form-actions > #home-nf-submit {
+  flex: 0 0 auto;
+  min-width: 13rem;
+  min-height: 38px;
+  padding: 0.52rem 1.1rem;
+  font-size: 0.9rem;
+}
+
+.natal-workspace .natal-form-actions .natal-profile-save__actions {
+  display: flex;
+  align-items: center;
+  flex: 1 1 18rem;
+  flex-wrap: wrap;
+  gap: 0.4rem;
+}
+
+.natal-workspace .natal-form-actions .natal-profile-save__actions .btn {
+  justify-content: center;
+  width: auto;
+  min-width: 4.75rem;
+  min-height: 36px;
+  padding: 0.42rem 0.7rem;
+  font-size: 0.84rem;
+}
+
+.natal-workspace .natal-form-actions .natal-profile-save__actions [data-profile-save] {
+  min-width: 5.8rem;
+}
+
+.natal-workspace .natal-form-actions .natal-error,
+.natal-workspace .natal-form-actions .natal-profile-message {
+  flex-basis: 100%;
+}
+
+.natal-workspace .natal-form-actions .natal-profile-message[hidden] {
+  display: none;
+}
+
+.natal-workspace .natal-form .consent {
+  padding: 0.6rem 0.7rem;
+}
+
+.natal-workspace .inline-check {
+  font-size: 0.82rem;
+}
+
+.natal-profile-card {
+  display: grid;
+  gap: 0.45rem;
+  cursor: pointer;
+}
+
+.natal-profile-card.is-reordering {
+  position: relative;
+  z-index: 2;
+  will-change: transform;
+}
+
+.natal-profile-card:hover,
+.natal-profile-card:focus-visible {
+  border-color: color-mix(in srgb, var(--primary) 55%, var(--outline));
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--primary-faint) 70%, transparent);
+  outline: none;
+}
+
+.natal-profile-card__top {
+  align-items: flex-start;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 0.5rem;
+  margin-bottom: 0;
+}
+
+.natal-profile-card__title {
+  min-width: 0;
+}
+
+.natal-profile-card__status {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 0.35rem;
+}
+
+.natal-profile-card__type,
+.natal-profile-card__active {
+  display: inline-flex;
+  align-items: center;
+  min-height: 1.25rem;
+  padding: 0.12rem 0.4rem;
+  border-radius: 999px;
+  background: color-mix(in srgb, var(--primary) 9%, transparent);
+  color: var(--ink-muted);
+  font-size: 0.68rem;
+  font-weight: 800;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+
+.natal-profile-card__active {
+  background: var(--primary-faint);
+  color: var(--primary);
+}
+
+.natal-profile-card__default {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.3rem;
+  min-height: 1.5rem;
+  padding: 0.14rem 0.42rem;
+  color: var(--ink);
+  background: var(--surface);
+  border: 1px solid var(--outline);
+  border-radius: 999px;
+  cursor: pointer;
+  font-size: 0.72rem;
+  font-weight: 800;
+  line-height: 1;
+  white-space: nowrap;
+}
+
+.natal-profile-card__default input {
+  width: 0.85rem;
+  height: 0.85rem;
+  margin: 0;
+  accent-color: var(--primary);
+}
+
+.natal-profile-card__default.is-default,
+.natal-profile-card__default:has(input:checked) {
+  color: var(--primary);
+  background: var(--primary-faint);
+  border-color: color-mix(in srgb, var(--primary) 45%, var(--outline));
+}
+
+.natal-profile-card__default.is-disabled {
+  cursor: not-allowed;
+  opacity: 0.55;
+}
+
+.natal-profile-card__meta {
+  margin-bottom: 0;
+  font-size: 0.76rem;
+  line-height: 1.35;
+}
+
+.natal-profile-empty--action {
+  display: grid;
+  gap: 0.45rem;
+  justify-items: start;
+  padding: 0.75rem;
+  color: var(--ink-muted);
+  background: var(--surface-2);
+  border: 1px dashed var(--outline);
+  border-radius: 8px;
+}
+
+.natal-profile-empty--action strong {
+  color: var(--ink);
+  font-size: 0.86rem;
+}
+
+.natal-profile-empty--action span {
+  font-size: 0.78rem;
+  line-height: 1.35;
+}
+
+.natal-profile-empty--action .btn {
+  min-height: 32px;
+  padding: 0.35rem 0.65rem;
+  font-size: 0.8rem;
+}
+
+@media (min-width: 760px) {
+  .natal-profile-workbench {
+    grid-template-columns: minmax(16rem, 20rem) minmax(0, 1fr);
+  }
+
+  .natal-profile-library {
+    position: sticky;
+    top: 0.75rem;
+    max-height: calc(100vh - 7rem);
+    overflow: hidden;
+  }
+
+  .natal-form--compact {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .natal-form--compact .natal-profile-save,
+  .natal-form--compact .natal-form-head,
+  .natal-form--compact .natal-form-subhead,
+  .natal-form--compact .natal-field--combo,
+  .natal-form--compact .natal-loc-detail,
+  .natal-form--compact .natal-profile-save__notes,
+  .natal-form--compact .natal-profile-save__primary-actions,
+  .natal-form--compact .natal-profile-message,
+  .natal-form--compact .natal-field.consent,
+  .natal-form--compact .natal-field--submit {
+    grid-column: 1 / -1;
+  }
+}
+
+@media (min-width: 760px) and (max-width: 979px) {
+  .natal-profile-workbench {
+    grid-template-columns: 1fr;
+  }
+
+  .natal-profile-library {
+    position: static;
+    max-height: none;
+    overflow: visible;
+  }
+}
+
+@media (min-width: 1080px) {
+  .natal-profile-workbench {
+    grid-template-columns: minmax(17rem, 21rem) minmax(0, 1fr);
+  }
+
+  .natal-form--compact {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+
+  .natal-form--compact .natal-profile-save,
+  .natal-form--compact .natal-form-head,
+  .natal-form--compact .natal-form-subhead,
+  .natal-form--compact .natal-field--combo,
+  .natal-form--compact .natal-loc-detail,
+  .natal-form--compact .natal-profile-save__notes,
+  .natal-form--compact .natal-profile-save__primary-actions,
+  .natal-form--compact .natal-profile-message,
+  .natal-form--compact .natal-field.consent,
+  .natal-form--compact .natal-field--submit {
+    grid-column: 1 / -1;
+  }
+
+  .natal-form--compact .natal-profile-save__grid {
+    grid-template-columns: minmax(12rem, 1fr) minmax(13rem, 0.8fr);
+  }
+
+  .natal-form--compact .natal-profile-save__notes {
+    grid-column: 1 / -1;
+  }
+}
+
+@media (max-width: 759px) {
+  .natal-profile-library__head,
+  .natal-profile-editor__top,
+  .natal-form-head--profile,
+  .natal-profile-save__primary-actions {
+    align-items: stretch;
+    flex-direction: column;
+  }
+
+  .natal-profile-list--all {
+    max-height: 19rem;
+  }
+
+  .natal-workspace .natal-form-actions {
+    align-items: stretch;
+    flex-direction: column;
+  }
+
+  .natal-workspace .natal-form-actions > #home-nf-submit {
+    width: 100%;
+    min-width: 0;
+  }
+
+  .natal-workspace .natal-form-actions .natal-profile-save__actions {
+    display: grid;
+    flex: none;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    width: 100%;
+  }
+
+  .natal-workspace .natal-form-actions .natal-profile-save__actions .btn,
+  .natal-workspace .natal-form-actions .natal-profile-save__actions [data-profile-save] {
+    width: 100%;
+    min-width: 0;
+  }
+}
+
+@media (max-width: 420px) {
+  .natal-workspace .natal-form-actions .natal-profile-save__actions {
+    grid-template-columns: 1fr;
+  }
 }
 
 .natal-profile-save__title {
@@ -1972,6 +3064,164 @@
 
 @media (max-width: 640px) {
   .natal-account--side .natal-profile-save__actions {
+    grid-template-columns: 1fr;
+  }
+}
+
+/* =====================================================================
+ * Marriage score workspace
+ * =================================================================== */
+
+.marriage-tool {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+}
+
+.marriage-tool__header h2 {
+  margin: 0 0 0.25rem;
+  color: var(--ink);
+  font-family: "Noto Serif", serif;
+  font-size: 1.35rem;
+}
+
+.marriage-tool__header p {
+  margin: 0;
+  color: var(--ink-muted);
+  font-size: 0.92rem;
+}
+
+.marriage-tool__grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 0.875rem;
+}
+
+.marriage-person {
+  display: flex;
+  min-width: 0;
+  flex-direction: column;
+  gap: 0.75rem;
+  padding: 0.875rem;
+  background: var(--surface-2);
+  border: 1px solid var(--outline);
+  border-radius: 8px;
+}
+
+.marriage-person label {
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+  color: var(--ink);
+  font-size: 0.85rem;
+  font-weight: 700;
+}
+
+.marriage-person select {
+  width: 100%;
+  min-height: 38px;
+  padding: 0.45rem 0.55rem;
+  color: var(--ink);
+  background: var(--surface);
+  border: 1px solid var(--outline);
+  border-radius: 8px;
+  font: inherit;
+  font-size: 0.88rem;
+}
+
+.marriage-person__tabs {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.35rem;
+}
+
+.marriage-person__tabs button {
+  min-height: 32px;
+  padding: 0.35rem 0.55rem;
+  color: var(--ink-muted);
+  background: var(--surface);
+  border: 1px solid var(--outline);
+  border-radius: 8px;
+  cursor: pointer;
+  font: inherit;
+  font-size: 0.78rem;
+  font-weight: 700;
+}
+
+.marriage-person__tabs button.is-active {
+  color: var(--ink);
+  border-color: var(--primary);
+  box-shadow: 0 0 0 2px var(--primary-faint);
+}
+
+.marriage-person svg {
+  display: block;
+  width: 100%;
+  height: auto;
+  background: var(--surface);
+  border: 1px solid var(--outline);
+  border-radius: 8px;
+}
+
+.marriage-data {
+  display: grid;
+  grid-template-columns: 6.5rem minmax(0, 1fr);
+  gap: 0.35rem 0.6rem;
+  margin: 0;
+  font-size: 0.85rem;
+}
+
+.marriage-data dt {
+  color: var(--ink-muted);
+  font-weight: 700;
+}
+
+.marriage-data dd {
+  min-width: 0;
+  margin: 0;
+  overflow-wrap: anywhere;
+  color: var(--ink);
+}
+
+.marriage-result {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+}
+
+.marriage-result__summary {
+  display: flex;
+  align-items: baseline;
+  gap: 0.75rem;
+  padding: 0.75rem 0.875rem;
+  background: var(--surface-2);
+  border: 1px solid var(--outline);
+  border-radius: 8px;
+}
+
+.marriage-result__summary strong {
+  color: var(--ink);
+  font-size: 1.4rem;
+}
+
+.marriage-result__summary span {
+  color: var(--ink-muted);
+  font-size: 0.85rem;
+  font-weight: 800;
+  text-transform: uppercase;
+}
+
+@media (max-width: 760px) {
+  .natal-header-actions {
+    align-items: flex-end;
+    flex-direction: column;
+  }
+
+  .marriage-tool__grid {
+    grid-template-columns: 1fr;
+  }
+
+  .marriage-data {
     grid-template-columns: 1fr;
   }
 }
