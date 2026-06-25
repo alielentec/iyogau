@@ -6,7 +6,7 @@
   "cleanUrls": true,
   "trailingSlash": true,
   "functions": {
-    "api/*.js": {
+    "api/**/*.js": {
       "maxDuration": 10,
       "memory": 256
     }
