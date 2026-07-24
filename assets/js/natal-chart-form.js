@@ -492,7 +492,7 @@
       lat: parseFloat(latEl.value),
       lon: parseFloat(lonEl.value),
       tradition: 'sidereal',
-      ayanamsa: 'lahiri',
+      ayanamsa: 'true_chitrapaksha',
       unknownTime: !!timeUnk.checked
     };
     // Note: payload deliberately omits the user-entered name.
@@ -553,6 +553,14 @@
     return retrograde ? base + ' ℞' : base;
   }
 
+  function ayanamsaLabel(value) {
+    if (value === 'true_chitrapaksha' || value === 'jhora') {
+      return 'True Chitrapaksha (JHora)';
+    }
+    if (value === 'lahiri') return 'Lahiri';
+    return value;
+  }
+
   function appendTable(parent, headings, rows) {
     var table = elt('table', { 'class': 'natal-table' });
     var thead = elt('thead');
@@ -600,7 +608,7 @@
         : model.tradition);
     }
     if (model.ayanamsa) {
-      var ayan = t('natal.results.ayanamsaLabel', 'Ayanamsa') + ': ' + model.ayanamsa;
+      var ayan = t('natal.results.ayanamsaLabel', 'Ayanamsa') + ': ' + ayanamsaLabel(model.ayanamsa);
       if (typeof model.ayanamsaValue === 'number') {
         ayan += ' (' + model.ayanamsaValue.toFixed(2) + '°)';
       }
