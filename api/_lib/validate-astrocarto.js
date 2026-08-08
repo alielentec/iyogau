@@ -1,18 +1,22 @@
 // Validator for /api/astrocarto. Extends validate.js#validateInput by adding:
 //   - mode: 'relocation' | 'immigration' | 'soulmate'  (required)
 //   - resolution: 'low' | 'medium' | 'high'             (optional, default 'medium')
-//   - currentResidence: { lat, lon }                    (required only when mode === 'immigration')
+//   - currentResidence: { lat, lon }                    (optional; read only for immigration)
+//   - targetDate: YYYY-MM-DD                            (only for soulmate_timing)
+//   - targetLocation: { lat, lon }                      (only for soulmate_timing)
+//   - includeHeat: boolean                              (optional, default true)
 //
 // Reuses every base-chart guard (date range, IANA tz, ±66.563° lat cap,
 // sidereal-only ayanamsa rule). The only differences from the natal API are
 // the three astrocarto-specific fields above and a relaxed unknownTime path
 // — astrocarto is meaningless without a real birth time (lines hinge on
-// GMST at birth), so we DO require time and reject unknownTime.
+// apparent sidereal time at birth), so we DO require time and reject unknownTime.
 
+import { DEFAULT_AYANAMSA, SUPPORTED_AYANAMSAS, isSupportedAyanamsa } from './ayanamsa.js';
 import { ValidationError } from './validate.js';
 
 const DATE_RE = /^\d{4}-\d{2}-\d{2}$/;
-const TIME_RE = /^([01]\d|2[0-3]):[0-5]\d$/;
+const TIME_RE = /^([01]\d|2[0-3]):[0-5]\d(?::[0-5]\d)?$/;
 const OFFSET_RE = /^([+-])(\d{1,2}):([0-5]\d)$/;
 const MIN_DATE = '1800-01-01';
 
@@ -44,21 +48,54 @@ const ALLOWED_TOP_FIELDS = new Set([
   // base chart fields
   'date', 'time', 'tz', 'lat', 'lon', 'tradition', 'ayanamsa',
   // astrocarto-specific
-  'mode', 'resolution', 'currentResidence',
+  'mode', 'resolution', 'currentResidence', 'targetDate', 'targetLocation', 'includeHeat',
 ]);
 
-const MODES = new Set(['relocation', 'immigration', 'soulmate']);
+const MODES = new Set(['relocation', 'immigration', 'soulmate', 'soulmate_timing']);
 
-// Resolution tiers — controls grid density. 'medium' (4°/4°) is the default
-// and matches the ast reference. 'high' (3°/3°) doubles cell count and
-// runtime; 'low' (6°/6°) halves it. The Vercel hobby budget for a 256 MB
-// function caps at ~1.5 s wall-time including cold-start ephemeris init,
-// so high-resolution is gated for paid plans / debug only.
+// Resolution tiers — controls full-world center-grid density. 'medium'
+// (4°/4°) is the default. 'high' (3°/3°) increases cell count; 'low'
+// (6°/6°) reduces it.
 const RESOLUTION_PRESETS = {
   low: { latStep: 6, lonStep: 6 },
   medium: { latStep: 4, lonStep: 4 },
   high: { latStep: 3, lonStep: 3 },
 };
+
+function validCalendarDateString(date) {
+  if (typeof date !== 'string' || !DATE_RE.test(date)) return false;
+  const [y, mo, d] = date.split('-').map(Number);
+  const probe = new Date(Date.UTC(y, mo - 1, d));
+  return probe.getUTCFullYear() === y && probe.getUTCMonth() === mo - 1 && probe.getUTCDate() === d;
+}
+
+function parseDateStringUTC(date) {
+  const [y, mo, d] = date.split('-').map(Number);
+  return new Date(Date.UTC(y, mo - 1, d, 12, 0, 0));
+}
+
+function dateStringUTC(date) {
+  return date.toISOString().slice(0, 10);
+}
+
+function daysInUTCMonth(year, monthIndex) {
+  return new Date(Date.UTC(year, monthIndex + 1, 0)).getUTCDate();
+}
+
+function addYearsClampedString(date, years) {
+  const start = parseDateStringUTC(date);
+  const year = start.getUTCFullYear() + years;
+  const month = start.getUTCMonth();
+  const day = Math.min(start.getUTCDate(), daysInUTCMonth(year, month));
+  return dateStringUTC(new Date(Date.UTC(year, month, day, 12, 0, 0)));
+}
+
+function todayClampedToRange(minDate, maxDate) {
+  const today = dateStringUTC(new Date());
+  if (today < minDate) return minDate;
+  if (today > maxDate) return maxDate;
+  return today;
+}
 
 export function validateAstrocartoInput(body) {
   if (!body || typeof body !== 'object' || Array.isArray(body)) {
@@ -71,7 +108,7 @@ export function validateAstrocartoInput(body) {
     }
   }
 
-  const { date, time, tz, lat, lon, tradition, ayanamsa, mode, resolution, currentResidence } = body;
+  const { date, time, tz, lat, lon, tradition, ayanamsa, mode, resolution, currentResidence, targetDate, targetLocation, includeHeat } = body;
 
   // ── Base chart fields (parity with validate.js) ──
   if (typeof date !== 'string' || !DATE_RE.test(date)) {
@@ -93,12 +130,12 @@ export function validateAstrocartoInput(body) {
   }
 
   // Astrocartography is meaningless without an accurate birth TIME — the
-  // four angular lines pivot on GMST at the birth instant, and a 4-minute
-  // time uncertainty shifts MC/IC lines by ~1° of longitude (~111 km at the
-  // equator). We do NOT accept `unknownTime: true` here. The frontend
+  // four angular lines pivot on apparent sidereal time at the birth instant,
+  // and a 4-minute time uncertainty shifts MC/IC lines by ~1° of longitude
+  // (~111 km at the equator). We do NOT accept `unknownTime: true`. The frontend
   // should gate the astrocarto feature behind a known-time prompt.
   if (typeof time !== 'string' || !TIME_RE.test(time)) {
-    throw new ValidationError('`time` must be a string in HH:MM 24-hour format. Astrocartography requires a known birth time.');
+    throw new ValidationError('`time` must be a string in HH:MM or HH:MM:SS 24-hour format. Astrocartography requires a known birth time.');
   }
 
   if (typeof tz !== 'string' || tz.length === 0 || tz.length > 64) {
@@ -125,20 +162,73 @@ export function validateAstrocartoInput(body) {
   }
   let ayanamsaFinal;
   if (traditionFinal === 'sidereal') {
-    ayanamsaFinal = ayanamsa === undefined ? 'lahiri' : ayanamsa;
-    if (ayanamsaFinal !== 'lahiri') {
-      throw new ValidationError('`ayanamsa` must be "lahiri" (the only supported value in v1).');
+    ayanamsaFinal = ayanamsa === undefined ? DEFAULT_AYANAMSA : ayanamsa;
+    if (!isSupportedAyanamsa(ayanamsaFinal)) {
+      throw new ValidationError(`\`ayanamsa\` must be one of: ${SUPPORTED_AYANAMSAS.map((a) => `"${a}"`).join(', ')}.`);
     }
   } else {
     if (ayanamsa !== undefined) {
-      throw new ValidationError('`ayanamsa` is not valid for tropical tradition. Omit `ayanamsa` for tropical, or set `tradition: "sidereal"` to use Lahiri.');
+      throw new ValidationError('`ayanamsa` is not valid for tropical tradition. Omit `ayanamsa` for tropical, or set `tradition: "sidereal"` to use a supported sidereal ayanamsa.');
     }
     ayanamsaFinal = null;
   }
 
   // ── Astrocarto-specific fields ──
   if (typeof mode !== 'string' || !MODES.has(mode)) {
-    throw new ValidationError('`mode` must be one of: "relocation", "immigration", "soulmate".');
+    throw new ValidationError('`mode` must be one of: "relocation", "immigration", "soulmate", "soulmate_timing".');
+  }
+
+  let targetDateFinal = null;
+  const minTarget = date;
+  const maxTarget = addYearsClampedString(date, 50);
+  if (targetDate !== undefined && targetDate !== null && targetDate !== '') {
+    if (!validCalendarDateString(targetDate)) {
+      throw new ValidationError('`targetDate` must be a valid date string in YYYY-MM-DD format.');
+    }
+    if (targetDate < minTarget || targetDate > maxTarget) {
+      throw new ValidationError(`\`targetDate\` must be between ${minTarget} and ${maxTarget}.`);
+    }
+    targetDateFinal = targetDate;
+  }
+  if (mode === 'soulmate_timing' && !targetDateFinal) {
+    targetDateFinal = todayClampedToRange(minTarget, maxTarget);
+  }
+  if (mode !== 'soulmate_timing' && targetDateFinal) {
+    throw new ValidationError('`targetDate` is only valid when `mode` is "soulmate_timing".');
+  }
+
+  let targetLocationFinal = null;
+  if (targetLocation !== undefined && targetLocation !== null) {
+    if (typeof targetLocation !== 'object' || Array.isArray(targetLocation)) {
+      throw new ValidationError('`targetLocation` must be an object with `lat` and `lon`.');
+    }
+    for (const k of Object.keys(targetLocation)) {
+      if (!['lat', 'lon', 'country', 'city'].includes(k)) {
+        throw new ValidationError(`Unknown field in \`targetLocation\`: \`${k}\`. Allowed: lat, lon, country, city.`);
+      }
+    }
+    const { lat: tLat, lon: tLon } = targetLocation;
+    if (!isFiniteNumber(tLat) || tLat < -90 || tLat > 90) {
+      throw new ValidationError('`targetLocation.lat` must be a finite number between -90 and 90.');
+    }
+    if (!isFiniteNumber(tLon) || tLon < -180 || tLon > 180) {
+      throw new ValidationError('`targetLocation.lon` must be a finite number between -180 and 180.');
+    }
+    targetLocationFinal = { lat: tLat, lon: tLon };
+    if (typeof targetLocation.country === 'string' && targetLocation.country.length <= 64) {
+      targetLocationFinal.country = targetLocation.country;
+    }
+    if (typeof targetLocation.city === 'string' && targetLocation.city.length <= 96) {
+      targetLocationFinal.city = targetLocation.city;
+    }
+  }
+  if (mode !== 'soulmate_timing' && targetLocationFinal) {
+    throw new ValidationError('`targetLocation` is only valid when `mode` is "soulmate_timing".');
+  }
+
+  const includeHeatFinal = includeHeat === undefined ? true : includeHeat;
+  if (typeof includeHeatFinal !== 'boolean') {
+    throw new ValidationError('`includeHeat` must be a boolean when supplied.');
   }
 
   const resolutionFinal = resolution === undefined ? 'medium' : resolution;
@@ -192,6 +282,9 @@ export function validateAstrocartoInput(body) {
     latStep,
     lonStep,
     currentResidence: currentResidenceFinal,
+    targetDate: targetDateFinal,
+    targetLocation: targetLocationFinal,
+    includeHeat: includeHeatFinal,
     unknownTime: false,
   };
 }

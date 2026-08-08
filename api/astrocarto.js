@@ -3,25 +3,24 @@
 // Astrocartography lines + heat-matrix for a natal chart, scored under one of
 // three life-mode lenses: relocation, immigration, soulmate.
 //
-// Math lives in ./_lib/astrocarto.js (parity-ported from ast/src/lib/
-// astrology.js). This file is the HTTP envelope: CORS, rate-limit, validation,
-// timezone resolution, response shaping. Same security posture as
-// /api/calculate-chart — birth data NEVER logged, anonymised IP, shared rate
-// bucket, 4 KB body cap.
+// Math lives in ./_lib/astrocarto.js. This file is the HTTP envelope: CORS,
+// rate-limit, validation, timezone resolution, response shaping. Same security
+// posture as /api/calculate-chart — birth data NEVER logged, anonymised IP,
+// shared rate bucket, 4 KB body cap.
 //
 // Returns 4 polylines per planet (MC, IC, AC, DC) × 9 Vedic bodies, plus a
-// {lat, lon, value} grid at the chosen resolution. Default 'medium' grid is
-// 4°×4° → 34 × 90 = 3060 cells, ~150 ms compute on Vercel hobby. The
-// response is deterministic for a given (date,time,tz,lat,lon,tradition,
-// mode,resolution) tuple → safe to cache 5 min in the browser.
+// full-world center-sampled vector grid at the chosen resolution. Default
+// 'medium' grid is 4°×4° → 45 × 90 = 4050 cells. The response is deterministic
+// for a given (date,time,tz,lat,lon,tradition,mode,resolution) tuple → safe to
+// cache 5 min in the browser.
 
-import { checkRateLimit, anonymizeIp } from './_lib/ratelimit.js';
+import { checkRateLimit, anonymizeIp, shouldBypassLocalRateLimit } from './_lib/ratelimit.js';
 import { localToUTC, ValidationError } from './_lib/validate.js';
 import { validateAstrocartoInput } from './_lib/validate-astrocarto.js';
-import { astroCartography, buildAstroNatal } from './_lib/astrocarto.js';
+import { astroCartography, buildAstroNatal, buildSoulmateTimingBounds, buildSoulmateTimingTimeline } from './_lib/astrocarto.js';
 
 const ENGINE_VERSION = '2.1.19';
-const ASTROCARTO_VERSION = '1.0.0';
+const ASTROCARTO_VERSION = '1.3.0';
 const ALLOWED_ORIGIN = 'https://iyogau.com';
 const VERCEL_PREVIEW_RE = /^https:\/\/iyogau-[a-z0-9-]+\.vercel\.app$/i;
 const LOCALHOST_RE = /^http:\/\/(localhost|127\.0\.0\.1)(:\d+)?$/i;
@@ -154,25 +153,29 @@ export default async function handler(req, res) {
   // same free-tool surface, and astrocarto compute is ~5-10× heavier than
   // the natal chart. Sharing the bucket means an attacker cannot get 5
   // charts + 5 astrocartos per minute (10 total) by alternating endpoints.
-  if (ip === 'unknown') {
-    const tight = checkRateLimit('unknown:tight');
-    if (!tight.allowed || tight.minuteRemaining < (tight.minuteLimit - 1)) {
-      res.setHeader('Retry-After', '60');
-      res.status(429).json({ error: 'Rate limit exceeded (anonymous client). Retry after 60s.' });
-      logLine({ t: new Date().toISOString(), ip: anonIp, status: 429, ms: Date.now() - startedAt, rl: 'unknown', route: 'astrocarto' });
+  if (shouldBypassLocalRateLimit(ip, reqOrigin, secFetchSite)) {
+    res.setHeader('X-RateLimit-Bypass', 'local-development');
+  } else {
+    if (ip === 'unknown') {
+      const tight = checkRateLimit('unknown:tight');
+      if (!tight.allowed || tight.minuteRemaining < (tight.minuteLimit - 1)) {
+        res.setHeader('Retry-After', '60');
+        res.status(429).json({ error: 'Rate limit exceeded (anonymous client). Retry after 60s.' });
+        logLine({ t: new Date().toISOString(), ip: anonIp, status: 429, ms: Date.now() - startedAt, rl: 'unknown', route: 'astrocarto' });
+        return;
+      }
+    }
+    const rl = checkRateLimit(ip);
+    res.setHeader('X-RateLimit-Limit-Minute', String(rl.minuteLimit));
+    res.setHeader('X-RateLimit-Remaining-Minute', String(rl.minuteRemaining));
+    res.setHeader('X-RateLimit-Limit-Day', String(rl.dayLimit));
+    res.setHeader('X-RateLimit-Remaining-Day', String(rl.dayRemaining));
+    if (!rl.allowed) {
+      res.setHeader('Retry-After', String(rl.retryAfter));
+      res.status(429).json({ error: `Rate limit exceeded (${rl.reason}). Retry after ${rl.retryAfter}s.` });
+      logLine({ t: new Date().toISOString(), ip: anonIp, status: 429, ms: Date.now() - startedAt, rl: rl.reason, route: 'astrocarto' });
       return;
     }
-  }
-  const rl = checkRateLimit(ip);
-  res.setHeader('X-RateLimit-Limit-Minute', String(rl.minuteLimit));
-  res.setHeader('X-RateLimit-Remaining-Minute', String(rl.minuteRemaining));
-  res.setHeader('X-RateLimit-Limit-Day', String(rl.dayLimit));
-  res.setHeader('X-RateLimit-Remaining-Day', String(rl.dayRemaining));
-  if (!rl.allowed) {
-    res.setHeader('Retry-After', String(rl.retryAfter));
-    res.status(429).json({ error: `Rate limit exceeded (${rl.reason}). Retry after ${rl.retryAfter}s.` });
-    logLine({ t: new Date().toISOString(), ip: anonIp, status: 429, ms: Date.now() - startedAt, rl: rl.reason, route: 'astrocarto' });
-    return;
   }
 
   // Read + parse body.
@@ -246,7 +249,7 @@ export default async function handler(req, res) {
   logLine({ t: new Date().toISOString(), ip: anonIp, status: 200, ms: Date.now() - startedAt, mode: input.mode, resolution: input.resolution, route: 'astrocarto' });
 }
 
-function buildAstrocartoPayload(input, dateUTC) {
+export function buildAstrocartoPayload(input, dateUTC) {
   const warnings = [];
   if (dateUTC && dateUTC.__ambiguous) {
     warnings.push('birth time fell inside a DST fall-back hour and was ambiguous; the earlier occurrence was used (standard convention)');
@@ -254,17 +257,30 @@ function buildAstrocartoPayload(input, dateUTC) {
   if (input.date < '1883-01-01') {
     warnings.push('pre-1883 date: most regions used Local Mean Time, not the modern IANA zone; computed offset may differ from the historic wall-clock by minutes');
   }
+  if (input.mode === 'immigration' && !input.currentResidence) {
+    warnings.push('immigration currentResidence not supplied; residence-distance adjustment omitted');
+  }
+  const timingBounds = input.mode === 'soulmate_timing'
+    ? buildSoulmateTimingBounds(input.date)
+    : null;
 
   const natalChart = buildAstroNatal(input, dateUTC);
   // Hand currentResidence through to the matrix scorer (only read when
   // mode === 'immigration'; for other modes it has no effect).
   natalChart.currentResidence = input.currentResidence;
+  const targetDateUTC = input.targetDate
+    ? new Date(`${input.targetDate}T12:00:00.000Z`)
+    : null;
 
   const compute = astroCartography(natalChart, input.mode, {
-    includeHeat: true,
+    includeHeat: input.includeHeat !== false,
     latStep: input.latStep,
     lonStep: input.lonStep,
+    targetDateUTC,
   });
+  const cityTiming = input.mode === 'soulmate_timing' && input.targetLocation
+    ? buildSoulmateTimingTimeline(natalChart, compute.lines, input.targetLocation, timingBounds)
+    : null;
 
   return {
     version: ASTROCARTO_VERSION,
@@ -290,21 +306,46 @@ function buildAstrocartoPayload(input, dateUTC) {
       type: line.type,
       weight: Math.round(line.weight * 10000) / 10000,
       scoreType: line.scoreType,
-      // Round to 2 decimal places (~1 km at the equator) — the SVG renderer
-      // can't show more precision than this, and it shaves ~40% off the
-      // wire weight.
-      points: line.points.map(([lon, lat]) => [round2(lon), round2(lat)]),
+      // Preserve sub-arcsecond geometry in the HTTP payload. Rounding to
+      // 2 decimals visibly kept the curve shape but moved AC/DC horizon
+      // points by multiple arcseconds, which is unacceptable for this map.
+      points: line.points.map(([lon, lat]) => [round6(lon), round6(lat)]),
     })),
+    timing: compute.timing && {
+      targetDate: compute.timing.targetDate,
+      targetTimeUTC: compute.timing.targetTimeUTC,
+      timelineStartDate: timingBounds?.startDate || null,
+      timelineEndDate: timingBounds?.endDate || null,
+      timelineTotalDays: timingBounds?.totalDays || null,
+      blend: compute.timing.blend,
+      globalActivationScore: compute.timing.globalActivationScore,
+      transitWeights: compute.timing.transitWeights,
+      lines: compute.timing.lines.map((line) => ({
+        planet: line.planet,
+        type: line.type,
+        weight: Math.round(line.weight * 10000) / 10000,
+        scoreType: line.scoreType,
+        points: line.points.map(([lon, lat]) => [round6(lon), round6(lat)]),
+      })),
+    },
+    cityTiming,
     heatMatrix: compute.heatMatrix && {
       formula: compute.heatMatrix.formula,
       sigmaKm: compute.heatMatrix.sigmaKm,
       influenceKm: compute.heatMatrix.influenceKm,
-      latStep: input.latStep,
-      lonStep: input.lonStep,
+      projection: compute.heatMatrix.projection,
+      coordinateRole: compute.heatMatrix.coordinateRole,
+      latRange: compute.heatMatrix.latRange,
+      lonRange: compute.heatMatrix.lonRange,
+      latStep: compute.heatMatrix.latStep,
+      lonStep: compute.heatMatrix.lonStep,
       latitudes: compute.heatMatrix.latitudes,
       longitudes: compute.heatMatrix.longitudes,
+      xCoordinates: compute.heatMatrix.xCoordinates,
+      yCoordinates: compute.heatMatrix.yCoordinates,
       values: compute.heatMatrix.values,
       cellMeta: compute.heatMatrix.cellMeta,
+      cells: compute.heatMatrix.cells,
       minValue: compute.heatMatrix.minValue,
       maxValue: compute.heatMatrix.maxValue,
     },
@@ -319,11 +360,20 @@ function buildAstrocartoPayload(input, dateUTC) {
       mode: input.mode,
       resolution: input.resolution,
       currentResidence: input.currentResidence,
+      targetDate: input.targetDate,
+      targetLocation: input.targetLocation,
+      includeHeat: input.includeHeat,
     },
     provenance: {
       engine: 'astronomy-engine',
       engineVersion: ENGINE_VERSION,
       astrocartoVersion: ASTROCARTO_VERSION,
+      timingModel: input.mode === 'soulmate_timing'
+        ? 'natal-soulmate-plus-noon-utc-transit-angular-lines-birth-to-age-50'
+        : null,
+      immigrationDistanceBasis: input.mode === 'immigration'
+        ? (input.currentResidence ? 'currentResidence' : 'omitted')
+        : null,
       // Rahu/Ketu use the MEAN ascending node (same caveat as
       // /api/calculate-chart). True node consumers cannot rely on these.
       nodeModel: 'mean',
@@ -333,5 +383,4 @@ function buildAstrocartoPayload(input, dateUTC) {
   };
 }
 
-function round2(v) { return Math.round(v * 100) / 100; }
 function round6(v) { return Math.round(v * 1000000) / 1000000; }

@@ -11,7 +11,7 @@
      in script-src/style-src is required by the FOUC-safe theme-init below
      and a few inline styles in markup; harden later by replacing with
      sha256 hashes if/when we audit them. -->
-<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com; img-src 'self' data:; connect-src 'self' https://open.er-api.com; base-uri 'self'; form-action 'self'; frame-ancestors 'none';" />
+<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com; img-src 'self' data:; connect-src 'self' https://open.er-api.com; base-uri 'self'; form-action 'self';" />
 <meta http-equiv="X-Content-Type-Options" content="nosniff" />
 <meta name="referrer" content="strict-origin-when-cross-origin" />
 
@@ -66,7 +66,7 @@
 
 <link rel="preload" as="style" href="/assets/css/styles.css" />
 <link rel="stylesheet" href="/assets/css/styles.css" />
-<link rel="stylesheet" href="/assets/css/natal-chart.css?v=28" />
+<link rel="stylesheet" href="/assets/css/natal-chart.css?v=49" />
 
 <!-- Schema.org -->
 <script type="application/ld+json">
@@ -174,6 +174,33 @@
             <button type="button" data-value="en" role="menuitemradio">English</button>
             <button type="button" data-value="ko" role="menuitemradio">한국어</button>
             <button type="button" data-value="zh" role="menuitemradio">中文</button>
+          </div>
+        </div>
+
+        <div class="site-account" data-account-global>
+          <span class="site-account__status" data-account-global-status aria-live="polite">Not signed in</span>
+          <a class="btn btn-secondary site-account__login" data-account-login data-account-login-compact href="#" aria-disabled="true">Sign in</a>
+          <div class="site-account__provider-menu" data-account-provider-menu role="menu" hidden></div>
+          <div class="site-account__menu-shell" data-account-menu-shell hidden>
+            <button class="site-account__trigger" type="button" data-account-menu-toggle aria-haspopup="menu" aria-expanded="false">
+              <span class="site-account__avatar" data-account-avatar aria-hidden="true">AK</span>
+              <span class="site-account__identity">
+                <span class="site-account__name" data-account-menu-name>Account</span>
+                <span class="site-account__email" data-account-menu-email></span>
+              </span>
+              <svg class="site-account__chevron" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.25" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="6 9 12 15 18 9"/></svg>
+            </button>
+            <div class="site-account__menu" data-account-menu role="menu" hidden>
+              <div class="site-account__summary" role="presentation">
+                <span class="site-account__summary-name" data-account-menu-name>Account</span>
+                <span class="site-account__summary-email" data-account-menu-email></span>
+              </div>
+              <a href="/natal-chart/#natal-calc" role="menuitem" data-account-menu-link>Saved profiles</a>
+              <button type="button" role="menuitem" data-account-export-all disabled>Export birth data</button>
+              <button type="button" role="menuitem" class="site-account__danger" data-account-delete-all disabled>Delete saved birth data</button>
+              <a href="/privacy/california/#sensitive" role="menuitem" data-account-menu-link>Privacy and data rights</a>
+              <button type="button" role="menuitem" data-account-logout>Sign out</button>
+            </div>
           </div>
         </div>
 
@@ -404,1567 +431,105 @@
   </div>
 </section>
 
-<!-- ========== INLINE NATAL-CHART CALCULATOR (tabbed) ==========
-     Tabs: Input Data | Natal Chart (default) | Planet Positions |
-     Major Aspects. The page renders Steve Jobs's chart by default —
-     visitors land on a real wheel and can switch to "Input Data" to
-     enter their own birth info. Default chart JSON is embedded in
-     the last <script type="application/json"> at the bottom of this
-     section; the form binder picks it up on init.
-     All IDs are prefixed `home-nf-` / `home-natal-` to avoid collision
-     with the dedicated /natal-chart/ page.  -->
-<section id="natal-calc" class="natal-page natal-page--lifted" aria-labelledby="natal-calc-heading">
+<!-- ========== GENERAL ASTROLOGY APP (public, signed-in gateway) ==========
+     The homepage no longer collects public birth data. It explains the
+     three core tools and sends users into the authenticated workspace for
+     personal calculations and saved profiles. -->
+<section id="natal-calc" class="natal-page natal-page--lifted natal-public-gateway" aria-labelledby="natal-calc-heading">
   <div class="container">
     <div class="natal-page__inner">
 
-      <div class="section-head">
-        <span class="eyebrow" data-i18n="natal.section.eyebrow">Vedic Natal Chart</span>
-        <h2 id="natal-calc-heading" data-i18n="natal.section.heading">Try it with your own birth details</h2>
-        <p class="natal-intro" id="home-natal-section-intro" data-i18n="natal.section.intro">Enter the date, time, and place you were born. The calculator runs sidereal Vedic math on our server &mdash; your details are not stored, sold, or sent anywhere else. Results appear on screen within seconds.</p>
+      <div class="section-head natal-public-gateway__head">
+        <span class="eyebrow" data-i18n="natal.section.eyebrow">General Astrology</span>
+        <h2 id="natal-calc-heading" data-i18n="natal.section.heading">Sidereal astrology tools</h2>
+        <p class="natal-intro" id="home-natal-section-intro" data-i18n="natal.section.intro">Sign in to calculate your own sidereal natal chart, relocation map, and soulmate map from one private birth profile.</p>
       </div>
 
-      <!-- Tablist: 4 tabs. Default-active = Natal Chart (so landing
-           visitors see the wheel first); rotating tabindex per ARIA
-           authoring practice (only the active tab is in the focus
-           ring, arrow keys move between siblings). -->
-      <div class="natal-tabs" role="tablist" aria-label="Natal chart sections" data-natal-tabs>
-        <button id="home-tab-input"       role="tab" aria-controls="home-panel-input"       aria-selected="false" tabindex="-1" class="natal-tab"           data-i18n="natal.tabs.input">Input Data</button>
-        <button id="home-tab-chart"       role="tab" aria-controls="home-panel-chart"       aria-selected="true"  tabindex="0"  class="natal-tab is-active" data-i18n="natal.tabs.chart">Natal Chart</button>
-        <button id="home-tab-planets"     role="tab" aria-controls="home-panel-planets"     aria-selected="false" tabindex="-1" class="natal-tab"           data-i18n="natal.tabs.planets">Planet Positions</button>
-        <button id="home-tab-aspects"     role="tab" aria-controls="home-panel-aspects"     aria-selected="false" tabindex="-1" class="natal-tab"           data-i18n="natal.tabs.aspects">Major Aspects</button>
-        <!-- Astrocartography: world-map heat overlay scored under three
-             life-mode lenses. Each tab fetches /api/astrocarto only on
-             first activation (debounced; cached for the session). The
-             panel body markup is identical except for data-astrocarto
-             mode, so the renderer keys behavior off that one attribute. -->
-        <button id="home-tab-relocation"  role="tab" aria-controls="home-panel-relocation"  aria-selected="false" tabindex="-1" class="natal-tab"           data-i18n="natal.tabs.relocation">Relocation</button>
-        <button id="home-tab-immigration" role="tab" aria-controls="home-panel-immigration" aria-selected="false" tabindex="-1" class="natal-tab"           data-i18n="natal.tabs.immigration">Immigration</button>
-        <button id="home-tab-soulmate"    role="tab" aria-controls="home-panel-soulmate"    aria-selected="false" tabindex="-1" class="natal-tab"           data-i18n="natal.tabs.soulmate">Soulmate</button>
+      <div id="home-natal-account" data-account-profiles data-account-header-only hidden aria-hidden="true"></div>
+
+      <div class="natal-method-note" aria-label="Calculation method">
+        <div>
+          <strong data-i18n="natal.public.methodTitle">Calculation method</strong>
+          <p data-i18n="natal.public.methodBody">This app uses a sidereal Vedic chart model, not a Western tropical chart. Natal output uses True Chitrapaksha/JHora ayanamsa with whole-sign houses; relocation and soulmate maps require exact birth time, birthplace coordinates, and timezone.</p>
+        </div>
+        <div class="natal-method-note__private">
+          <p data-i18n="natal.public.privacy">The public homepage does not ask for birth data. Your own details are entered after sign-in and stay tied to your account.</p>
+          <a class="btn btn-primary" href="/natal-chart/#natal-calc" data-account-login data-account-login-action data-i18n="natal.public.ctaSignIn">Sign in to calculate</a>
+        </div>
       </div>
 
-      <!-- ----- Tabpanel 1: Input Data ----- -->
-      <div role="tabpanel" id="home-panel-input" aria-labelledby="home-tab-input" class="natal-tabpanel" hidden>
-
-        <!-- Inline attention banner: explains that the page is currently
-             showing Steve Jobs's chart as a demo, and that editing the
-             form replaces it with the user's own. Subtle primary-tinted
-             background so it reads as informational, not alarming. -->
-        <aside class="natal-banner" id="home-natal-demo-banner" role="note" aria-label="Demo chart notice">
-          <svg class="natal-banner__icon" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
-            <circle cx="12" cy="12" r="10"></circle>
-            <line x1="12" y1="8" x2="12" y2="12"></line>
-            <line x1="12" y1="16" x2="12.01" y2="16"></line>
-          </svg>
-          <!-- Text is rewritten by the bootstrap whenever the active
-               preset changes — interpolates the localized preset name
-               into natal.presets.currentlyShowing. The data-i18n key
-               is kept so the i18n applier (re)translates on language
-               switch; the bootstrap re-runs after that. -->
-          <span id="home-natal-demo-banner-text" data-i18n="natal.form.steveJobsNote">Currently showing Steve Jobs&rsquo;s chart. Edit any field below and your own chart will appear in the Natal Chart tab.</span>
-        </aside>
-
-        <section class="natal-form-section" aria-labelledby="home-natal-form-heading">
-          <h3 id="home-natal-form-heading" class="sr-only" data-i18n="natal.form.heading">Birth details</h3>
-
-          <!-- Form fields are pre-populated with Steve Jobs's birth data so
-               the default chart in the "Natal Chart" tab matches what's in
-               the form. `data-default-tz` tells the binder which timezone
-               to select once the IANA list has been populated; `data-
-               resolved="1"` on the place input tells the binder it can
-               trust the pre-filled lat/lon and reveal the location-detail
-               fieldset without waiting for an autocomplete pick. -->
-          <form id="home-natal-form"
-                class="natal-form"
-                novalidate
-                data-default-tz="America/Los_Angeles">
-
-            <!-- Name input is wired as a combobox backed by a <datalist>
-                 of famous-person presets. Typing in the field updates
-                 only the wheel TITLE — picking a list entry overwrites
-                 the birth fields (date/time/place/lat/lon/tz) with that
-                 person's birth-data snapshot from
-                 /assets/js/natal-presets.js. The picker decides which
-                 path was taken by checking whether the typed text
-                 matches a preset's localized name (see the bootstrap
-                 below — onNameInputChange). -->
-            <div class="natal-field natal-field--name">
-              <label for="home-nf-name" data-i18n="natal.form.name">Your name (optional)</label>
-              <input id="home-nf-name" name="name" type="text" maxlength="60"
-                     autocomplete="off" inputmode="text"
-                     list="home-nf-name-presets"
-                     placeholder="Steve Jobs"
-                     data-i18n-attr="placeholder:natal.presets.placeholder" />
-              <datalist id="home-nf-name-presets">
-                <!-- Options are injected on init by the bootstrap so
-                     each <option value="..."> carries the LOCALIZED
-                     preset name. Browsers render the option `label`
-                     (place + blurb) next to the value. -->
-              </datalist>
-              <small class="help" data-i18n="natal.form.name.help">For your reference only &mdash; not sent to our server.</small>
-            </div>
-
-            <div class="natal-field">
-              <label for="home-nf-date" data-i18n="natal.form.date">Birth date</label>
-              <input id="home-nf-date" name="date" type="date" min="1800-01-01" value="1955-02-24" required aria-required="true" />
-            </div>
-
-            <div class="natal-field">
-              <label for="home-nf-time" data-i18n="natal.form.time">Birth time</label>
-              <input id="home-nf-time" name="time" type="time" value="19:15" required aria-required="true" />
-              <label class="inline-check">
-                <input id="home-nf-time-unknown" type="checkbox" />
-                <span data-i18n="natal.form.time.unknown">I don&rsquo;t know my birth time</span>
-              </label>
-            </div>
-
-            <div class="natal-field natal-field--combo">
-              <label for="home-nf-place" data-i18n="natal.form.place">Birthplace</label>
-              <div class="combo">
-                <input
-                  id="home-nf-place"
-                  name="place"
-                  type="text"
-                  value="San Francisco, United States"
-                  data-resolved="1"
-                  autocomplete="off"
-                  autocorrect="off"
-                  spellcheck="false"
-                  role="combobox"
-                  aria-autocomplete="list"
-                  aria-expanded="false"
-                  aria-controls="home-nf-place-listbox"
-                  aria-activedescendant=""
-                  required
-                  aria-required="true"
-                />
-                <ul id="home-nf-place-listbox" class="combo-listbox" role="listbox" hidden></ul>
-              </div>
-              <small class="help" data-i18n="natal.form.place.help">Type a city name. We match against a built-in gazetteer &mdash; no third-party lookup.</small>
-              <small class="help help--empty" id="home-nf-place-empty" hidden data-i18n="natal.form.place.empty">No matches. Try a larger nearby city.</small>
-            </div>
-
-            <fieldset class="natal-loc-detail" id="home-nf-loc-detail">
-              <legend data-i18n="natal.form.adjust.legend">Fine-tune location (optional)</legend>
-              <div class="natal-loc-grid">
-                <div class="natal-field">
-                  <label for="home-nf-lat" data-i18n="natal.form.lat">Latitude</label>
-                  <input id="home-nf-lat" name="lat" type="number" step="0.0001" min="-66.563" max="66.563" value="37.7749" inputmode="decimal" required aria-required="true" />
-                </div>
-                <div class="natal-field">
-                  <label for="home-nf-lon" data-i18n="natal.form.lon">Longitude</label>
-                  <input id="home-nf-lon" name="lon" type="number" step="0.0001" min="-180" max="180" value="-122.4194" inputmode="decimal" required aria-required="true" />
-                </div>
-                <div class="natal-field">
-                  <label for="home-nf-tz-select" data-i18n="natal.form.tz">Timezone</label>
-                  <select id="home-nf-tz-select" name="tz" aria-label="IANA timezone" aria-live="polite"></select>
-                </div>
-              </div>
-
-              <!-- Manual UTC-offset override. When the checkbox is ticked, the
-                   ±HH:MM input replaces the IANA timezone for the calculation
-                   (the form sends the offset as `tz` to the API, which accepts
-                   either form). Useful for births during a DST transition,
-                   in regions with historical TZ changes, or when the user
-                   simply knows their exact UTC offset and doesn't want to
-                   pick the right city. -->
-              <div class="natal-field tz-offset-row">
-                <label class="inline-check">
-                  <input id="home-nf-tz-offset-enable" type="checkbox" />
-                  <span data-i18n="natal.form.tz.offset.enable">Use custom UTC offset instead</span>
-                </label>
-                <div class="tz-offset-input-row" hidden>
-                  <label for="home-nf-tz-offset" class="sr-only" data-i18n="natal.form.tz.offset">UTC offset (±HH:MM)</label>
-                  <span class="tz-offset-sign-label">UTC</span>
-                  <select id="home-nf-tz-offset-sign" name="tzOffsetSign" aria-label="Offset sign">
-                    <option value="+">+</option>
-                    <option value="-">−</option>
-                  </select>
-                  <input id="home-nf-tz-offset-hours" type="number" min="0" max="14" step="1" value="8"
-                         inputmode="numeric" aria-label="Offset hours" />
-                  <span class="tz-offset-colon">:</span>
-                  <input id="home-nf-tz-offset-minutes" type="number" min="0" max="59" step="1" value="00"
-                         inputmode="numeric" aria-label="Offset minutes" />
-                </div>
-              </div>
-
-              <small class="help" data-i18n="natal.form.adjust.help">Auto-filled from the city you picked. Adjust if needed.</small>
-            </fieldset>
-
-            <div class="natal-field consent">
-              <label class="inline-check">
-                <input id="home-nf-consent" type="checkbox" required aria-required="true" />
-                <span>
-                  <span data-i18n="natal.form.consent">I consent to processing my birth details (date, time, place) for this natal chart calculation.</span>
-                  <a id="home-nf-privacy-link" href="/privacy/california/#sensitive" data-i18n="natal.form.consent.link">See our Privacy Policy.</a>
-                </span>
-              </label>
-            </div>
-
-            <div class="natal-field natal-field--submit">
-              <button type="submit" id="home-nf-submit" class="btn btn-primary" disabled>
-                <span data-i18n="natal.form.submit">Calculate Natal Chart</span>
-              </button>
-              <p class="natal-error" id="home-nf-error" role="alert" hidden></p>
-            </div>
-
-          </form>
-        </section>
+      <div class="natal-public-picker" aria-labelledby="home-public-picker-heading">
+        <div class="natal-public-picker__head">
+          <div>
+            <strong id="home-public-picker-heading" data-i18n="natal.public.pickerTitle">Known public birth charts</strong>
+            <p data-i18n="natal.public.pickerBody">Select a known person to view their published sidereal natal chart. Personal birth charts require sign-in.</p>
+          </div>
+        </div>
+        <div class="natal-public-cards" id="home-public-preset-cards" aria-label="Known public birth charts"></div>
       </div>
 
-      <!-- ----- Tabpanel 2: Natal Chart (default active) ----- -->
-      <div role="tabpanel" id="home-panel-chart" aria-labelledby="home-tab-chart" class="natal-tabpanel">
-        <section
-          class="natal-results"
-          id="home-natal-results"
-          aria-labelledby="home-natal-results-heading"
-          aria-live="polite"
-          aria-busy="false"
-        >
-          <h2 id="home-natal-results-heading" class="sr-only" data-i18n="natal.results.heading">Your sidereal natal chart</h2>
-          <p class="natal-chart-title" id="home-natal-chart-title" data-i18n="natal.results.defaultName">Steve Jobs</p>
-          <p class="natal-default-caption" id="home-natal-default-caption" data-i18n="natal.results.defaultCaption">Currently showing: Steve Jobs &middot; 24 Feb 1955 &middot; San Francisco</p>
+      <div class="natal-tabs" role="tablist" aria-label="General astrology tools" data-natal-tabs>
+        <button id="home-tab-chart" role="tab" aria-controls="home-panel-chart" aria-selected="true" tabindex="0" class="natal-tab is-active" data-i18n="natal.tabs.chart">Natal Chart</button>
+        <button id="home-tab-relocation" role="tab" aria-controls="home-panel-relocation" aria-selected="false" tabindex="-1" class="natal-tab" data-i18n="natal.tabs.relocation">Relocation</button>
+        <button id="home-tab-soulmate" role="tab" aria-controls="home-panel-soulmate" aria-selected="false" tabindex="-1" class="natal-tab" data-i18n="natal.tabs.soulmate">Soulmate</button>
+      </div>
+
+      <div role="tabpanel" id="home-panel-chart" aria-labelledby="home-tab-chart" class="natal-tabpanel natal-public-chart">
+        <section class="natal-results" id="home-public-chart-results" aria-labelledby="home-public-chart-title" aria-live="polite" aria-busy="false">
+          <div class="natal-public-chart__head">
+            <div>
+              <h3 class="natal-chart-title" id="home-public-chart-title" data-i18n="natal.public.chartLoadingTitle">Loading public chart</h3>
+              <p class="natal-default-caption" id="home-public-chart-caption" data-i18n="natal.public.chartLoadingCaption">Select a known person to load a sidereal natal chart.</p>
+            </div>
+          </div>
+
+          <p class="natal-public-chart__status" id="home-public-chart-status" role="status" aria-live="polite" hidden></p>
 
           <div class="natal-wheel-wrap">
             <svg
-              id="home-natal-wheel"
+              id="home-public-chart-wheel"
               viewBox="0 0 800 800"
               role="img"
-              aria-labelledby="home-natal-wheel-title home-natal-wheel-desc"
+              aria-labelledby="home-public-chart-wheel-title home-public-chart-wheel-desc"
               xmlns="http://www.w3.org/2000/svg"
             >
-              <title id="home-natal-wheel-title" data-i18n="natal.results.heading">Sidereal natal chart</title>
-              <desc id="home-natal-wheel-desc">Astrological wheel showing twelve zodiac signs, twelve houses, planetary positions, and major aspects.</desc>
+              <title id="home-public-chart-wheel-title" data-i18n="natal.results.heading">Sidereal natal chart</title>
+              <desc id="home-public-chart-wheel-desc">Sidereal natal chart wheel showing zodiac signs, houses, and chart axes.</desc>
             </svg>
           </div>
 
-          <div class="natal-meta" id="home-natal-meta"></div>
+          <p class="natal-meta__line" id="home-public-chart-meta"></p>
+          <p class="natal-attribution" id="home-public-chart-source"></p>
         </section>
       </div>
 
-      <!-- ----- Tabpanel 3: Planet Positions ----- -->
-      <div role="tabpanel" id="home-panel-planets" aria-labelledby="home-tab-planets" class="natal-tabpanel" hidden>
-        <div class="natal-table-wrap" id="home-natal-planets"></div>
-      </div>
-
-      <!-- ----- Tabpanel 4: Major Aspects ----- -->
-      <div role="tabpanel" id="home-panel-aspects" aria-labelledby="home-tab-aspects" class="natal-tabpanel" hidden>
-        <div class="natal-table-wrap" id="home-natal-aspects"></div>
-      </div>
-
-      <!-- ----- Tabpanel 5: Relocation (astrocartography) -----
-           data-astrocarto="<mode>" tells assets/js/astrocarto.js which
-           mode payload to fetch from /api/astrocarto. The renderer paints
-           the SVG into [data-astrocarto-map] and the legend into
-           [data-astrocarto-legend]; loading/error chrome reuses the
-           shared .astrocarto-state component. The panel only fetches on
-           first activation (debounced) — landing visitors who never
-           click this tab pay zero compute. -->
-      <div role="tabpanel" id="home-panel-relocation" aria-labelledby="home-tab-relocation" class="natal-tabpanel astrocarto-panel" data-astrocarto="relocation" hidden>
+      <div role="tabpanel" id="home-panel-relocation" aria-labelledby="home-tab-relocation" class="natal-tabpanel astrocarto-panel natal-public-map" data-astrocarto="relocation" hidden>
+        <div class="natal-public-map__head">
+          <div>
+            <h3 data-i18n="natal.public.relocationTitle">Relocation map</h3>
+            <p id="home-public-relocation-caption">Select a known person to load the relocation heat map.</p>
+          </div>
+        </div>
         <p class="astrocarto-panel__intro" data-i18n="natal.astrocarto.relocation.intro">Places where the planets that support stability, visibility, and growth in your chart amplify their effects. Warmer cells mark stronger zones; lines mark exact angular activation.</p>
         <div class="astrocarto-map" data-astrocarto-map aria-busy="false"></div>
-        <div class="astrocarto-state" data-astrocarto-loader hidden>
-          <span class="astrocarto-state__spinner" aria-hidden="true"></span>
-          <span data-i18n="natal.astrocarto.loading">Computing astrocartography map…</span>
-        </div>
+        <div class="astrocarto-state" data-astrocarto-loader hidden><span class="astrocarto-state__spinner" aria-hidden="true"></span><span data-i18n="natal.astrocarto.loading">Computing astrocartography map...</span></div>
         <div class="astrocarto-state astrocarto-state--error" data-astrocarto-error role="alert" hidden></div>
         <div class="astrocarto-legend" data-astrocarto-legend aria-label="Map legend"></div>
       </div>
 
-      <!-- ----- Tabpanel 6: Immigration (astrocartography) ----- -->
-      <div role="tabpanel" id="home-panel-immigration" aria-labelledby="home-tab-immigration" class="natal-tabpanel astrocarto-panel" data-astrocarto="immigration" hidden>
-        <p class="astrocarto-panel__intro" data-i18n="natal.astrocarto.immigration.intro">Places that support foreign movement, paperwork endurance, and settlement. Rahu, Saturn, and Jupiter lead this lens; warmer cells indicate where the transition can take root.</p>
-        <div class="astrocarto-map" data-astrocarto-map aria-busy="false"></div>
-        <div class="astrocarto-state" data-astrocarto-loader hidden>
-          <span class="astrocarto-state__spinner" aria-hidden="true"></span>
-          <span data-i18n="natal.astrocarto.loading">Computing astrocartography map…</span>
+      <div role="tabpanel" id="home-panel-soulmate" aria-labelledby="home-tab-soulmate" class="natal-tabpanel astrocarto-panel natal-public-map" data-astrocarto="soulmate" hidden>
+        <div class="natal-public-map__head">
+          <div>
+            <h3 data-i18n="natal.public.soulmateTitle">Soulmate map</h3>
+            <p id="home-public-soulmate-caption">Select a known person to load the soulmate heat map.</p>
+          </div>
         </div>
-        <div class="astrocarto-state astrocarto-state--error" data-astrocarto-error role="alert" hidden></div>
-        <div class="astrocarto-legend" data-astrocarto-legend aria-label="Map legend"></div>
-      </div>
-
-      <!-- ----- Tabpanel 7: Soulmate (astrocartography) ----- -->
-      <div role="tabpanel" id="home-panel-soulmate" aria-labelledby="home-tab-soulmate" class="natal-tabpanel astrocarto-panel" data-astrocarto="soulmate" hidden>
         <p class="astrocarto-panel__intro" data-i18n="natal.astrocarto.soulmate.intro">Places that favor partnership and meeting: where Venus, the Moon, and Jupiter lines run close to angular points. Warmer cells mark zones of relationship resonance.</p>
         <div class="astrocarto-map" data-astrocarto-map aria-busy="false"></div>
-        <div class="astrocarto-state" data-astrocarto-loader hidden>
-          <span class="astrocarto-state__spinner" aria-hidden="true"></span>
-          <span data-i18n="natal.astrocarto.loading">Computing astrocartography map…</span>
-        </div>
+        <div class="astrocarto-state" data-astrocarto-loader hidden><span class="astrocarto-state__spinner" aria-hidden="true"></span><span data-i18n="natal.astrocarto.loading">Computing astrocartography map...</span></div>
         <div class="astrocarto-state astrocarto-state--error" data-astrocarto-error role="alert" hidden></div>
         <div class="astrocarto-legend" data-astrocarto-legend aria-label="Map legend"></div>
       </div>
-
-      <p class="natal-attribution">
-        <small>
-          City data &copy; <a href="https://www.geonames.org/" rel="noopener" target="_blank">GeoNames</a>,
-          <a href="https://creativecommons.org/licenses/by/4.0/" rel="noopener license" target="_blank">CC&nbsp;BY&nbsp;4.0</a>.
-          <span id="home-natal-steve-jobs-attrib" data-i18n="natal.results.steveJobsAttrib">Steve Jobs birth data: Astro-Databank, AA-rated.</span>
-        </small>
-      </p>
-
-      <!-- Default chart for the "Natal Chart" tab on landing. JSON
-           below is a verbatim /api/calculate-chart response for Steve
-           Jobs (1955-02-24 19:15 PST, San Francisco, lat 37.7749,
-           lon -122.4194, sidereal/Lahiri). The form binder reads it
-           on init and renders the wheel + planets + aspects before
-           the user touches the form. -->
-      <script id="home-natal-default-data" type="application/json">{"ascendant":{"longitude":149.06441296669777,"sign":"Leo","signIndex":4,"degree":29,"minute":3,"second":52},"midheaven":{"longitude":58.0882769856228,"sign":"Taurus","signIndex":1,"degree":28,"minute":5,"second":18},"planets":[{"name":"Sun","longitude":312.5212435909421,"latitude":-7.436211995827448e-05,"sign":"Aquarius","signIndex":10,"degree":12,"minute":31,"second":16,"speed":1.006,"retrograde":false,"house":7,"nakshatra":{"index":23,"name":"Shatabhisha","pada":2,"lord":"Rahu"},"navamsha":{"sign":9,"signName":"Capricorn","pada":4,"longitude":292.69119231847895,"longitudeWithinNavamshaSign":22.691192318478954}},{"name":"Moon","longitude":344.52082698910385,"latitude":5.0469561558173375,"sign":"Pisces","signIndex":11,"degree":14,"minute":31,"second":15,"speed":14.1762,"retrograde":false,"house":8,"nakshatra":{"index":25,"name":"Uttara Bhadrapada","pada":4,"lord":"Saturn"},"navamsha":{"sign":7,"signName":"Scorpio","pada":5,"longitude":220.68744290193467,"longitudeWithinNavamshaSign":10.687442901934668}},{"name":"Mercury","longitude":291.13441635828747,"latitude":2.1070509775537953,"sign":"Capricorn","signIndex":9,"degree":21,"minute":8,"second":4,"speed":-0.0325,"retrograde":true,"house":6,"nakshatra":{"index":21,"name":"Shravana","pada":4,"lord":"Moon"},"navamsha":{"sign":3,"signName":"Cancer","pada":7,"longitude":100.2097472245872,"longitudeWithinNavamshaSign":10.209747224587204}},{"name":"Venus","longitude":267.9455611204071,"latitude":1.7173909307941988,"sign":"Sagittarius","signIndex":8,"degree":27,"minute":56,"second":44,"speed":1.1367,"retrograde":false,"house":5,"nakshatra":{"index":20,"name":"Uttara Ashadha","pada":1,"lord":"Sun"},"navamsha":{"sign":8,"signName":"Sagittarius","pada":9,"longitude":251.51005008366383,"longitudeWithinNavamshaSign":11.510050083663815}},{"name":"Mars","longitude":5.863535344005449,"latitude":0.30505974160026234,"sign":"Aries","signIndex":0,"degree":5,"minute":51,"second":49,"speed":0.7018,"retrograde":false,"house":9,"nakshatra":{"index":0,"name":"Ashwini","pada":2,"lord":"Ketu"},"navamsha":{"sign":1,"signName":"Taurus","pada":2,"longitude":52.77181809604903,"longitudeWithinNavamshaSign":22.771818096049035}},{"name":"Jupiter","longitude":87.2804956914565,"latitude":0.4740878036658731,"sign":"Gemini","signIndex":2,"degree":27,"minute":16,"second":50,"speed":-0.063,"retrograde":true,"house":11,"nakshatra":{"index":6,"name":"Punarvasu","pada":3,"lord":"Jupiter"},"navamsha":{"sign":2,"signName":"Gemini","pada":9,"longitude":65.52446122310843,"longitudeWithinNavamshaSign":5.524461223108435}},{"name":"Saturn","longitude":207.93582687333412,"latitude":2.3707636232903626,"sign":"Libra","signIndex":6,"degree":27,"minute":56,"second":9,"speed":0.0071,"retrograde":false,"house":3,"nakshatra":{"index":15,"name":"Vishakha","pada":3,"lord":"Jupiter"},"navamsha":{"sign":2,"signName":"Gemini","pada":9,"longitude":71.42244186000708,"longitudeWithinNavamshaSign":11.422441860007085}},{"name":"Uranus","longitude":90.9072058497672,"latitude":0.5462800724106303,"sign":"Cancer","signIndex":3,"degree":0,"minute":54,"second":26,"speed":-0.0292,"retrograde":true,"house":12,"nakshatra":{"index":6,"name":"Punarvasu","pada":4,"lord":"Jupiter"},"navamsha":{"sign":3,"signName":"Cancer","pada":1,"longitude":98.16485264790475,"longitudeWithinNavamshaSign":8.164852647904752}},{"name":"Neptune","longitude":184.82162360364492,"latitude":1.751786779671622,"sign":"Libra","signIndex":6,"degree":4,"minute":49,"second":18,"speed":-0.0141,"retrograde":true,"house":3,"nakshatra":{"index":13,"name":"Chitra","pada":4,"lord":"Mars"},"navamsha":{"sign":7,"signName":"Scorpio","pada":2,"longitude":223.3946124328043,"longitudeWithinNavamshaSign":13.394612432804307}},{"name":"Pluto","longitude":122.0962440763987,"latitude":10.544173263564584,"sign":"Leo","signIndex":4,"degree":2,"minute":5,"second":46,"speed":-0.0244,"retrograde":true,"house":1,"nakshatra":{"index":9,"name":"Magha","pada":1,"lord":"Ketu"},"navamsha":{"sign":0,"signName":"Aries","pada":1,"longitude":18.86619668758834,"longitudeWithinNavamshaSign":18.86619668758834}},{"name":"Rahu","longitude":249.27300871566274,"latitude":0,"sign":"Sagittarius","signIndex":8,"degree":9,"minute":16,"second":23,"speed":-0.053,"retrograde":true,"house":5,"nakshatra":{"index":18,"name":"Mula","pada":3,"lord":"Ketu"},"navamsha":{"sign":2,"signName":"Gemini","pada":3,"longitude":83.45707844096466,"longitudeWithinNavamshaSign":23.45707844096466}},{"name":"Ketu","longitude":69.27300871566274,"latitude":0,"sign":"Gemini","signIndex":2,"degree":9,"minute":16,"second":23,"speed":-0.053,"retrograde":true,"house":11,"nakshatra":{"index":5,"name":"Ardra","pada":1,"lord":"Rahu"},"navamsha":{"sign":8,"signName":"Sagittarius","pada":3,"longitude":263.45707844096466,"longitudeWithinNavamshaSign":23.45707844096466}}],"moonNakshatra":{"index":25,"name":"Uttara Bhadrapada","pada":4,"lord":"Saturn"},"houses":[{"number":1,"cusp":120,"sign":"Leo","signIndex":4,"degree":0,"minute":0},{"number":2,"cusp":150,"sign":"Virgo","signIndex":5,"degree":0,"minute":0},{"number":3,"cusp":180,"sign":"Libra","signIndex":6,"degree":0,"minute":0},{"number":4,"cusp":210,"sign":"Scorpio","signIndex":7,"degree":0,"minute":0},{"number":5,"cusp":240,"sign":"Sagittarius","signIndex":8,"degree":0,"minute":0},{"number":6,"cusp":270,"sign":"Capricorn","signIndex":9,"degree":0,"minute":0},{"number":7,"cusp":300,"sign":"Aquarius","signIndex":10,"degree":0,"minute":0},{"number":8,"cusp":330,"sign":"Pisces","signIndex":11,"degree":0,"minute":0},{"number":9,"cusp":0,"sign":"Aries","signIndex":0,"degree":0,"minute":0},{"number":10,"cusp":30,"sign":"Taurus","signIndex":1,"degree":0,"minute":0},{"number":11,"cusp":60,"sign":"Gemini","signIndex":2,"degree":0,"minute":0},{"number":12,"cusp":90,"sign":"Cancer","signIndex":3,"degree":0,"minute":0}],"aspects":[{"from":"Sun","to":"Rahu","type":"sextile","orb":3.25,"exact":60},{"from":"Sun","to":"Ketu","type":"trine","orb":3.25,"exact":120},{"from":"Moon","to":"Rahu","type":"square","orb":5.25,"exact":90},{"from":"Moon","to":"Ketu","type":"square","orb":5.25,"exact":90},{"from":"Venus","to":"Jupiter","type":"opposition","orb":0.67,"exact":180},{"from":"Venus","to":"Saturn","type":"sextile","orb":0.01,"exact":60},{"from":"Venus","to":"Uranus","type":"opposition","orb":2.96,"exact":180},{"from":"Mars","to":"Uranus","type":"square","orb":4.96,"exact":90},{"from":"Mars","to":"Neptune","type":"opposition","orb":1.04,"exact":180},{"from":"Mars","to":"Pluto","type":"trine","orb":3.77,"exact":120},{"from":"Mars","to":"Rahu","type":"trine","orb":3.41,"exact":120},{"from":"Mars","to":"Ketu","type":"sextile","orb":3.41,"exact":60},{"from":"Jupiter","to":"Saturn","type":"trine","orb":0.66,"exact":120},{"from":"Jupiter","to":"Uranus","type":"conjunction","orb":3.63,"exact":0},{"from":"Saturn","to":"Uranus","type":"trine","orb":2.97,"exact":120},{"from":"Saturn","to":"Pluto","type":"square","orb":4.16,"exact":90},{"from":"Uranus","to":"Neptune","type":"square","orb":3.91,"exact":90},{"from":"Neptune","to":"Pluto","type":"sextile","orb":2.73,"exact":60},{"from":"Neptune","to":"Ketu","type":"trine","orb":4.45,"exact":120},{"from":"Rahu","to":"Ketu","type":"opposition","orb":0,"exact":180}],"tradition":"sidereal","ayanamsa":"lahiri","ayanamsaValue":23.226856,"houseSystem":"whole-sign","input":{"date":"1955-02-24","time":"19:15","tz":"America/Los_Angeles","lat":37.7749,"lon":-122.4194,"tradition":"sidereal","ayanamsa":"lahiri","unknownTime":false},"provenance":{"engine":"astronomy-engine","engineVersion":"2.1.19","warnings":[]},"computedAt":"2026-06-09T04:38:59.000Z"}</script>
-
-      <!-- Auto-render + live recalc bootstrap.
-           - Renders Steve Jobs's chart on landing from the embedded JSON above.
-           - Populates the IANA timezone <select> with all Intl-supported zones.
-           - Wires the custom-offset checkbox: shows/hides the ±HH:MM input row,
-             and toggles which value is sent as `tz` to the API.
-           - Re-fetches and re-renders the chart 600ms after any change to
-             date, time, lat, lon, tz, or the offset fields.
-           - The form's Calculate button triggers the same recalc path
-             immediately.
-           - The natal-chart-form.js binder's submit handler bailed silently
-             in production for the home- mount, so we own the submit path
-             here. The binder still owns city autocomplete + selectCity().
-      -->
-      <script>
-      (function () {
-        'use strict';
-
-        // ---- DOM helpers — createElement + textContent only, never innerHTML.
-        function el(tag, attrs, text) {
-          var n = document.createElement(tag);
-          if (attrs) for (var k in attrs) if (Object.prototype.hasOwnProperty.call(attrs, k)) {
-            if (k === 'class') n.className = attrs[k];
-            else n.setAttribute(k, attrs[k]);
-          }
-          if (text !== undefined && text !== null) n.textContent = String(text);
-          return n;
-        }
-        function appendTable(parent, headings, rows) {
-          var table = el('table', { 'class': 'natal-table' });
-          var thead = el('thead');
-          var trh = el('tr');
-          headings.forEach(function (h) { trh.appendChild(el('th', { scope: 'col' }, h)); });
-          thead.appendChild(trh);
-          table.appendChild(thead);
-          var tbody = el('tbody');
-          rows.forEach(function (cells) {
-            var tr = el('tr');
-            cells.forEach(function (c, i) {
-              tr.appendChild(el(i === 0 ? 'th' : 'td', i === 0 ? { scope: 'row' } : null, c));
-            });
-            tbody.appendChild(tr);
-          });
-          table.appendChild(tbody);
-          parent.appendChild(table);
-        }
-        function degMin(p) {
-          var m = (p.minute != null) ? p.minute : 0;
-          return p.degree + '°' + (m < 10 ? '0' + m : m) + '′';
-        }
-        function $(id) { return document.getElementById(id); }
-
-        // ---- Render a chart model into the four containers.
-        function renderModel(model) {
-          // Wheel
-          var wheelEl = $('home-natal-wheel');
-          if (wheelEl && window.NatalWheel && typeof window.NatalWheel.render === 'function') {
-            try { window.NatalWheel.render(model, wheelEl, { showAspects: true, locale: 'en' }); }
-            catch (e) { if (window.console && console.warn) console.warn('[natal] wheel', e); }
-          }
-
-          // Meta line
-          var metaEl = $('home-natal-meta');
-          if (metaEl) {
-            var parts = [];
-            if (model.tradition === 'sidereal') parts.push('Sidereal (Vedic)');
-            if (model.ayanamsa) {
-              parts.push('Ayanamsa: ' + model.ayanamsa +
-                (typeof model.ayanamsaValue === 'number' ? ' (' + model.ayanamsaValue.toFixed(2) + '°)' : ''));
-            }
-            if (model.houseSystem) parts.push('Houses: ' + model.houseSystem);
-            metaEl.textContent = '';
-            metaEl.appendChild(el('p', { 'class': 'natal-meta__line' }, parts.join(' · ')));
-          }
-
-          // Planets table (with Asc/MC summary on top)
-          var planetsEl = $('home-natal-planets');
-          if (planetsEl) {
-            planetsEl.textContent = '';
-            if (model.ascendant || model.midheaven) {
-              var axesP = el('p', { 'class': 'natal-axes-summary' });
-              if (model.ascendant) {
-                axesP.appendChild(el('strong', null, 'Ascendant: '));
-                axesP.appendChild(document.createTextNode(model.ascendant.sign + ' ' + degMin(model.ascendant)));
-              }
-              if (model.ascendant && model.midheaven) axesP.appendChild(document.createTextNode('  ·  '));
-              if (model.midheaven) {
-                axesP.appendChild(el('strong', null, 'Midheaven: '));
-                axesP.appendChild(document.createTextNode(model.midheaven.sign + ' ' + degMin(model.midheaven)));
-              }
-              planetsEl.appendChild(axesP);
-            }
-            planetsEl.appendChild(el('h3', null, 'Planet positions'));
-            var rows = (model.planets || []).map(function (p) {
-              return [
-                p.name + (p.retrograde ? ' ℞' : ''),
-                p.sign, degMin(p),
-                (p.house != null ? String(p.house) : '—')
-              ];
-            });
-            appendTable(planetsEl, ['Planet', 'Sign', 'Degree', 'House'], rows);
-          }
-
-          // Aspects table
-          var aspectsEl = $('home-natal-aspects');
-          if (aspectsEl) {
-            aspectsEl.textContent = '';
-            var aspects = Array.isArray(model.aspects) ? model.aspects : [];
-            if (aspects.length === 0) {
-              aspectsEl.appendChild(el('p', { 'class': 'natal-empty' },
-                'No major aspects within standard orbs for this chart.'));
-            } else {
-              aspectsEl.appendChild(el('h3', null, 'Major aspects'));
-              var aRows = aspects.map(function (a) {
-                return [a.from, a.type, a.to, (a.orb != null ? a.orb.toFixed(1) + '°' : '—')];
-              });
-              appendTable(aspectsEl, ['From', 'Aspect', 'To', 'Orb'], aRows);
-            }
-          }
-        }
-
-        // ---- Build the API payload from current form values.
-        //
-        // If "use custom UTC offset" is checked, the offset (e.g. "+05:30")
-        // is sent as `tz` and the backend validates it as a fixed offset
-        // string. Otherwise the IANA timezone select value is sent.
-        function buildPayload() {
-          var dateEl = $('home-nf-date');
-          var timeEl = $('home-nf-time');
-          var timeUnk = $('home-nf-time-unknown');
-          var latEl  = $('home-nf-lat');
-          var lonEl  = $('home-nf-lon');
-          var tzSel  = $('home-nf-tz-select');
-          var useOff = $('home-nf-tz-offset-enable');
-          var offSign = $('home-nf-tz-offset-sign');
-          var offHrs  = $('home-nf-tz-offset-hours');
-          var offMin  = $('home-nf-tz-offset-minutes');
-
-          var date = dateEl.value;
-          var time = (timeUnk && timeUnk.checked) ? '12:00' : timeEl.value;
-          var lat = parseFloat(latEl.value);
-          var lon = parseFloat(lonEl.value);
-
-          var tz;
-          if (useOff && useOff.checked && offSign && offHrs && offMin) {
-            var sign = offSign.value === '-' ? '-' : '+';
-            var h = String(Math.max(0, Math.min(14, parseInt(offHrs.value, 10) || 0))).padStart(2, '0');
-            var m = String(Math.max(0, Math.min(59, parseInt(offMin.value, 10) || 0))).padStart(2, '0');
-            tz = sign + h + ':' + m;
-          } else {
-            tz = tzSel.value;
-          }
-
-          return {
-            date: date, time: time, tz: tz, lat: lat, lon: lon,
-            tradition: 'sidereal', ayanamsa: 'lahiri',
-            unknownTime: !!(timeUnk && timeUnk.checked)
-          };
-        }
-
-        function validPayload(p) {
-          if (!p.date || !p.time) return false;
-          if (!isFinite(p.lat) || p.lat < -66.563 || p.lat > 66.563) return false;
-          if (!isFinite(p.lon) || p.lon < -180 || p.lon > 180) return false;
-          if (!p.tz) return false;
-          return true;
-        }
-
-        var inFlight = false;
-        var pending = false;
-        // Serialised snapshot of the last payload that was successfully
-        // rendered. Initialised from the embedded default-data so the
-        // first user keystroke (which may not change anything material)
-        // does not fire a redundant request to the server. Updated on
-        // every successful render.
-        var lastPayloadJson = '';
-
-        // ---- Fetch a chart for the current form and re-render. Two
-        // levels of coalescing:
-        //   (1) If a request is already in flight, queue exactly one
-        //       follow-up; further calls collapse onto it.
-        //   (2) If the new payload is byte-for-byte identical to the
-        //       last successfully-rendered one, skip the fetch entirely.
-        //       Saves API calls when the user clicks Calculate without
-        //       having changed anything, or when input/change events
-        //       fire (e.g. autocomplete listener) without the value
-        //       actually moving.
-        // Canonical key for dedupe — serialise with SORTED object keys
-        // so the dedupe cache compares values regardless of which
-        // serialiser populated `lastPayloadJson` (the API's input echo
-        // vs the bootstrap's buildPayload have different field orders).
-        function canonicalJson(obj) {
-          if (obj === null || typeof obj !== 'object') return JSON.stringify(obj);
-          if (Array.isArray(obj)) return '[' + obj.map(canonicalJson).join(',') + ']';
-          var keys = Object.keys(obj).sort();
-          return '{' + keys.map(function (k) {
-            return JSON.stringify(k) + ':' + canonicalJson(obj[k]);
-          }).join(',') + '}';
-        }
-
-        function recalculate() {
-          if (inFlight) { pending = true; return; }
-          var payload = buildPayload();
-          if (!validPayload(payload)) {
-            // Reset the queued-recalc flag so a stale 'pending=true' from
-            // a previous in-flight cycle can't ghost-fire a recalc later
-            // in the session against a still-invalid form.
-            pending = false;
-            return;
-          }
-
-          var payloadJson = canonicalJson(payload);
-          if (payloadJson === lastPayloadJson) {
-            // No-op: the chart already reflects this payload. Same
-            // pending reset as above — otherwise a queued recalc that
-            // turns out to be a dupe could leak its flag into the next
-            // event loop.
-            pending = false;
-            return;
-          }
-
-          inFlight = true;
-          fetch('/api/calculate-chart/', {
-            method: 'POST',
-            headers: { 'content-type': 'application/json', 'accept': 'application/json' },
-            body: JSON.stringify(payload)
-          })
-            .then(function (r) {
-              if (!r.ok) return r.text().then(function (t) { throw new Error('API ' + r.status + ': ' + t.slice(0, 200)); });
-              return r.json();
-            })
-            .then(function (model) {
-              renderModel(model);
-              // Stamp the successful payload only AFTER render succeeds,
-              // so a transient API error doesn't poison the dedup cache.
-              lastPayloadJson = payloadJson;
-              // Hand the validated payload to the astrocartography renderer
-              // so the Relocation / Immigration / Soulmate tabs pick up the
-              // new birth data on next activation. setNatalSource is a
-              // no-op when the payload key hasn't changed, so we can fire
-              // it freely on every successful recalc.
-              try {
-                if (window.__astrocarto && typeof window.__astrocarto.setNatalSource === 'function') {
-                  window.__astrocarto.setNatalSource(payload);
-                }
-              } catch (e) {}
-            })
-            .catch(function (err) {
-              if (window.console && console.warn) console.warn('[natal] recalc', err);
-            })
-            .then(function () {
-              inFlight = false;
-              // Clear aria-busy now that the in-flight cycle is done. If
-              // a follow-up `pending` recalc is queued, recalculate()
-              // will set it again. Look up the element lazily so we
-              // tolerate the bootstrap not having reached step-5 yet.
-              try {
-                var rsEl = document.getElementById('home-natal-results');
-                if (rsEl) rsEl.setAttribute('aria-busy', 'false');
-              } catch (e) {}
-              if (pending) { pending = false; recalculate(); }
-            });
-        }
-
-        // Debounced wrapper — used by change-event listeners so the user
-        // can finish typing before we fire the API.
-        var debounceTimer = null;
-        function recalculateDebounced() {
-          if (debounceTimer) clearTimeout(debounceTimer);
-          debounceTimer = setTimeout(recalculate, 600);
-        }
-
-        function onReady(fn) {
-          if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', fn);
-          else fn();
-        }
-
-        onReady(function () {
-          // setTimeout(0) lets the deferred natal-chart-wheel.js IIFE finish
-          // attaching window.NatalWheel before we try to render.
-          setTimeout(function () {
-            // Idempotency guard: if this bootstrap has already run (e.g.
-            // a future SPA route change re-evaluates the inline script),
-            // bail. Double-binding event listeners would fire each
-            // handler twice and double the rate-limit consumption.
-            if (window.__natalHomeBootstrapInit) return;
-            window.__natalHomeBootstrapInit = true;
-            try {
-              // ---- 1. Default chart render from embedded JSON.
-              var dataEl = $('home-natal-default-data');
-              if (dataEl && dataEl.textContent) {
-                var defaultModel = JSON.parse(dataEl.textContent);
-                renderModel(defaultModel);
-                // Seed the dedupe cache with the default chart's input
-                // payload so the first user-triggered recalc only
-                // fires if the form values actually differ from
-                // Steve Jobs's defaults. Without this, the very first
-                // input event (e.g. autocomplete-listener side effect)
-                // would fire a redundant /api/calculate-chart/ POST
-                // for data the page is already rendering.
-                if (defaultModel.input) {
-                  lastPayloadJson = canonicalJson(defaultModel.input);
-                  // Seed the astrocartography renderer with Steve Jobs's
-                  // input so the three map tabs work immediately on first
-                  // click — no need to wait for a form-driven recalc.
-                  // setNatalSource is idempotent under the same key.
-                  try {
-                    if (window.__astrocarto && typeof window.__astrocarto.setNatalSource === 'function') {
-                      window.__astrocarto.setNatalSource(defaultModel.input);
-                    } else {
-                      // Renderer hasn't loaded yet (defer order). Stash on
-                      // a placeholder; astrocarto.js init() will read this
-                      // before its first fetch.
-                      window.__astrocartoPending = defaultModel.input;
-                    }
-                  } catch (e) {}
-                }
-              }
-
-              // ---- 2. Populate the IANA timezone select.
-              var tzSel = $('home-nf-tz-select');
-              if (tzSel && tzSel.options.length === 0) {
-                var zones = [];
-                try {
-                  if (typeof Intl !== 'undefined' && typeof Intl.supportedValuesOf === 'function') {
-                    zones = Intl.supportedValuesOf('timeZone');
-                  }
-                } catch (e) {}
-                if (!zones.length) {
-                  zones = ['UTC', 'America/Los_Angeles', 'America/New_York', 'Europe/London',
-                           'Asia/Kolkata', 'Asia/Shanghai', 'Asia/Seoul', 'Asia/Tokyo'];
-                }
-                var frag = document.createDocumentFragment();
-                zones.forEach(function (z) {
-                  var opt = document.createElement('option');
-                  opt.value = z; opt.textContent = z;
-                  frag.appendChild(opt);
-                });
-                tzSel.appendChild(frag);
-                tzSel.value = 'America/Los_Angeles';
-              }
-
-              // ---- 3. Wire the offset-enable checkbox.
-              var useOff = $('home-nf-tz-offset-enable');
-              var offRow = document.querySelector('#natal-calc .tz-offset-input-row');
-              if (useOff && offRow) {
-                useOff.addEventListener('change', function () {
-                  offRow.hidden = !useOff.checked;
-                  tzSel.disabled = useOff.checked;
-                  recalculate();
-                });
-              }
-
-              // ---- 4. Live recalc listeners on every input that affects
-              //         the chart. Debounced so a partial keystroke doesn't
-              //         fire the API.
-              ['home-nf-date', 'home-nf-time', 'home-nf-time-unknown',
-               'home-nf-lat', 'home-nf-lon', 'home-nf-tz-select',
-               'home-nf-tz-offset-sign', 'home-nf-tz-offset-hours',
-               'home-nf-tz-offset-minutes'
-              ].forEach(function (id) {
-                var input = $(id);
-                if (!input) return;
-                input.addEventListener('change', recalculateDebounced);
-                input.addEventListener('input', recalculateDebounced);
-              });
-
-              // ---- 4b. Name field is LOCAL ONLY (never sent to the API
-              //          — see buildPayload() above which deliberately
-              //          omits it). Reflect typed name into the chart
-              //          title above the wheel and into the caption.
-              //          On blank, fall back to "Steve Jobs" / the
-              //          i18n default caption so the demo state stays
-              //          self-explanatory.
-              //
-              //          Snapshot the caption AFTER i18n has had a chance
-              //          to translate it — by reading it lazily on first
-              //          updateName() call, then caching. The data-orig
-              //          attribute below is preserved across language
-              //          switches by re-snapshotting whenever the active
-              //          name field is empty.
-              var nameEl     = $('home-nf-name');
-              var titleEl    = $('home-natal-chart-title');
-              var captionEl  = $('home-natal-default-caption');
-              var dateElCap  = $('home-nf-date');
-              var placeElCap = $('home-nf-place');
-
-              // Look up the LOCALIZED default name from the i18n bundle.
-              // When a famous-people preset is active, prefer its
-              // localized name over the legacy i18n.results.defaultName
-              // key — that key is fixed to Steve Jobs and was the only
-              // option before the picker existed. Now that we have
-              // 8 presets, we route the title through the active
-              // preset's i18n entry. Falls back to the legacy key for
-              // backward compatibility (e.g. if the i18n bundle hasn't
-              // loaded yet on a slow connection).
-              function getDefaultName() {
-                // Returns the chart's "vanity title" when the user has
-                // not typed a custom name:
-                //   - DEMO state (activePresetId set) → that preset's
-                //     localized display name ("Steve Jobs", "스티브 잡스",
-                //     "Albert Einstein", …)
-                //   - CUSTOM state (activePresetId null) → empty string,
-                //     so the wheel's title renders blank and the user
-                //     understands the chart is purely theirs.
-                try {
-                  var html = document.documentElement.getAttribute('lang') || 'en';
-                  var lang = html.indexOf('ko') === 0 ? 'ko'
-                          : html.indexOf('zh') === 0 ? 'zh' : 'en';
-                  var dict = window.IYOGAU_I18N && window.IYOGAU_I18N[lang];
-                  if (typeof activePresetId === 'string' && activePresetId) {
-                    var pi = dict && dict.natal && dict.natal.presets
-                          && dict.natal.presets[activePresetId];
-                    if (pi && pi.name) return pi.name;
-                    // Fall back to the English name from the JS module.
-                    var presets = window.IYOGAU_NATAL_PRESETS || [];
-                    for (var i = 0; i < presets.length; i++) {
-                      if (presets[i].id === activePresetId) return presets[i].name;
-                    }
-                  }
-                  // CUSTOM state — no active preset. Empty string is
-                  // semantically "no labeled person for this chart" —
-                  // the user is editing their own data without a name.
-                  return '';
-                } catch (e) {}
-                return '';
-              }
-
-              // Format an <input type="date"> value (YYYY-MM-DD) as
-              // "DD Mon YYYY" (e.g. "22 Jan 1948"). Returns '' on
-              // parse failure so the caller can omit the segment.
-              function formatCaptionDate(iso) {
-                if (!iso) return '';
-                var parts = String(iso).split('-');
-                if (parts.length !== 3) return '';
-                var months = ['Jan','Feb','Mar','Apr','May','Jun',
-                              'Jul','Aug','Sep','Oct','Nov','Dec'];
-                var y = parts[0];
-                var m = parseInt(parts[1], 10) - 1;
-                var d = parseInt(parts[2], 10);
-                if (isNaN(m) || isNaN(d) || !months[m]) return '';
-                return (d < 10 ? '0' + d : d) + ' ' + months[m] + ' ' + y;
-              }
-
-              function updateCaption() {
-                if (!nameEl) return;
-                var typed   = (nameEl.value || '').trim();
-                // Lazy-resolve the localized default-name on every call
-                // so language switches reflect immediately and the
-                // strict-mode ReferenceError on the missing `defaultName`
-                // var (beta evaluator finding) goes away.
-                // In CUSTOM state (no active preset), getDefaultName()
-                // returns '' so an empty typed-name yields display=''.
-                var display = typed || getDefaultName();
-                if (titleEl) {
-                  titleEl.textContent = display;
-                  // Hide the title row entirely when the chart has no
-                  // labeled person (CUSTOM state + no typed name).
-                  // Otherwise the empty <p> leaves a vertical gap.
-                  titleEl.hidden = !display;
-                }
-                if (!captionEl) return;
-
-                // Always read the localized "default caption" template
-                // straight from the i18n dict — never cache it on the
-                // DOM. Caching on dataset.origCaption was lazy-bound on
-                // the first updateCaption() call, locking the value to
-                // whatever language was active at that moment. Reading
-                // fresh each time means language switches don't strand
-                // the prefix in the previous locale.
-                var orig = (function () {
-                  try {
-                    var lang = getActiveLang
-                            ? getActiveLang()
-                            : (function () {
-                                var html = document.documentElement.getAttribute('lang') || 'en';
-                                if (html.indexOf('ko') === 0) return 'ko';
-                                if (html.indexOf('zh') === 0) return 'zh';
-                                return 'en';
-                              }());
-                    var flat = window.I18N && window.I18N[lang];
-                    if (flat && typeof flat['natal.results.defaultCaption'] === 'string') {
-                      return flat['natal.results.defaultCaption'];
-                    }
-                  } catch (e) {}
-                  return captionEl.textContent;
-                }());
-
-                var dateStr = dateElCap ? formatCaptionDate(dateElCap.value) : '';
-                // Only show the place when the autocomplete has resolved
-                // a real city — while the user is still typing we don't
-                // want to splash partial text into the caption.
-                var resolved = placeElCap
-                  && placeElCap.getAttribute('data-resolved') === '1';
-                var placeStr = (resolved && placeElCap.value.trim())
-                  ? placeElCap.value.trim()
-                  : '';
-
-                // Graceful fallback: nothing the user can drive → restore
-                // the i18n original verbatim.
-                if (!typed && !dateStr && !placeStr) {
-                  captionEl.textContent = orig;
-                  captionEl.hidden = false;
-                  return;
-                }
-
-                // Recover the localized "Currently showing:" prefix from
-                // the original caption (everything up to the first colon).
-                var colonAt = orig.indexOf(':');
-                var prefix  = colonAt >= 0 ? orig.slice(0, colonAt + 1) + ' ' : '';
-                // Skip the name bit entirely when there's nothing to
-                // show — otherwise the caption renders as
-                // "Currently showing:  · 22 Jan 1948 · …" with a blank
-                // leading slot.
-                var bits    = display ? [display] : [];
-                if (dateStr) bits.push(dateStr);
-                // i18n-aware "your chart" fallback when the user has
-                // typed in the birthplace input but hasn't picked from
-                // the autocomplete (data-resolved !== '1'). Sourced
-                // from the natal-chart i18n bundle so ko/zh visitors
-                // get their localized phrase instead of English.
-                var placeFallback = 'your chart';
-                try {
-                  var html = document.documentElement.getAttribute('lang') || 'en';
-                  var lang = html.indexOf('ko') === 0 ? 'ko'
-                          : html.indexOf('zh') === 0 ? 'zh' : 'en';
-                  var d = window.IYOGAU_I18N && window.IYOGAU_I18N[lang];
-                  var loc = d && d.natal && d.natal.results
-                         && d.natal.results.placeFallback;
-                  if (typeof loc === 'string' && loc) placeFallback = loc;
-                } catch (e) {}
-                bits.push(placeStr || placeFallback);
-                captionEl.textContent = prefix + bits.join(' · ');
-                captionEl.hidden = false;
-              }
-
-              // ---- 4c. DEMO / CUSTOM state machine.
-              //
-              // States:
-              //   DEMO(p)  — activePresetId === p.id. Birth fields equal
-              //              p's snapshot; banner / generic intro /
-              //              attribution all render with p's name + source.
-              //              The name input may be the localized preset
-              //              name (vanity-default) OR any free-text typed
-              //              by the user (purely a wheel-title label).
-              //   CUSTOM   — activePresetId === null. None of the demo
-              //              callouts render; intro switches to
-              //              natal.section.editedIntro.
-              //
-              // Transitions:
-              //   init → DEMO('steve-jobs')   (page-load default)
-              //   DEMO(p) -- user types in name input only --> DEMO(p)
-              //   DEMO(p) -- user picks preset q from datalist --> DEMO(q)
-              //   DEMO(p) -- user edits date/time/lat/lon/tz/place --> CUSTOM
-              //   CUSTOM  -- user picks preset q --> DEMO(q)
-              //   CUSTOM  -- user types anything --> CUSTOM
-              //
-              // The chart math depends on date/time/lat/lon/tz (place
-              // drives lat/lon/tz via the gazetteer). Typing a custom
-              // NAME never demotes DEMO→CUSTOM because the chart math
-              // doesn't read the name.
-              //
-              // HARD auto-clear: when a chart-math field is edited,
-              // we wipe the name input, hide the banner / attribution,
-              // and swap the intro paragraph. No snap-back on undo.
-              var PRESETS = (window.IYOGAU_NATAL_PRESETS || []).slice();
-              var demoBannerEl     = $('home-natal-demo-banner');
-              var demoBannerTextEl = $('home-natal-demo-banner-text');
-              var demoIntroEl      = $('home-natal-section-intro');
-              var demoAttribEl     = $('home-natal-steve-jobs-attrib');
-              var timeElCap        = $('home-nf-time');
-              var timeUnkElCap     = $('home-nf-time-unknown');
-              // Demo-state check needs lat/lon/tz references. The
-              // bootstrap's own buildPayload() declares them inside its
-              // closure; the state machine runs OUTSIDE that closure so
-              // we re-lookup here. Same applies to the UTC-offset
-              // override controls — when any of these are active they
-              // change the math the API receives and a preset can no
-              // longer be considered "active" (the displayed banner
-              // would not match the chart being computed).
-              var latEl       = $('home-nf-lat');
-              var lonEl       = $('home-nf-lon');
-              var tzSelEl     = $('home-nf-tz-select');
-              var useOffEl    = $('home-nf-tz-offset-enable');
-              var offSignEl   = $('home-nf-tz-offset-sign');
-              var offHrsEl    = $('home-nf-tz-offset-hours');
-              var offMinEl    = $('home-nf-tz-offset-minutes');
-              var offRowEl    = document.querySelector('#natal-calc .tz-offset-input-row');
-              // Snapshot of the default intro text — initialised below
-              // AFTER the i18n applier has had a chance to translate
-              // the DOM. Captured once at boot (line ~1753 below) and
-              // refreshed by the lang-change listener so the cached
-              // value stays locale-aware. Declared here (empty) just to
-              // hoist the variable into the enclosing scope.
-              var demoIntroCached = '';
-
-              // Session-only state. activePresetId is the source of
-              // truth — language switches preserve it; only chart-math
-              // edits clear it. Persisted only in memory (no
-              // localStorage / sessionStorage — these are demo
-              // overlays, not user data).
-              var activePresetId = 'steve-jobs';
-              // Internal-update guard: set true while the picker
-              // programmatically mutates the form so the change
-              // listeners DON'T treat our own writes as user edits
-              // (and demote DEMO→CUSTOM).
-              var internalUpdate = false;
-
-              // Look up the localized i18n entry for a preset id.
-              // Falls back to the preset's English fields if a
-              // language-specific entry is missing (matches the
-              // deepMerge behavior in i18n.natal-chart.js).
-              function getActiveLang() {
-                try {
-                  var html = document.documentElement.getAttribute('lang') || 'en';
-                  if (html.indexOf('ko') === 0) return 'ko';
-                  if (html.indexOf('zh') === 0) return 'zh';
-                } catch (e) {}
-                return 'en';
-              }
-              function localizedPreset(preset) {
-                if (!preset) return null;
-                var lang = getActiveLang();
-                var dict = window.IYOGAU_I18N && window.IYOGAU_I18N[lang];
-                var pi   = dict && dict.natal && dict.natal.presets
-                        && dict.natal.presets[preset.id];
-                return {
-                  id: preset.id,
-                  name: (pi && pi.name) || preset.name,
-                  placeLabel: (pi && pi.placeLabel) || preset.placeLabel,
-                  blurb: (pi && pi.blurb) || preset.blurb,
-                  source: preset.source
-                };
-              }
-              function getPresetById(id) {
-                for (var i = 0; i < PRESETS.length; i++) {
-                  if (PRESETS[i].id === id) return PRESETS[i];
-                }
-                return null;
-              }
-              // Match a localized name back to a preset id. The
-              // datalist option `value` attributes are the localized
-              // names, so when the user picks a row the name input's
-              // value is exactly one of these strings.
-              function findPresetByLocalizedName(typed) {
-                if (!typed) return null;
-                var trimmed = String(typed).trim();
-                if (!trimmed) return null;
-                for (var i = 0; i < PRESETS.length; i++) {
-                  var lp = localizedPreset(PRESETS[i]);
-                  if (lp.name === trimmed) return PRESETS[i];
-                  // Also accept the English name (typed manually or
-                  // pasted) so e.g. ko visitors typing "Steve Jobs"
-                  // still hit the preset.
-                  if (PRESETS[i].name === trimmed) return PRESETS[i];
-                }
-                return null;
-              }
-
-              // (Re)populate the <datalist> options with the localized
-              // names. Called on init and on language switch.
-              function rebuildPresetDatalist() {
-                var dl = $('home-nf-name-presets');
-                if (!dl) return;
-                dl.textContent = '';
-                var frag = document.createDocumentFragment();
-                PRESETS.forEach(function (p) {
-                  var lp = localizedPreset(p);
-                  var opt = document.createElement('option');
-                  opt.value = lp.name;
-                  // The `label` shows next to the value in supporting
-                  // browsers (Chrome / Firefox / Safari render it as
-                  // dim secondary text). Place + brief blurb makes
-                  // the choice scannable without opening a modal.
-                  opt.label = lp.placeLabel + ' — ' + lp.blurb;
-                  frag.appendChild(opt);
-                });
-                dl.appendChild(frag);
-              }
-
-              function getEditedIntro() {
-                try {
-                  var d = window.IYOGAU_I18N && window.IYOGAU_I18N[getActiveLang()];
-                  var loc = d && d.natal && d.natal.section
-                         && d.natal.section.editedIntro;
-                  if (typeof loc === 'string' && loc) return loc;
-                } catch (e) {}
-                return 'The chart below is computed from your birth details. The calculator runs sidereal Vedic math on our server and your details are never stored, sold, or sent anywhere else.';
-              }
-
-              // Build the banner text "Currently showing {name}'s chart…"
-              // by interpolating the localized preset name into the
-              // i18n template. Falls back to the original Steve Jobs
-              // English copy if either key is missing.
-              function renderBannerText(preset) {
-                if (!demoBannerTextEl) return;
-                var lp = localizedPreset(preset);
-                try {
-                  var d = window.IYOGAU_I18N && window.IYOGAU_I18N[getActiveLang()];
-                  var tpl = d && d.natal && d.natal.presets
-                         && d.natal.presets.currentlyShowing;
-                  if (typeof tpl === 'string' && tpl) {
-                    demoBannerTextEl.textContent = tpl.replace('{name}', lp.name);
-                    return;
-                  }
-                } catch (e) {}
-                demoBannerTextEl.textContent =
-                  "Currently showing " + lp.name + "'s chart. Edit any field below and your own chart will appear in the Natal Chart tab.";
-              }
-              // Extract a Rodden rating from a preset source string.
-              // Returns one of 'B', 'C', 'DD', 'X' or null.
-              // AA and A are reliable and need no badge — any other Rodden
-              // rating surfaces a UI warning so users know the chart's
-              // Ascendant + houses may not be canonical. B is included
-              // because some presets (e.g. Maradona) carry an explicit
-              // "time disputed" caveat in the source field.
-              //
-              // Adding a rating: append a row to RATING_PATTERNS below.
-              // The table makes the regex-anchor choice visible side-by-side
-              // so a future contributor can't miss the difference:
-              //   DD/X use \b…\b (two-letter or X is unambiguous)
-              //   C/B  use (^|[^A-Z])…\b (must guard against a preceding
-              //                            A — e.g. "AA-rated" or "AB-rated")
-              var RATING_PATTERNS = [
-                ['DD', /\bDD[- ]?rated\b/],
-                ['X',  /\bX[- ]?rated\b/],
-                ['C',  /(^|[^A-Z])C[- ]?rated\b/],
-                ['B',  /(^|[^A-Z])B[- ]?rated\b/]
-              ];
-              function getUnreliableRating(sourceStr) {
-                if (typeof sourceStr !== 'string' || !sourceStr) return null;
-                for (var ri = 0; ri < RATING_PATTERNS.length; ri++) {
-                  if (RATING_PATTERNS[ri][1].test(sourceStr)) {
-                    return RATING_PATTERNS[ri][0];
-                  }
-                }
-                return null;
-              }
-
-              // Localized "Time unreliable" warning text. Falls back to
-              // English. The rating token (DD / C / X) is interpolated
-              // into the {rating} slot.
-              function getRatingWarningText(rating) {
-                try {
-                  var d = window.IYOGAU_I18N && window.IYOGAU_I18N[getActiveLang()];
-                  var presets = d && d.natal && d.natal.presets;
-                  // X has its own template — "time UNKNOWN" not "unreliable".
-                  // ko/zh used to fall through to the generic template; now
-                  // they get the X-specific localized warning too.
-                  if (rating === 'X') {
-                    var tplX = presets && presets.ratingWarningX;
-                    if (typeof tplX === 'string' && tplX) return tplX;
-                  }
-                  var tpl = presets && presets.ratingWarning;
-                  if (typeof tpl === 'string' && tpl) {
-                    return tpl.replace('{rating}', rating);
-                  }
-                } catch (e) {}
-                if (rating === 'X') {
-                  return 'Time unknown (X-rated) — chart shown for reference; Ascendant and houses are NOT astrologically valid.';
-                }
-                return 'Time unreliable (' + rating + '-rated) — chart shown for reference; Ascendant and houses may not be accurate.';
-              }
-
-              function renderAttribText(preset) {
-                if (!demoAttribEl) return;
-                var lp = localizedPreset(preset);
-
-                // Build the base attribution string ("<name> birth data: <source>").
-                var base = lp.name + ' birth data: ' + lp.source;
-                try {
-                  var d = window.IYOGAU_I18N && window.IYOGAU_I18N[getActiveLang()];
-                  var tpl = d && d.natal && d.natal.presets
-                         && d.natal.presets.attribution;
-                  if (typeof tpl === 'string' && tpl) {
-                    base = tpl
-                      .replace('{name}', lp.name)
-                      .replace('{source}', lp.source);
-                  }
-                } catch (e) {}
-
-                // Surface DD / C / X rating warnings as a visible badge
-                // before the citation. Use textContent on the inner
-                // nodes to keep escaping safe, then assemble via DOM
-                // (no innerHTML with user-derived strings).
-                var rating = getUnreliableRating(lp.source);
-                while (demoAttribEl.firstChild) {
-                  demoAttribEl.removeChild(demoAttribEl.firstChild);
-                }
-                if (rating) {
-                  var warn = document.createElement('span');
-                  warn.className = 'natal-rating-warning natal-rating-warning--' + rating.toLowerCase();
-                  warn.textContent = getRatingWarningText(rating);
-                  demoAttribEl.appendChild(warn);
-                  demoAttribEl.appendChild(document.createTextNode(' '));
-                }
-                demoAttribEl.appendChild(document.createTextNode(base));
-              }
-
-              // Match form against EVERY preset and return the first
-              // exact hit (chart-math fields only — name is excluded).
-              // If activePresetId is set and STILL matches, we keep it
-              // (stable identity across language switches); otherwise
-              // we scan from the top.
-              function detectActivePreset() {
-                // Hard short-circuit: "unknown time" feeds 12:00 to the
-                // API regardless of what the time input shows, so no
-                // preset can be active while that's on (otherwise the
-                // banner would claim a preset while the chart is for
-                // a different time).
-                if (timeUnkElCap && timeUnkElCap.checked) return null;
-                var date = dateElCap && dateElCap.value;
-                var time = timeElCap && timeElCap.value;
-                var lat  = latEl && latEl.value;
-                var lon  = lonEl && lonEl.value;
-                // Timezone match: two paths.
-                //   - useOff ON  → derive '+HH:MM' / '-HH:MM' from the
-                //     offset controls and match against offset-shaped
-                //     preset.tz values (Einstein / Edison).
-                //   - useOff OFF → match preset.tz against IANA select.
-                // Presets carry exactly one tz shape; the other path
-                // never matches, so this branch fully replaces the
-                // old "hard short-circuit when useOff is on" guard.
-                var tz;
-                if (useOffEl && useOffEl.checked
-                    && offSignEl && offHrsEl && offMinEl) {
-                  var sign = offSignEl.value === '-' ? '-' : '+';
-                  var h = String(Math.max(0, Math.min(14, parseInt(offHrsEl.value, 10) || 0))).padStart(2, '0');
-                  var m = String(Math.max(0, Math.min(59, parseInt(offMinEl.value, 10) || 0))).padStart(2, '0');
-                  tz = sign + h + ':' + m;
-                } else {
-                  tz = tzSelEl && tzSelEl.value;
-                }
-                function matches(p) {
-                  return p.birthDate === date
-                      && p.birthTime === time
-                      && String(p.lat)  === String(lat)
-                      && String(p.lon)  === String(lon)
-                      && p.tz === tz;
-                }
-                if (activePresetId) {
-                  var current = getPresetById(activePresetId);
-                  if (current && matches(current)) return current;
-                }
-                for (var i = 0; i < PRESETS.length; i++) {
-                  if (matches(PRESETS[i])) return PRESETS[i];
-                }
-                return null;
-              }
-
-              // Render whatever the current state implies. Centralised
-              // so banner / intro / attribution / wheel title stay
-              // consistent regardless of which event fired.
-              function renderState() {
-                // Resolve the active preset (if any). If the id is set
-                // but the preset has gone missing (e.g. a stale localStorage
-                // value from before a preset list rewrite), demote to
-                // CUSTOM in-place rather than recursing — the recursion was
-                // bounded in practice but unbounded in theory.
-                var preset = activePresetId ? getPresetById(activePresetId) : null;
-                if (activePresetId && !preset) {
-                  activePresetId = null;
-                }
-                if (preset) {
-                  if (demoBannerEl) demoBannerEl.hidden = false;
-                  if (demoAttribEl) demoAttribEl.hidden = false;
-                  // Intro paragraph is INTENTIONALLY not swapped here.
-                  // Per user request the section intro is now a static
-                  // statement ("The chart below is computed from your
-                  // birth details. The calculator runs sidereal Vedic
-                  // math…") that stays the same across DEMO ↔ CUSTOM
-                  // transitions. Previously we swapped to a per-preset
-                  // intro mentioning the active person by name — that
-                  // was confusing because the visible person changes
-                  // every time the user picks from the dropdown, and
-                  // the sentence couldn't honestly name only one of them.
-                  renderBannerText(preset);
-                  renderAttribText(preset);
-                } else {
-                  if (demoBannerEl) demoBannerEl.hidden = true;
-                  if (demoAttribEl) demoAttribEl.hidden = true;
-                  // Intro paragraph also static in CUSTOM. No swap.
-                }
-                // Caption / title always re-derive from current input
-                // values (typed name overrides preset name as title;
-                // caption uses date + place).
-                updateCaption();
-              }
-
-              // Programmatically apply a preset's snapshot to the form.
-              // Sets internalUpdate=true so the change-listener guard
-              // doesn't treat these writes as user edits (which would
-              // immediately demote us back to CUSTOM and clear the
-              // name we just set).
-              function applyPreset(preset) {
-                if (!preset) return;
-                internalUpdate = true;
-                try {
-                  var lp = localizedPreset(preset);
-                  if (dateElCap)  dateElCap.value  = preset.birthDate;
-                  if (timeElCap)  timeElCap.value  = preset.birthTime;
-                  // If the user had toggled "unknown time" on, picking
-                  // a new preset implies they DO want this time —
-                  // untoggle it so the form looks coherent.
-                  if (timeUnkElCap && timeUnkElCap.checked) {
-                    timeUnkElCap.checked = false;
-                  }
-                  if (latEl) latEl.value = String(preset.lat);
-                  if (lonEl) lonEl.value = String(preset.lon);
-                  // Two timezone shapes are supported in presets:
-                  //   - IANA name (e.g. 'America/Los_Angeles')
-                  //   - fixed UTC offset (e.g. '+00:40', '-05:30') — used
-                  //     for pre-CET / pre-railroad-zone presets like
-                  //     Einstein (1879 Ulm LMT) and Edison (1847 Milan-OH
-                  //     LMT) where no IANA zone applies historically.
-                  // For the offset shape we drive the form's UTC-offset
-                  // override controls instead of stuffing the offset
-                  // string into the IANA <select> — makes the UI
-                  // self-explanatory and keeps buildPayload on the
-                  // offset code path naturally.
-                  var offsetMatch = /^([+-])(\d{1,2}):(\d{2})$/.exec(preset.tz || '');
-                  if (offsetMatch && useOffEl && offSignEl && offHrsEl && offMinEl) {
-                    // CRITICAL ORDER: write sign/hrs/min FIRST, then
-                    // toggle the offset checkbox + dispatch its 'change'.
-                    // The 'change' listener triggers recalculate() which
-                    // reads these three inputs via buildPayload(); if we
-                    // dispatched before writing, the first recalc would
-                    // POST with a stale offset (race flagged by alpha
-                    // evaluator).
-                    offSignEl.value = offsetMatch[1];
-                    offHrsEl.value  = String(parseInt(offsetMatch[2], 10));
-                    offMinEl.value  = offsetMatch[3];
-                    if (!useOffEl.checked) {
-                      useOffEl.checked = true;
-                      if (offRowEl) offRowEl.hidden = false;
-                      if (tzSelEl) tzSelEl.disabled = true;
-                      try {
-                        useOffEl.dispatchEvent(new Event('change', { bubbles: true }));
-                      } catch (e) { /* old browsers — no harm */ }
-                    } else {
-                      if (offRowEl) offRowEl.hidden = false;
-                      if (tzSelEl) tzSelEl.disabled = true;
-                    }
-                  } else {
-                    // IANA preset: ensure the offset override is OFF so
-                    // buildPayload picks up the IANA select value, not
-                    // a stale offset from a previous preset / user edit.
-                    if (useOffEl && useOffEl.checked) {
-                      useOffEl.checked = false;
-                      if (offRowEl) offRowEl.hidden = true;
-                      if (tzSelEl) tzSelEl.disabled = false;
-                      try {
-                        useOffEl.dispatchEvent(new Event('change', { bubbles: true }));
-                      } catch (e) { /* old browsers — no harm */ }
-                    }
-                    if (tzSelEl) {
-                      tzSelEl.value = preset.tz;
-                      // If the IANA tz isn't in the select (rare —
-                      // Intl.supportedValuesOf is a superset), append it
-                      // so the value sticks.
-                      if (tzSelEl.value !== preset.tz) {
-                        var opt = document.createElement('option');
-                        opt.value = preset.tz; opt.textContent = preset.tz;
-                        tzSelEl.appendChild(opt);
-                        tzSelEl.value = preset.tz;
-                      }
-                    }
-                  }
-                  // Place input: write the localized label and mark
-                  // it resolved so updateCaption surfaces it and the
-                  // form-binder skips its gazetteer-pending state.
-                  if (placeElCap) {
-                    placeElCap.value = lp.placeLabel;
-                    placeElCap.setAttribute('data-resolved', '1');
-                  }
-                  // Clear the name input so the combobox shows the
-                  // preset name as the resolved label (matches the
-                  // "Edge case 1" spec: user picks Steve Jobs after
-                  // editing → name field cleared, label reads
-                  // "Steve Jobs" via i18n defaultName).
-                  if (nameEl) nameEl.value = '';
-                  activePresetId = preset.id;
-                } finally {
-                  internalUpdate = false;
-                }
-                renderState();
-                // Trigger a recalculate now that the form holds the
-                // new snapshot. recalculateDebounced is closured above
-                // and the listeners we replaced would normally call
-                // it; we call it directly here since our internalUpdate
-                // guard suppressed those listeners.
-                recalculateDebounced();
-              }
-
-              // ---- Event wiring.
-
-              // Name input — TWO listener responsibilities:
-              //   1. update the wheel title to the typed text (vanity)
-              //   2. if the typed text was PICKED from the datalist
-              //      (vs typed character-by-character), apply that preset.
-              //
-              // Cross-browser datalist-pick detection is messy: Chrome/Edge
-              // fire an InputEvent with inputType='insertReplacementText',
-              // but Safari/Firefox don't surface a reliable per-event
-              // datalist signal at all — they often drop the final value
-              // in via the 'change' event on blur, without intermediate
-              // character-level 'input' events.
-              //
-              // Typing-flag detector:
-              //   - On focus, clear `userTypedInName`.
-              //   - Every 'input' event with a non-empty inputType (the
-              //     family of 'insertText', 'deleteContentBackward',
-              //     'insertCompositionText', etc.) sets the flag to true:
-              //     the user is typing characters.
-              //   - On the Chrome-explicit signal ('insertReplacementText')
-              //     we apply the matching preset immediately.
-              //   - On 'change' (blur), if the flag is still false the
-              //     value did not arrive via keystrokes, so a value that
-              //     matches a preset must be a datalist pick from Safari /
-              //     Firefox / keyboard. We apply it.
-              //
-              // This is safe against the prior "Steve-Jobs-as-father" bug:
-              // typing characters always sets the flag, and the change
-              // handler then refuses to auto-apply.
-              var userTypedInName = false;
-              function resetNameTypingFlag() { userTypedInName = false; }
-
-              function onNameInputEvent(e) {
-                if (internalUpdate) return;
-                // Chrome's explicit signal: a datalist row was selected.
-                if (e && e.inputType === 'insertReplacementText') {
-                  var typedCR = (nameEl && nameEl.value) || '';
-                  var matchCR = findPresetByLocalizedName(typedCR);
-                  if (matchCR) { applyPreset(matchCR); resetNameTypingFlag(); return; }
-                  updateCaption();
-                  return;
-                }
-                // Any other 'input' event with a non-empty inputType
-                // means the user is typing/deleting/composing
-                // characters. Mark the flag so the subsequent 'change'
-                // on blur knows not to treat the field as a datalist
-                // pick.
-                if (e && typeof e.inputType === 'string' && e.inputType !== '') {
-                  userTypedInName = true;
-                }
-                updateCaption();
-              }
-
-              // 'change' fires on blur (and after Safari/Firefox datalist
-              // picks). If the user did NOT type characters between focus
-              // and this change, and the field's value exactly matches a
-              // preset name, treat it as a datalist pick.
-              function onNameInputChange() {
-                if (internalUpdate) return;
-                if (!userTypedInName) {
-                  var typed = (nameEl && nameEl.value) || '';
-                  var match = findPresetByLocalizedName(typed);
-                  if (match) { applyPreset(match); resetNameTypingFlag(); return; }
-                }
-                updateCaption();
-              }
-
-              // Chart-math field edit — when in DEMO, demote to CUSTOM.
-              // We only demote if the new value differs from the
-              // active preset's snapshot value, so the user can wiggle
-              // back to a preset's exact lat/lon/tz without losing
-              // demo state.
-              function onChartMathEdit() {
-                if (internalUpdate) return;
-                if (activePresetId) {
-                  var preset = getPresetById(activePresetId);
-                  // detectActivePreset checks all fields. If they
-                  // still match, keep DEMO.
-                  if (preset) {
-                    var stillMatches = detectActivePreset();
-                    if (stillMatches && stillMatches.id === preset.id) {
-                      renderState();
-                      return;
-                    }
-                  }
-                  // HARD auto-clear.
-                  activePresetId = null;
-                  if (nameEl) nameEl.value = '';
-                }
-                renderState();
-              }
-
-              if (nameEl) {
-                // 'focus' resets the typing flag so each fresh entry
-                // into the field starts from a known state. 'input'
-                // carries the InputEvent (inputType signal) — the
-                // event-aware handler sets the typing flag on
-                // character-level events and applies the preset on
-                // Chrome's insertReplacementText. 'change' fires on
-                // blur and is the Safari/Firefox/keyboard fallback:
-                // if the typing flag is still false, the value must
-                // have arrived from a datalist pick.
-                nameEl.addEventListener('focus', resetNameTypingFlag);
-                nameEl.addEventListener('input', onNameInputEvent);
-                nameEl.addEventListener('change', onNameInputChange);
-              }
-              if (dateElCap) {
-                dateElCap.addEventListener('input', onChartMathEdit);
-                dateElCap.addEventListener('change', onChartMathEdit);
-              }
-              if (timeElCap) {
-                timeElCap.addEventListener('input', onChartMathEdit);
-                timeElCap.addEventListener('change', onChartMathEdit);
-              }
-              if (timeUnkElCap) {
-                // Per Edge case 2: toggling "unknown time" is treated
-                // as a birth-field edit → demote. Toggling back without
-                // restoring the exact time stays CUSTOM (no snap-back,
-                // consistent with the HARD policy).
-                timeUnkElCap.addEventListener('change', onChartMathEdit);
-              }
-              if (placeElCap) {
-                // Place-input is special: any typing in it is by definition
-                // a CUSTOM-state trigger (the natal-chart-form.js binder
-                // clears lat/lon and toggles `data-resolved=''` on every
-                // keystroke, so even before selectCity() finishes the form
-                // no longer matches the active preset). A binder/listener
-                // ordering race means detectActivePreset can run with stale
-                // lat/lon and incorrectly keep DEMO. Unconditionally demote.
-                function onPlaceTyped() {
-                  if (internalUpdate) return;
-                  if (activePresetId) {
-                    activePresetId = null;
-                    if (nameEl) nameEl.value = '';
-                  }
-                  renderState();
-                }
-                placeElCap.addEventListener('input',  onPlaceTyped);
-                placeElCap.addEventListener('change', onChartMathEdit);
-              }
-              if (latEl) {
-                latEl.addEventListener('input', onChartMathEdit);
-                latEl.addEventListener('change', onChartMathEdit);
-              }
-              if (lonEl) {
-                lonEl.addEventListener('input', onChartMathEdit);
-                lonEl.addEventListener('change', onChartMathEdit);
-              }
-              if (tzSelEl) {
-                tzSelEl.addEventListener('change', onChartMathEdit);
-              }
-              // UTC-offset override controls — toggling the checkbox OR
-              // editing any of sign/hours/minutes changes the timezone
-              // the API receives. Demote DEMO→CUSTOM via onChartMathEdit
-              // so the banner / intro / attribution stop claiming "Steve
-              // Jobs's chart" while the API computes something else.
-              // The offset-enable handler at step 3 already calls
-              // recalculate() (the API path); we register a SEPARATE
-              // listener here for the state machine. Two listeners are
-              // fine — both fire on the single 'change' event.
-              if (useOffEl) {
-                useOffEl.addEventListener('change', onChartMathEdit);
-              }
-              if (offSignEl) {
-                offSignEl.addEventListener('input',  onChartMathEdit);
-                offSignEl.addEventListener('change', onChartMathEdit);
-              }
-              if (offHrsEl) {
-                offHrsEl.addEventListener('input',  onChartMathEdit);
-                offHrsEl.addEventListener('change', onChartMathEdit);
-              }
-              if (offMinEl) {
-                offMinEl.addEventListener('input',  onChartMathEdit);
-                offMinEl.addEventListener('change', onChartMathEdit);
-              }
-
-              // Build the datalist now that the i18n bundle should be
-              // populated (i18n.natal-chart.js runs at `defer` order
-              // before this inline script — verify by checking the
-              // PRESETS array length, falling through gracefully if
-              // anything's missing).
-              rebuildPresetDatalist();
-
-              // Re-render banner / attribution / datalist on language
-              // change. The base i18n applier (assets/js/app.js) does a
-              // full-page reload on language switch via setLang(), so a
-              // MutationObserver on <html lang> rarely fires from the
-              // picker. Listen to a custom event instead — matches the
-              // pattern already used by natal-chart-form.js (line ~139).
-              // The MutationObserver is kept as a defensive fallback for
-              // any path that mutates lang in-place (e.g. a future SPA
-              // route change).
-              function onLangChanged() {
-                rebuildPresetDatalist();
-                if (demoIntroEl) {
-                  // Read fresh localized text. The home demo intro lives
-                  // in the FLAT window.I18N dict (assets/js/i18n.js)
-                  // under the literal key "natal.section.intro", NOT in
-                  // the nested IYOGAU_I18N bundle's natal.section.intro.
-                  // The nested bundle only exposes section.editedIntro
-                  // (used by the CUSTOM branch of renderState).
-                  try {
-                    var flat = window.I18N && window.I18N[getActiveLang()];
-                    var loc = flat && flat['natal.section.intro'];
-                    if (typeof loc === 'string' && loc) {
-                      demoIntroCached = loc;
-                    }
-                  } catch (e) {}
-                }
-                renderState();
-              }
-              window.addEventListener('iyogau:lang-changed', onLangChanged);
-              try {
-                var langObserver = new MutationObserver(onLangChanged);
-                langObserver.observe(document.documentElement,
-                  { attributes: true, attributeFilter: ['lang'] });
-              } catch (e) {}
-
-              // Prime caches and render initial DEMO('steve-jobs')
-              // state. The page already loaded with Steve Jobs's birth
-              // fields baked into the HTML, so detectActivePreset
-              // should confirm DEMO('steve-jobs') on the first call.
-              updateCaption();
-              if (demoIntroEl) demoIntroCached = demoIntroEl.textContent;
-              var detected = detectActivePreset();
-              activePresetId = detected ? detected.id : null;
-              renderState();
-
-              // ---- 5. Submit button → immediate recalc (no debounce).
-              //         Also unlocks even if consent isn't toggled — we
-              //         already display Steve Jobs's chart on landing
-              //         without consent (it's a published chart, not user
-              //         data), and the consent gate was a leftover from
-              //         the legacy form-binder flow.
-              var form = $('home-natal-form');
-              var submitBtn = $('home-nf-submit');
-              var resultsSection = $('home-natal-results');
-              if (form) {
-                form.addEventListener('submit', function (e) {
-                  e.preventDefault();
-                  // Cancel any pending debounced recalc — the submit is
-                  // the explicit user intent and should not be raced by
-                  // the trailing edge of the debounce timer.
-                  if (debounceTimer) { clearTimeout(debounceTimer); debounceTimer = null; }
-                  // Surface "work in progress" to assistive tech so a
-                  // screen reader doesn't announce stale numbers while
-                  // the new chart is loading.
-                  if (resultsSection) resultsSection.setAttribute('aria-busy', 'true');
-                  recalculate();
-                });
-              }
-              // Make sure submit is clickable from the start (legacy binder
-              // marks it disabled until consent).
-              if (submitBtn) submitBtn.disabled = false;
-            } catch (err) {
-              if (window.console && console.warn) console.warn('[natal-bootstrap]', err);
-            }
-          }, 0);
-        });
-      })();
-      </script>
 
     </div>
   </div>
@@ -2236,32 +801,17 @@
   </div>
 </footer>
 
-<script src="/assets/js/i18n.js?v=5" defer></script>
+<script src="/assets/js/i18n.js?v=6" defer></script>
 <script src="/assets/js/currency.js" defer></script>
 <script src="/assets/js/app.js" defer></script>
-<!-- Inline natal-chart calculator. Loads on every homepage view; the
-     binder auto-skips if it can't find #home-natal-form, so adding
-     these scripts to other pages is harmless.
-     Load order matters: i18n.natal-chart.js MUST run before
-     natal-chart-form.js so window.IYOGAU_I18N is populated when the
-     form's `t()` helper looks up labels (sign / planet / aspect /
-     error / "Calculating…" strings) — otherwise ko/zh visitors get
-     English fallbacks for everything below the section heading. -->
-<!-- ?v=N cache-bust on each JS file to evict Vercel's immutable cache.
-     Bump these on every JS change (same pattern as natal-chart.css?v=N).
-     Current version round: i18n.natal-chart.js (adds defaultName key) and
-     natal-chart-form.js (other recent edits). -->
-<script src="/assets/js/natal-presets.js?v=5" defer></script>
-<script src="/assets/js/i18n.natal-chart.js?v=14" defer></script>
-<script src="/assets/js/natal-chart-wheel.js?v=21" defer></script>
+<!-- Homepage astrology gateway: tab behavior plus account sign-in modal. -->
+<script src="/assets/js/i18n.natal-chart.js?v=22" defer></script>
+<script src="/assets/js/natal-presets.js?v=4" defer></script>
+<script src="/assets/js/natal-chart-wheel.js?v=29" defer></script>
 <script src="/assets/js/natal-chart-tabs.js?v=10" defer></script>
-<script src="/assets/js/natal-chart-form.js?v=14" defer></script>
-<!-- Astrocartography: data + renderer for the Relocation / Immigration /
-     Soulmate tabs. Loaded `defer` so it runs AFTER the bootstrap above
-     attaches __astrocarto.setNatalSource() (the renderer reads it lazily,
-     so even if the order ever swaps, the first tab activation just shows
-     the loading state until the natal data is available). -->
-<script src="/assets/data/world-continents.js?v=2" defer></script>
-<script src="/assets/js/astrocarto.js?v=5" defer></script>
+<script src="/assets/js/account-profiles.js?v=24" defer></script>
+<script src="/assets/js/public-astrology.js?v=2" defer></script>
+<script src="/assets/data/world-continents.js?v=3" defer></script>
+<script src="/assets/js/astrocarto.js?v=15" defer></script>
 </body>
 </html>
