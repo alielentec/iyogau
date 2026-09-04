@@ -37,7 +37,7 @@
 
   <link rel="stylesheet" href="/assets/css/styles.css" />
   <!-- Natal-chart-specific styles (kept in a sibling file so the base sheet is untouched) -->
-  <link rel="stylesheet" href="/assets/css/natal-chart.css?v=24" />
+  <link rel="stylesheet" href="/assets/css/natal-chart.css?v=49" />
 
   <!-- Tool page: keep crawlers from indexing this as primary content vs. course pages -->
   <link rel="alternate" hreflang="en" href="https://iyogau.com/natal-chart/" />
@@ -74,150 +74,265 @@
     <a href="/" class="brand" aria-label="iYogaU home">
       <span class="brand-i">i</span>Yoga<span class="brand-u">U</span>
     </a>
-    <a href="/" class="btn btn-ghost btn-back" data-i18n="natal.header.back">&larr; Back to iYogaU</a>
+    <div class="natal-header-actions">
+      <a href="/" class="btn btn-ghost btn-back" data-i18n="natal.header.back">&larr; Back to iYogaU</a>
+      <div class="site-account" data-account-global>
+        <span class="site-account__status" data-account-global-status aria-live="polite">Not signed in</span>
+        <a class="btn btn-secondary site-account__login" data-account-login data-account-login-compact href="#" aria-disabled="true">Sign in</a>
+        <div class="site-account__provider-menu" data-account-provider-menu role="menu" hidden></div>
+        <div class="site-account__menu-shell" data-account-menu-shell hidden>
+          <button class="site-account__trigger" type="button" data-account-menu-toggle aria-haspopup="menu" aria-expanded="false">
+            <span class="site-account__avatar" data-account-avatar aria-hidden="true">AC</span>
+            <span class="site-account__identity">
+              <span class="site-account__name" data-account-menu-name>Account</span>
+              <span class="site-account__email" data-account-menu-email></span>
+            </span>
+            <svg class="site-account__chevron" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.25" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="6 9 12 15 18 9"/></svg>
+          </button>
+          <div class="site-account__menu" data-account-menu role="menu" hidden>
+            <div class="site-account__summary" role="presentation">
+              <span class="site-account__summary-name" data-account-menu-name>Account</span>
+              <span class="site-account__summary-email" data-account-menu-email></span>
+            </div>
+            <button type="button" role="menuitem" data-account-export-all disabled>Export birth data</button>
+            <button type="button" role="menuitem" class="site-account__danger" data-account-delete-all disabled>Delete saved birth data</button>
+            <a href="/privacy/california/#sensitive" role="menuitem" data-account-menu-link>Privacy and data rights</a>
+            <button type="button" role="menuitem" data-account-logout>Sign out</button>
+          </div>
+        </div>
+      </div>
+    </div>
   </div>
 </header>
 
-<!-- ============================ Main: hero + form + results ============================ -->
-<main id="main" class="natal-page" role="main">
+<!-- ============================ Main: signed-in astrology workspace ============================ -->
+<main id="main" class="natal-page natal-workspace" role="main">
   <div class="container natal-page__inner">
-
-    <!-- Hero -->
-    <section class="natal-hero">
-      <h1 data-i18n="natal.title">Your Free Vedic Natal Chart</h1>
-      <p class="lead" data-i18n="natal.subtitle">A sidereal birth chart in the classical Jyotisha tradition &mdash; computed instantly, with no birth details stored on our servers.</p>
-      <p class="natal-intro" data-i18n="natal.intro">Enter the date, time, and place of your birth. We use the Lahiri ayanamsa and the whole-sign house system, the conventions used in classical yoga training.</p>
+    <section class="natal-hero natal-hero--compact">
+      <h1>Astrology Workspace</h1>
+      <p class="lead">Save birth profiles, switch between people, and run the detailed chart tools from one signed-in workspace.</p>
     </section>
 
-    <!-- Form -->
-    <section class="natal-form-section" aria-labelledby="natal-form-heading">
-      <h2 id="natal-form-heading" class="sr-only" data-i18n="natal.form.heading">Birth details</h2>
+    <div class="natal-tabs" role="tablist" aria-label="Astrology workspace tools" data-natal-tabs>
+      <button id="home-tab-input" role="tab" aria-controls="home-panel-input" aria-selected="true" tabindex="0" class="natal-tab is-active" data-i18n="natal.tabs.input">Input Data</button>
+      <button id="home-tab-chart" role="tab" aria-controls="home-panel-chart" aria-selected="false" tabindex="-1" class="natal-tab" data-i18n="natal.tabs.chart">Natal Chart</button>
+      <button id="home-tab-planets" role="tab" aria-controls="home-panel-planets" aria-selected="false" tabindex="-1" class="natal-tab" data-i18n="natal.tabs.planets">Planet Positions</button>
+      <button id="home-tab-aspects" role="tab" aria-controls="home-panel-aspects" aria-selected="false" tabindex="-1" class="natal-tab" data-i18n="natal.tabs.aspects">Major Aspects</button>
+      <button id="home-tab-relocation" role="tab" aria-controls="home-panel-relocation" aria-selected="false" tabindex="-1" class="natal-tab" data-i18n="natal.tabs.relocation">Relocation</button>
+      <button id="home-tab-immigration" role="tab" aria-controls="home-panel-immigration" aria-selected="false" tabindex="-1" class="natal-tab" data-i18n="natal.tabs.immigration">Immigration</button>
+      <button id="home-tab-soulmate" role="tab" aria-controls="home-panel-soulmate" aria-selected="false" tabindex="-1" class="natal-tab" data-i18n="natal.tabs.soulmate">Soulmate</button>
+      <button id="home-tab-soulmate-timing" role="tab" aria-controls="home-panel-soulmate-timing" aria-selected="false" tabindex="-1" class="natal-tab" data-i18n="natal.tabs.soulmateTiming">Soulmate Timing</button>
+      <button id="home-tab-marriage" role="tab" aria-controls="home-panel-marriage" aria-selected="false" tabindex="-1" class="natal-tab" data-i18n="natal.tabs.marriageScore">Marriage Score</button>
+    </div>
 
-      <form id="natal-form" class="natal-form" novalidate>
-
-        <!-- Name (optional, not sent to server) -->
-        <div class="natal-field natal-field--name">
-          <label for="nf-name" data-i18n="natal.form.name">Your name (optional)</label>
-          <input id="nf-name" name="name" type="text" maxlength="60"
-                 autocomplete="given-name" inputmode="text"
-                 placeholder="Steve Jobs"
-                 data-i18n-attr="placeholder:natal.presets.placeholder" />
-          <small class="help" data-i18n="natal.form.name.help">For your reference only &mdash; not sent to our server.</small>
-        </div>
-
-        <!-- Birth date -->
-        <div class="natal-field">
-          <label for="nf-date" data-i18n="natal.form.date">Birth date</label>
-          <input id="nf-date" name="date" type="date" min="1900-01-01" required aria-required="true" />
-        </div>
-
-        <!-- Birth time -->
-        <div class="natal-field">
-          <label for="nf-time" data-i18n="natal.form.time">Birth time</label>
-          <input id="nf-time" name="time" type="time" required aria-required="true" />
-          <label class="inline-check">
-            <input id="nf-time-unknown" type="checkbox" />
-            <span data-i18n="natal.form.time.unknown">I don&rsquo;t know my birth time</span>
-          </label>
-        </div>
-
-        <!-- Birthplace -->
-        <div class="natal-field natal-field--combo">
-          <label for="nf-place" data-i18n="natal.form.place">Birthplace</label>
-          <div class="combo">
-            <input
-              id="nf-place"
-              name="place"
-              type="text"
-              autocomplete="off"
-              autocorrect="off"
-              spellcheck="false"
-              role="combobox"
-              aria-autocomplete="list"
-              aria-expanded="false"
-              aria-controls="nf-place-listbox"
-              aria-activedescendant=""
-              required
-              aria-required="true"
-            />
-            <ul id="nf-place-listbox" class="combo-listbox" role="listbox" hidden></ul>
+    <div role="tabpanel" id="home-panel-input" aria-labelledby="home-tab-input" class="natal-tabpanel">
+      <section class="natal-account natal-account--workspace" id="natal-calc" data-account-profiles aria-labelledby="home-natal-account-heading">
+        <div class="natal-account__header">
+          <div>
+            <span class="natal-account__eyebrow" data-i18n="natal.form.profileEyebrow">Birth Profile</span>
+            <h2 id="home-natal-account-heading">Birth profile workspace</h2>
+            <p data-account-status data-i18n="natal.form.profileStatusSignedOut">Sign in from the header to save birth profiles.</p>
           </div>
-          <small class="help" data-i18n="natal.form.place.help">Type a city name. We match against a built-in gazetteer &mdash; no third-party lookup.</small>
-          <small class="help help--empty" id="nf-place-empty" hidden data-i18n="natal.form.place.empty">No matches. Try a larger nearby city.</small>
         </div>
 
-        <!-- Location detail: lat / lon / tz. Hidden until a city is selected;
-             then auto-filled AND editable, in case the birth was outside the
-             city centre or near a timezone boundary. -->
-        <fieldset class="natal-loc-detail" id="nf-loc-detail" hidden>
-          <legend data-i18n="natal.form.adjust.legend">Fine-tune location (optional)</legend>
-          <div class="natal-loc-grid">
+        <div class="natal-account__body" data-account-body hidden>
+          <div class="natal-profile-workbench">
+            <aside class="natal-profile-library" aria-labelledby="home-profile-library-heading">
+              <div class="natal-profile-library__head">
+                <div>
+                  <h3 id="home-profile-library-heading">Saved profiles</h3>
+                  <p data-active-profile>Active: Ali calibration preset</p>
+                </div>
+                <button type="button" class="btn btn-secondary" data-profile-new>New</button>
+              </div>
+              <label class="natal-profile-search">
+                <span>Search people</span>
+                <input type="search" data-profile-search placeholder="Name or birthplace" autocomplete="off" />
+              </label>
+              <div class="natal-profile-list natal-profile-list--all" data-profile-list-all></div>
+            </aside>
+
+            <form id="home-natal-form" class="natal-form natal-form--unified natal-form--compact" novalidate data-default-tz="+03:30">
+              <div class="natal-form-head natal-form-head--profile">
+                <div>
+                  <h3>Birth information</h3>
+                  <p>Edit the selected person here, then calculate or save.</p>
+                </div>
+              </div>
+              <div class="natal-field natal-field--name natal-field--profile-name">
+                <label for="home-profile-display-name">Profile name</label>
+                <input id="home-profile-display-name" type="text" maxlength="80" data-profile-display-name placeholder="Ali" />
+              </div>
+              <label class="natal-profile-save__notes">
+                <span>Notes</span>
+                <textarea maxlength="1000" data-profile-notes placeholder="Optional private notes"></textarea>
+              </label>
+              <input type="hidden" data-profile-type value="other" />
+
+              <div class="natal-form-subhead"><span>Birth details</span></div>
+              <div class="natal-field">
+                <label for="home-nf-date" data-i18n="natal.form.date">Birth date</label>
+                <input id="home-nf-date" name="date" type="date" min="1800-01-01" value="1985-06-09" required aria-required="true" />
+              </div>
             <div class="natal-field">
-              <label for="nf-lat" data-i18n="natal.form.lat">Latitude</label>
-              <input id="nf-lat" name="lat" type="number" step="0.0001" min="-66.5" max="66.5"
-                     inputmode="decimal" required aria-required="true" />
+              <label for="home-nf-time" data-i18n="natal.form.time">Birth time</label>
+              <input id="home-nf-time" name="time" type="time" step="1" value="15:30:30" required aria-required="true" />
+              <label class="inline-check">
+                <input id="home-nf-time-unknown" type="checkbox" />
+                <span data-i18n="natal.form.time.unknown">I don&rsquo;t know my birth time</span>
+              </label>
             </div>
-            <div class="natal-field">
-              <label for="nf-lon" data-i18n="natal.form.lon">Longitude</label>
-              <input id="nf-lon" name="lon" type="number" step="0.0001" min="-180" max="180"
-                     inputmode="decimal" required aria-required="true" />
+            <div class="natal-form-subhead"><span>Birthplace and timezone</span></div>
+            <div class="natal-field natal-field--combo">
+              <label for="home-nf-place" data-i18n="natal.form.place">Birthplace</label>
+              <div class="combo">
+                <input id="home-nf-place" name="place" type="text" value="Hamedan, Iran" data-resolved="1" autocomplete="off" autocorrect="off" spellcheck="false" role="combobox" aria-autocomplete="list" aria-expanded="false" aria-controls="home-nf-place-listbox" aria-activedescendant="" required aria-required="true" />
+                <ul id="home-nf-place-listbox" class="combo-listbox" role="listbox" hidden></ul>
+              </div>
+              <small class="help" data-i18n="natal.form.place.help">Type a city name. We match against a built-in gazetteer &mdash; no third-party lookup.</small>
+              <small class="help help--empty" id="home-nf-place-empty" hidden data-i18n="natal.form.place.empty">No matches. Try a larger nearby city.</small>
             </div>
-            <div class="natal-field">
-              <label for="nf-tz-select" data-i18n="natal.form.tz">Timezone</label>
-              <select id="nf-tz-select" name="tz" aria-label="IANA timezone" aria-live="polite"></select>
+            <fieldset class="natal-loc-detail" id="home-nf-loc-detail">
+              <legend data-i18n="natal.form.adjust.legend">Fine-tune location</legend>
+              <div class="natal-loc-grid">
+                <div class="natal-field">
+                  <label for="home-nf-lat" data-i18n="natal.form.lat">Latitude</label>
+                  <input id="home-nf-lat" name="lat" type="number" step="any" min="-66.563" max="66.563" value="35.19694444444445" inputmode="decimal" required aria-required="true" />
+                </div>
+                <div class="natal-field">
+                  <label for="home-nf-lon" data-i18n="natal.form.lon">Longitude</label>
+                  <input id="home-nf-lon" name="lon" type="number" step="any" min="-180" max="180" value="48.69777777777777" inputmode="decimal" required aria-required="true" />
+                </div>
+                <div class="natal-field">
+                  <label for="home-nf-tz-select" data-i18n="natal.form.tz">Timezone</label>
+                  <select id="home-nf-tz-select" name="tz" aria-label="IANA timezone" aria-live="polite"></select>
+                </div>
+              </div>
+              <div class="natal-field tz-offset-row">
+                <label class="inline-check">
+                  <input id="home-nf-tz-offset-enable" type="checkbox" checked />
+                  <span data-i18n="natal.form.tz.offset.enable">Use custom UTC offset instead</span>
+                </label>
+                <div class="tz-offset-input-row">
+                  <label for="home-nf-tz-offset-hours" class="sr-only" data-i18n="natal.form.tz.offset">UTC offset</label>
+                  <span class="tz-offset-sign-label">UTC</span>
+                  <select id="home-nf-tz-offset-sign" name="tzOffsetSign" aria-label="Offset sign"><option value="+">+</option><option value="-">-</option></select>
+                  <input id="home-nf-tz-offset-hours" type="number" min="0" max="14" step="1" value="3" inputmode="numeric" aria-label="Offset hours" />
+                  <span class="tz-offset-colon">:</span>
+                  <input id="home-nf-tz-offset-minutes" type="number" min="0" max="59" step="1" value="30" inputmode="numeric" aria-label="Offset minutes" />
+                </div>
+              </div>
+            </fieldset>
+            <div class="natal-field natal-field--submit natal-form-actions">
+              <button type="submit" id="home-nf-submit" class="btn btn-primary">
+                <span data-i18n="natal.form.submit">Calculate Natal Chart</span>
+              </button>
+              <div class="natal-profile-save__actions natal-profile-save__actions--inline">
+                <button type="button" class="btn btn-secondary" data-profile-update data-i18n="natal.form.profileUpdateButton" disabled>Save</button>
+                <button type="button" class="btn btn-secondary" data-profile-save data-i18n="natal.form.profileSaveButton">Save as</button>
+                <button type="button" class="btn btn-secondary" data-profile-export data-i18n="natal.form.profileExportButton" disabled>Export</button>
+                <button type="button" class="btn btn-secondary natal-profile-danger" data-profile-delete data-i18n="natal.form.profileDeleteButton" disabled>Delete</button>
+              </div>
+              <p class="natal-error" id="home-nf-error" role="alert" hidden></p>
+              <p class="natal-profile-message" data-profile-message role="status" aria-live="polite" hidden></p>
             </div>
+            </form>
           </div>
-          <small class="help" data-i18n="natal.form.adjust.help">Auto-filled from the city you picked. Adjust if needed.</small>
-        </fieldset>
-
-        <!-- Consent -->
-        <div class="natal-field consent">
-          <label class="inline-check">
-            <input id="nf-consent" type="checkbox" required aria-required="true" />
-            <span>
-              <span data-i18n="natal.form.consent">I consent to processing my birth details (date, time, place) for this natal chart calculation.</span>
-              <a id="nf-privacy-link" href="/privacy/california/#sensitive" data-i18n="natal.form.consent.link">See our Privacy Policy.</a>
-            </span>
-          </label>
         </div>
+      </section>
+    </div>
 
-        <!-- Submit -->
-        <div class="natal-field natal-field--submit">
-          <button type="submit" id="nf-submit" class="btn btn-primary" disabled>
-            <span data-i18n="natal.form.submit">Calculate Natal Chart</span>
-          </button>
-          <p class="natal-error" id="nf-error" role="alert" hidden></p>
+    <div role="tabpanel" id="home-panel-chart" aria-labelledby="home-tab-chart" class="natal-tabpanel" hidden>
+      <section class="natal-results" id="home-natal-results" aria-labelledby="home-natal-results-heading" aria-live="polite" aria-busy="false">
+        <h2 id="home-natal-results-heading" data-i18n="natal.results.heading">Your sidereal natal chart</h2>
+        <div class="natal-wheel-wrap">
+          <svg id="home-natal-wheel" viewBox="0 0 800 800" role="img" aria-labelledby="home-natal-wheel-title home-natal-wheel-desc" xmlns="http://www.w3.org/2000/svg">
+            <title id="home-natal-wheel-title" data-i18n="natal.results.heading">Sidereal natal chart</title>
+            <desc id="home-natal-wheel-desc">Astrological wheel showing twelve zodiac signs, twelve houses, planetary positions, and major aspects.</desc>
+          </svg>
         </div>
-      </form>
-    </section>
+        <div class="natal-meta" id="home-natal-meta"></div>
+      </section>
+    </div>
 
-    <!-- Results (hidden until first successful calc) -->
-    <section
-      class="natal-results"
-      id="natal-results"
-      aria-labelledby="natal-results-heading"
-      aria-live="polite"
-      aria-busy="false"
-      hidden
-    >
-      <h2 id="natal-results-heading" data-i18n="natal.results.heading">Your sidereal natal chart</h2>
+    <div role="tabpanel" id="home-panel-planets" aria-labelledby="home-tab-planets" class="natal-tabpanel" hidden>
+      <div class="natal-table-wrap" id="home-natal-planets"></div>
+    </div>
+    <div role="tabpanel" id="home-panel-aspects" aria-labelledby="home-tab-aspects" class="natal-tabpanel" hidden>
+      <div class="natal-table-wrap" id="home-natal-aspects"></div>
+    </div>
 
-      <div class="natal-wheel-wrap">
-        <svg
-          id="natal-wheel"
-          viewBox="0 0 800 800"
-          role="img"
-          aria-labelledby="natal-wheel-title natal-wheel-desc"
-          xmlns="http://www.w3.org/2000/svg"
-        >
-          <title id="natal-wheel-title" data-i18n="natal.results.heading">Sidereal natal chart</title>
-          <desc id="natal-wheel-desc">Astrological wheel showing twelve zodiac signs, twelve houses, planetary positions, and major aspects.</desc>
-        </svg>
+    <div role="tabpanel" id="home-panel-relocation" aria-labelledby="home-tab-relocation" class="natal-tabpanel astrocarto-panel" data-astrocarto="relocation" hidden>
+      <p class="astrocarto-panel__intro" data-i18n="natal.astrocarto.relocation.intro">Places where the planets that support stability, visibility, and growth in your chart amplify their effects.</p>
+      <div class="astrocarto-map" data-astrocarto-map aria-busy="false"></div>
+      <div class="astrocarto-state" data-astrocarto-loader hidden><span class="astrocarto-state__spinner" aria-hidden="true"></span><span data-i18n="natal.astrocarto.loading">Computing astrocartography map...</span></div>
+      <div class="astrocarto-state astrocarto-state--error" data-astrocarto-error role="alert" hidden></div>
+      <div class="astrocarto-legend" data-astrocarto-legend aria-label="Map legend"></div>
+    </div>
+    <div role="tabpanel" id="home-panel-immigration" aria-labelledby="home-tab-immigration" class="natal-tabpanel astrocarto-panel" data-astrocarto="immigration" hidden>
+      <p class="astrocarto-panel__intro" data-i18n="natal.astrocarto.immigration.intro">Places that support foreign movement, paperwork endurance, and settlement.</p>
+      <div class="astrocarto-map" data-astrocarto-map aria-busy="false"></div>
+      <div class="astrocarto-state" data-astrocarto-loader hidden><span class="astrocarto-state__spinner" aria-hidden="true"></span><span data-i18n="natal.astrocarto.loading">Computing astrocartography map...</span></div>
+      <div class="astrocarto-state astrocarto-state--error" data-astrocarto-error role="alert" hidden></div>
+      <div class="astrocarto-legend" data-astrocarto-legend aria-label="Map legend"></div>
+    </div>
+    <div role="tabpanel" id="home-panel-soulmate" aria-labelledby="home-tab-soulmate" class="natal-tabpanel astrocarto-panel" data-astrocarto="soulmate" hidden>
+      <p class="astrocarto-panel__intro" data-i18n="natal.astrocarto.soulmate.intro">Places that favor partnership and meeting.</p>
+      <div class="astrocarto-map" data-astrocarto-map aria-busy="false"></div>
+      <div class="astrocarto-state" data-astrocarto-loader hidden><span class="astrocarto-state__spinner" aria-hidden="true"></span><span data-i18n="natal.astrocarto.loading">Computing astrocartography map...</span></div>
+      <div class="astrocarto-state astrocarto-state--error" data-astrocarto-error role="alert" hidden></div>
+      <div class="astrocarto-legend" data-astrocarto-legend aria-label="Map legend"></div>
+    </div>
+    <div role="tabpanel" id="home-panel-soulmate-timing" aria-labelledby="home-tab-soulmate-timing" class="natal-tabpanel astrocarto-panel" data-astrocarto="soulmate_timing" hidden>
+      <div class="astrocarto-timing" data-astrocarto-timing>
+        <label class="astrocarto-timing__label" for="home-soulmate-timing-slider" data-i18n="natal.astrocarto.timing.sliderLabel">Life timing date</label>
+        <div class="astrocarto-timing__row">
+          <input id="home-soulmate-timing-slider" type="range" min="0" max="18263" step="7" value="0" data-astrocarto-date-slider aria-describedby="home-soulmate-timing-date" />
+          <output id="home-soulmate-timing-date" data-astrocarto-date-label></output>
+        </div>
       </div>
+      <div class="astrocarto-map" data-astrocarto-map aria-busy="false"></div>
+      <div class="astrocarto-state" data-astrocarto-loader hidden><span class="astrocarto-state__spinner" aria-hidden="true"></span><span data-i18n="natal.astrocarto.loading">Computing astrocartography map...</span></div>
+      <div class="astrocarto-state astrocarto-state--error" data-astrocarto-error role="alert" hidden></div>
+      <div class="astrocarto-legend" data-astrocarto-legend aria-label="Map legend"></div>
+    </div>
 
-      <div class="natal-meta" id="natal-meta"></div>
-      <div class="natal-table-wrap" id="natal-tables"></div>
-    </section>
+    <div role="tabpanel" id="home-panel-marriage" aria-labelledby="home-tab-marriage" class="natal-tabpanel" hidden>
+      <section class="marriage-tool" data-marriage-tool aria-labelledby="marriage-heading">
+        <div class="marriage-tool__header">
+          <h2 id="marriage-heading">Marriage Score</h2>
+          <p>Ashtakoota / Guna Milan score from saved birth profiles.</p>
+        </div>
+        <div class="marriage-tool__grid">
+          <article class="marriage-person" data-marriage-person="a">
+            <label>Person A<select data-marriage-select="a"></select></label>
+            <div class="marriage-person__tabs">
+              <button type="button" class="is-active" data-marriage-card-tab="a:data">Data</button>
+              <button type="button" data-marriage-card-tab="a:natal">Natal Chart</button>
+              <button type="button" data-marriage-card-tab="a:soulmate">Soulmate</button>
+            </div>
+            <div data-marriage-card-panel="a:data"></div>
+            <div data-marriage-card-panel="a:natal" hidden><svg data-marriage-wheel="a" viewBox="0 0 800 800" role="img" aria-label="Person A natal chart"></svg></div>
+            <div data-marriage-card-panel="a:soulmate" hidden><p class="natal-empty">Select this profile in the Soulmate tab to view the full map.</p></div>
+          </article>
+          <article class="marriage-person" data-marriage-person="b">
+            <label>Person B<select data-marriage-select="b"></select></label>
+            <div class="marriage-person__tabs">
+              <button type="button" class="is-active" data-marriage-card-tab="b:data">Data</button>
+              <button type="button" data-marriage-card-tab="b:natal">Natal Chart</button>
+              <button type="button" data-marriage-card-tab="b:soulmate">Soulmate</button>
+            </div>
+            <div data-marriage-card-panel="b:data"></div>
+            <div data-marriage-card-panel="b:natal" hidden><svg data-marriage-wheel="b" viewBox="0 0 800 800" role="img" aria-label="Person B natal chart"></svg></div>
+            <div data-marriage-card-panel="b:soulmate" hidden><p class="natal-empty">Select this profile in the Soulmate tab to view the full map.</p></div>
+          </article>
+        </div>
+        <button type="button" class="btn btn-primary" data-marriage-calculate disabled>Calculate Marriage Score</button>
+        <div class="marriage-result" data-marriage-result></div>
+      </section>
+    </div>
+
+    <script id="home-natal-default-data" type="application/json">{"ascendant":{"longitude":186.757541053065,"sign":"Libra","signIndex":6,"degree":6,"minute":45,"second":27},"midheaven":{"longitude":100.65259574466877,"sign":"Cancer","signIndex":3,"degree":10,"minute":39,"second":9},"planets":[{"name":"Sun","longitude":54.948645233349836,"latitude":-0.000027684377643961012,"sign":"Taurus","signIndex":1,"degree":24,"minute":56,"second":55,"speed":0.9561,"retrograde":false,"house":8,"nakshatra":{"index":4,"name":"Mrigashira","pada":1,"lord":"Mars"},"navamsha":{"sign":4,"signName":"Leo","pada":8,"longitude":134.5378071001485,"longitudeWithinNavamshaSign":14.537807100148505}},{"name":"Moon","longitude":315.36013756443634,"latitude":-4.874173072813623,"sign":"Aquarius","signIndex":10,"degree":15,"minute":21,"second":36,"speed":12.4123,"retrograde":false,"house":5,"nakshatra":{"index":23,"name":"Shatabhisha","pada":3,"lord":"Rahu"},"navamsha":{"sign":10,"signName":"Aquarius","pada":5,"longitude":318.2412380799271,"longitudeWithinNavamshaSign":18.24123807992708}},{"name":"Mercury","longitude":57.3252181951453,"latitude":1.069618928001871,"sign":"Taurus","signIndex":1,"degree":27,"minute":19,"second":31,"speed":2.1944,"retrograde":false,"house":8,"nakshatra":{"index":4,"name":"Mrigashira","pada":2,"lord":"Mars"},"navamsha":{"sign":5,"signName":"Virgo","pada":9,"longitude":155.92696375630766,"longitudeWithinNavamshaSign":5.92696375630766}},{"name":"Venus","longitude":9.239979862524326,"latitude":-2.5278180615187527,"sign":"Aries","signIndex":0,"degree":9,"minute":14,"second":24,"speed":0.932,"retrograde":false,"house":7,"nakshatra":{"index":0,"name":"Ashwini","pada":3,"lord":"Ketu"},"navamsha":{"sign":2,"signName":"Gemini","pada":3,"longitude":83.15981876271893,"longitudeWithinNavamshaSign":23.159818762718928}},{"name":"Mars","longitude":66.39901457098613,"latitude":0.8478849500439799,"sign":"Gemini","signIndex":2,"degree":6,"minute":23,"second":56,"speed":0.6671,"retrograde":false,"house":9,"nakshatra":{"index":4,"name":"Mrigashira","pada":4,"lord":"Mars"},"navamsha":{"sign":7,"signName":"Scorpio","pada":2,"longitude":237.5911311388751,"longitudeWithinNavamshaSign":27.591131138875124}},{"name":"Jupiter","longitude":293.29132842402015,"latitude":-0.6699664178486491,"sign":"Capricorn","signIndex":9,"degree":23,"minute":17,"second":29,"speed":-0.0146,"retrograde":true,"house":4,"nakshatra":{"index":21,"name":"Shravana","pada":4,"lord":"Moon"},"navamsha":{"sign":3,"signName":"Cancer","pada":7,"longitude":119.62195581618136,"longitudeWithinNavamshaSign":29.621955816181355}},{"name":"Saturn","longitude":209.4351185707531,"latitude":2.329220951767696,"sign":"Libra","signIndex":6,"degree":29,"minute":26,"second":6,"speed":-0.0636,"retrograde":true,"house":1,"nakshatra":{"index":15,"name":"Vishakha","pada":3,"lord":"Jupiter"},"navamsha":{"sign":2,"signName":"Gemini","pada":9,"longitude":84.91606713677793,"longitudeWithinNavamshaSign":24.916067136777926}},{"name":"Uranus","longitude":232.23887868351724,"latitude":-0.028085287973929972,"sign":"Scorpio","signIndex":7,"degree":22,"minute":14,"second":20,"speed":-0.0411,"retrograde":true,"house":2,"nakshatra":{"index":17,"name":"Jyeshtha","pada":2,"lord":"Mercury"},"navamsha":{"sign":9,"signName":"Capricorn","pada":7,"longitude":290.14990815165515,"longitudeWithinNavamshaSign":20.149908151655183}},{"name":"Neptune","longitude":248.98052418296996,"latitude":1.1645713936945956,"sign":"Sagittarius","signIndex":8,"degree":8,"minute":58,"second":50,"speed":-0.0259,"retrograde":true,"house":3,"nakshatra":{"index":18,"name":"Mula","pada":3,"lord":"Ketu"},"navamsha":{"sign":2,"signName":"Gemini","pada":3,"longitude":80.82471764672962,"longitudeWithinNavamshaSign":20.82471764672962}},{"name":"Pluto","longitude":188.57816020358698,"latitude":17.09026604861252,"sign":"Libra","signIndex":6,"degree":8,"minute":34,"second":41,"speed":-0.0171,"retrograde":true,"house":1,"nakshatra":{"index":14,"name":"Swati","pada":1,"lord":"Rahu"},"navamsha":{"sign":8,"signName":"Sagittarius","pada":3,"longitude":257.20344183228275,"longitudeWithinNavamshaSign":17.203441832282774}},{"name":"Rahu","longitude":23.06750964140817,"latitude":0,"sign":"Aries","signIndex":0,"degree":23,"minute":4,"second":3,"speed":-0.053,"retrograde":true,"house":7,"nakshatra":{"index":1,"name":"Bharani","pada":3,"lord":"Venus"},"navamsha":{"sign":6,"signName":"Libra","pada":7,"longitude":207.60758677267353,"longitudeWithinNavamshaSign":27.607586772673518}},{"name":"Ketu","longitude":203.06750964140818,"latitude":0,"sign":"Libra","signIndex":6,"degree":23,"minute":4,"second":3,"speed":-0.053,"retrograde":true,"house":1,"nakshatra":{"index":15,"name":"Vishakha","pada":1,"lord":"Jupiter"},"navamsha":{"sign":0,"signName":"Aries","pada":7,"longitude":27.607586772673613,"longitudeWithinNavamshaSign":27.607586772673613}}],"moonNakshatra":{"index":23,"name":"Shatabhisha","pada":3,"lord":"Rahu"},"houses":[{"number":1,"cusp":180,"sign":"Libra","signIndex":6,"degree":0,"minute":0},{"number":2,"cusp":210,"sign":"Scorpio","signIndex":7,"degree":0,"minute":0},{"number":3,"cusp":240,"sign":"Sagittarius","signIndex":8,"degree":0,"minute":0},{"number":4,"cusp":270,"sign":"Capricorn","signIndex":9,"degree":0,"minute":0},{"number":5,"cusp":300,"sign":"Aquarius","signIndex":10,"degree":0,"minute":0},{"number":6,"cusp":330,"sign":"Pisces","signIndex":11,"degree":0,"minute":0},{"number":7,"cusp":0,"sign":"Aries","signIndex":0,"degree":0,"minute":0},{"number":8,"cusp":30,"sign":"Taurus","signIndex":1,"degree":0,"minute":0},{"number":9,"cusp":60,"sign":"Gemini","signIndex":2,"degree":0,"minute":0},{"number":10,"cusp":90,"sign":"Cancer","signIndex":3,"degree":0,"minute":0},{"number":11,"cusp":120,"sign":"Leo","signIndex":4,"degree":0,"minute":0},{"number":12,"cusp":150,"sign":"Virgo","signIndex":5,"degree":0,"minute":0}],"aspects":[{"from":"Sun","to":"Mercury","type":"conjunction","orb":2.38,"exact":0},{"from":"Sun","to":"Jupiter","type":"trine","orb":1.66,"exact":120},{"from":"Sun","to":"Uranus","type":"opposition","orb":2.71,"exact":180},{"from":"Mercury","to":"Jupiter","type":"trine","orb":4.03,"exact":120},{"from":"Mercury","to":"Uranus","type":"opposition","orb":5.09,"exact":180},{"from":"Venus","to":"Mars","type":"sextile","orb":2.84,"exact":60},{"from":"Venus","to":"Neptune","type":"trine","orb":0.26,"exact":120},{"from":"Venus","to":"Pluto","type":"opposition","orb":0.66,"exact":180},{"from":"Mars","to":"Neptune","type":"opposition","orb":2.58,"exact":180},{"from":"Mars","to":"Pluto","type":"trine","orb":2.18,"exact":120},{"from":"Jupiter","to":"Uranus","type":"sextile","orb":1.05,"exact":60},{"from":"Jupiter","to":"Rahu","type":"square","orb":0.22,"exact":90},{"from":"Jupiter","to":"Ketu","type":"square","orb":0.22,"exact":90},{"from":"Saturn","to":"Rahu","type":"opposition","orb":6.37,"exact":180},{"from":"Saturn","to":"Ketu","type":"conjunction","orb":6.37,"exact":0},{"from":"Neptune","to":"Pluto","type":"sextile","orb":0.4,"exact":60},{"from":"Rahu","to":"Ketu","type":"opposition","orb":0,"exact":180}],"tradition":"sidereal","ayanamsa":"true_chitrapaksha","ayanamsaValue":23.638111,"houseSystem":"whole-sign","input":{"date":"1985-06-09","time":"15:30:30","tz":"+03:30","lat":35.19694444444445,"lon":48.69777777777777,"tradition":"sidereal","ayanamsa":"true_chitrapaksha","unknownTime":false},"provenance":{"engine":"astronomy-engine","engineVersion":"2.1.19","nodeModel":"mean","warnings":[]},"computedAt":"2026-06-10T23:12:11.446Z"}</script>
 
     <p class="natal-attribution">
       <small>
@@ -225,7 +340,6 @@
         <a href="https://creativecommons.org/licenses/by/4.0/" rel="noopener license" target="_blank">CC&nbsp;BY&nbsp;4.0</a>.
       </small>
     </p>
-
   </div>
 </main>
 
@@ -276,12 +390,17 @@
   </div>
 </footer>
 
-<script src="/assets/js/i18n.js?v=5" defer></script>
+<script src="/assets/js/i18n.js?v=6" defer></script>
 <!-- Natal-chart i18n bundle: merges new keys into IYOGAU_I18N. Loaded after i18n.js. -->
-<script src="/assets/js/i18n.natal-chart.js?v=1" defer></script>
+<script src="/assets/js/i18n.natal-chart.js?v=21" defer></script>
 <script src="/assets/js/app.js" defer></script>
-<script src="/assets/js/natal-chart-wheel.js?v=21" defer></script>
-<script src="/assets/js/natal-chart-form.js?v=14" defer></script>
+<script src="/assets/js/natal-chart-wheel.js?v=29" defer></script>
+<script src="/assets/js/natal-chart-tabs.js?v=10" defer></script>
+<script src="/assets/js/natal-chart-form.js?v=19" defer></script>
+<script src="/assets/js/account-profiles.js?v=24" defer></script>
+<script src="/assets/data/world-continents.js?v=3" defer></script>
+<script src="/assets/js/astrocarto.js?v=15" defer></script>
+<script src="/assets/js/marriage-score.js?v=1" defer></script>
 <script>
   // Tiny footer-year shim — same as other pages
   document.addEventListener('DOMContentLoaded', function () {

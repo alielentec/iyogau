@@ -20,6 +20,27 @@ import { fileURLToPath, pathToFileURL } from 'node:url';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const ROOT = path.resolve(__dirname, '..');
+
+function loadEnvFile(filePath) {
+  if (!fs.existsSync(filePath)) return;
+  const raw = fs.readFileSync(filePath, 'utf8');
+  raw.split(/\r?\n/).forEach((line) => {
+    const trimmed = line.trim();
+    if (!trimmed || trimmed.startsWith('#') || !trimmed.includes('=')) return;
+    const idx = trimmed.indexOf('=');
+    const key = trimmed.slice(0, idx).trim();
+    let value = trimmed.slice(idx + 1).trim();
+    if (!key || process.env[key] !== undefined) return;
+    if ((value.startsWith('"') && value.endsWith('"')) || (value.startsWith("'") && value.endsWith("'"))) {
+      value = value.slice(1, -1);
+    }
+    process.env[key] = value;
+  });
+}
+
+loadEnvFile(path.join(ROOT, '.env'));
+loadEnvFile(path.join(ROOT, '.env.local'));
+
 const PORT = Number(process.env.PORT || 5180);
 
 const MIME = {
