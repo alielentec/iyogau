@@ -1,9 +1,10 @@
 // Astrocartography math: planetary lines + heat-matrix scoring.
 //
-// Ported from ast/src/lib/astrology.js (the iYogaU reference implementation).
-// All math is preserved bit-for-bit modulo cosmetic renaming. Three responsibilities:
+// Started from ast/src/lib/astrology.js and tightened for full-world vector
+// heat maps. The angular-line equations are intentionally kept standard and
+// independently testable. Three responsibilities:
 //
-//   1. buildPlanetLines(planet, gmstDeg, weight)
+//   1. buildPlanetLines(planet, siderealDeg, weight)
 //      → emit four parametric polylines (MC, IC, AC, DC) per planet
 //   2. lineDistanceKm(point, line)
 //      → great-circle distance from a {lat,lon} point to a polyline
@@ -13,28 +14,38 @@
 //        gaussian-falloff formula
 //
 // The matrix is the heavy path: O(latSteps * lonSteps * planets * 4 lines).
-// At the default 4° resolution → 34 * 90 * 9 * 4 ≈ 110k inner iterations,
+// At the default 4° resolution → 45 * 90 * 9 * 4 ≈ 146k inner iterations,
 // each one a Math.cos/sin in lineDistanceKm. With the great-circle fast path
-// for MC/IC and a per-line spherical-segment cache for AC/DC, this completes
-// in ~120-180 ms on Vercel hobby (single 256 MB region). The per-mode handler
-// budgets <1 s end-to-end.
+// for MC/IC and a per-line spherical-segment cache for AC/DC, this remains
+// small enough for the per-mode serverless handler budget.
 
 import * as Astronomy from 'astronomy-engine';
 import { computePlanetTropical, computeAscMC, PLANETS as PLANET_NAMES, norm360 } from './astronomy.js';
-import { lahiriAyanamsa, applyAyanamsa } from './ayanamsa.js';
-import { buildWholeSignHouses, houseOf, signIndexOf, decomposeLongitude } from './houses.js';
+import { resolveAyanamsaValue, applyAyanamsa } from './ayanamsa.js';
+import { buildWholeSignHouses, houseOf, signIndexOf } from './houses.js';
 
 // ── Constants (parity with ast/src/lib/astrology.js:10-20) ──
 const EARTH_RADIUS_KM = 6371;
 const LINE_INFLUENCE_KM = 1100;
 const HEAT_MATRIX_SIGMA_KM = 650;
 
-// Default grid: 4°×4° → 34 rows × 90 cols = 3060 cells. ~120 ms on a 256 MB
-// Vercel instance. Coarser resolutions (6°, 8°) trade compute for visual
-// blockiness; finer (2°) doubles runtime and overshoots the 1 s SLA.
-const DEFAULT_LAT_MIN = -60;
-const DEFAULT_LAT_MAX = 72;
+// The heat matrix is a full-world, center-sampled vector grid. Each heat
+// sample is a real map point: (x, y) in the 800x400 equirectangular SVG
+// viewBox maps exactly to the same (lon, lat) used as the equation input.
+// At 4° resolution the centers are lat=-88..88 and lon=-178..178, so the
+// rendered cells cover the whole [-90, 90] x [-180, 180] world without
+// scoring at the singular geographic poles.
+const WORLD_LAT_MIN = -90;
+const WORLD_LAT_MAX = 90;
+const WORLD_LON_MIN = -180;
+const WORLD_LON_MAX = 180;
+const MAP_VIEWBOX_WIDTH = 800;
+const MAP_VIEWBOX_HEIGHT = 400;
 const DEFAULT_STEP = 4;
+const LINE_SAMPLE_LAT_LIMIT = 89;
+const HORIZON_SEED_LAT_STEP = 1;
+const HORIZON_MAX_INTERPOLATION_DEG = 0.05;
+const HORIZON_MAX_SUBDIVISION_DEPTH = 14;
 
 // Mode weights (parity with ast/src/lib/data.js:MODE_CONFIG).
 export const MODE_CONFIG = {
@@ -53,12 +64,35 @@ export const MODE_CONFIG = {
     description: 'Relationship ease, attraction, meeting probability, and harmony.',
     weights: { Venus: 1.45, Jupiter: 1.0, Moon: 0.95, Mars: 0.55, Mercury: 0.45, Sun: 0.35, Rahu: 0.3, Saturn: 0.25, Ketu: 0.2 },
   },
+  soulmate_timing: {
+    label: 'Soulmate Timing',
+    description: 'Date-specific relationship activation layered over natal soulmate potential.',
+    weights: { Venus: 1.45, Jupiter: 1.0, Moon: 0.95, Mars: 0.55, Mercury: 0.45, Sun: 0.35, Rahu: 0.3, Saturn: 0.25, Ketu: 0.2 },
+  },
 };
 
-export const MODES = Object.freeze(['relocation', 'immigration', 'soulmate']);
+export const MODES = Object.freeze(['relocation', 'immigration', 'soulmate', 'soulmate_timing']);
+
+const SOULMATE_TIMING_MODE = 'soulmate_timing';
+const SOULMATE_TIMING_TRANSIT_WEIGHTS = Object.freeze({
+  Venus: 1.35,
+  Jupiter: 1.05,
+  Moon: 0.95,
+  Mars: 0.45,
+  Mercury: 0.35,
+  Rahu: 0.3,
+  Sun: 0.25,
+  Saturn: 0.25,
+  Ketu: 0.15,
+});
+const SOULMATE_TIMING_BLEND = Object.freeze({
+  natal: 0.62,
+  transitLines: 0.28,
+  transitAspects: 0.10,
+});
 
 // Astrocarto uses only the 9 Vedic-tradition bodies — Uranus/Neptune/Pluto
-// are excluded because they're not in the Lahiri-sidereal canon and have
+// are excluded because they're not in the traditional sidereal canon and have
 // zero weight in every MODE_CONFIG. Filtering them here keeps the line
 // count to 9*4=36 and shaves ~25% off matrix compute.
 const ASTROCARTO_PLANETS = ['Sun', 'Moon', 'Mercury', 'Venus', 'Mars', 'Jupiter', 'Saturn', 'Rahu', 'Ketu'];
@@ -69,6 +103,8 @@ const DEG = 180 / Math.PI;
 function toRadians(v) { return v * RAD; }
 function toDegrees(v) { return v * DEG; }
 function clamp(value, min, max) { return Math.min(max, Math.max(min, value)); }
+function round2(v) { return Math.round(v * 100) / 100; }
+function round6(v) { return Math.round(v * 1000000) / 1000000; }
 
 // Wrap into (-180, 180]. The ast reference uses this for line-longitude
 // emission; the heat-matrix grid then runs lon ∈ [-180, 180) so the seam
@@ -76,6 +112,33 @@ function clamp(value, min, max) { return Math.min(max, Math.max(min, value)); }
 function normalizeLongitude(value) {
   const wrapped = ((value + 180) % 360 + 360) % 360 - 180;
   return wrapped === -180 ? 180 : wrapped;
+}
+
+function unwrapLongitudeNear(value, reference) {
+  let x = value;
+  while (x - reference > 180) x -= 360;
+  while (x - reference < -180) x += 360;
+  return x;
+}
+
+function xOfLongitude(lon) {
+  return (lon - WORLD_LON_MIN) / (WORLD_LON_MAX - WORLD_LON_MIN) * MAP_VIEWBOX_WIDTH;
+}
+
+function yOfLatitude(lat) {
+  return (WORLD_LAT_MAX - lat) / (WORLD_LAT_MAX - WORLD_LAT_MIN) * MAP_VIEWBOX_HEIGHT;
+}
+
+function coordinateCenters(min, max, step) {
+  const centers = [];
+  for (let edge = min; edge < max - 1e-9; edge += step) {
+    centers.push(round6(edge + step / 2));
+  }
+  return centers;
+}
+
+function baseScoringMode(mode) {
+  return mode === SOULMATE_TIMING_MODE ? 'soulmate' : mode;
 }
 
 // ── Equatorial coords (RA, Dec) for ecliptic longitude — used for AC/DC ──
@@ -112,11 +175,11 @@ const BODY_MAP = {
 //
 // This is a stripped-down sibling of calculate-chart.js#buildChart — it
 // computes only what astrocarto needs (no aspects, no nakshatra, no
-// navamsha) and uses sidereal Lahiri longitudes (matching the Vedic
-// default of the iYogaU site).
+// navamsha) and uses the requested sidereal ayanamsa (JHora-compatible
+// true Chitrapaksha by default).
 export function buildAstroNatal(input, dateUTC) {
   const time = Astronomy.MakeTime(dateUTC);
-  const ayanamsa = input.tradition === 'sidereal' ? lahiriAyanamsa(dateUTC) : 0;
+  const ayanamsa = input.tradition === 'sidereal' ? resolveAyanamsaValue(input.ayanamsa, dateUTC) : 0;
   const adjust = (lonTrop) => input.tradition === 'sidereal'
     ? applyAyanamsa(lonTrop, ayanamsa)
     : norm360(lonTrop);
@@ -176,42 +239,109 @@ export function buildAstroNatal(input, dateUTC) {
 // upper meridian), Imum Coeli (IC, lower meridian), Ascendant (AC, rising
 // at the eastern horizon), Descendant (DC, setting at the western horizon).
 //
-//   MC line:  cos(H) = 0 with H = LST - RA  ⇒  LST = RA  ⇒  lon = RA - GMST
+//   MC line:  H = 0 with H = LST - RA  ⇒  LST = RA  ⇒  lon = RA - GAST
 //   IC line:  MC line ± 180°
 //   AC/DC:    cos(H) = -tan(lat) * tan(dec)  (the standard rising/setting equation)
 //
-// All angles in degrees. gmstDeg = Greenwich Mean Sidereal Time × 15
+// All angles in degrees. siderealDeg = Greenwich apparent sidereal time × 15
 // (i.e. converted from sidereal hours to degrees).
-export function buildPlanetLines(planet, gmstDeg, weight) {
+function horizonPoint(planet, siderealDeg, latitude, type) {
+  const tanDec = Math.tan(toRadians(planet.dec));
+  const cosHRaw = -Math.tan(toRadians(latitude)) * tanDec;
+  if (Math.abs(cosHRaw) > 1 + 1e-12) return null;
+  const cosH = clamp(cosHRaw, -1, 1);
+  const hourAngle = toDegrees(Math.acos(cosH));
+  const sign = type === 'DC' ? 1 : -1;
+  const longitude = normalizeLongitude(planet.ra * 15 + sign * hourAngle - siderealDeg);
+  return [longitude, latitude];
+}
+
+function isHorizonLatitudeValid(planet, latitude) {
+  const cosH = -Math.tan(toRadians(latitude)) * Math.tan(toRadians(planet.dec));
+  return Math.abs(cosH) <= 1;
+}
+
+function refineHorizonBoundary(planet, invalidLatitude, validLatitude, type, siderealDeg) {
+  let invalid = invalidLatitude;
+  let valid = validLatitude;
+  for (let i = 0; i < 44; i += 1) {
+    const mid = (invalid + valid) / 2;
+    if (isHorizonLatitudeValid(planet, mid)) valid = mid;
+    else invalid = mid;
+  }
+  return horizonPoint(planet, siderealDeg, valid, type);
+}
+
+function midpointProjectionErrorDeg(a, b, mid) {
+  const bLon = unwrapLongitudeNear(b[0], a[0]);
+  const midLon = unwrapLongitudeNear(mid[0], a[0]);
+  const linearLon = a[0] + (bLon - a[0]) / 2;
+  return Math.abs(midLon - linearLon);
+}
+
+function appendAdaptiveHorizonSegment(points, planet, siderealDeg, type, a, b, depth = 0) {
+  const midLat = (a[1] + b[1]) / 2;
+  const mid = horizonPoint(planet, siderealDeg, midLat, type);
+  if (!mid || depth >= HORIZON_MAX_SUBDIVISION_DEPTH || midpointProjectionErrorDeg(a, b, mid) <= HORIZON_MAX_INTERPOLATION_DEG) {
+    points.push(b);
+    return;
+  }
+  appendAdaptiveHorizonSegment(points, planet, siderealDeg, type, a, mid, depth + 1);
+  appendAdaptiveHorizonSegment(points, planet, siderealDeg, type, mid, b, depth + 1);
+}
+
+function buildHorizonCurve(planet, siderealDeg, type) {
+  const points = [];
+  let prevLat = -LINE_SAMPLE_LAT_LIMIT;
+  let prev = horizonPoint(planet, siderealDeg, prevLat, type);
+  if (prev) points.push(prev);
+
+  for (let lat = -LINE_SAMPLE_LAT_LIMIT + HORIZON_SEED_LAT_STEP; lat <= LINE_SAMPLE_LAT_LIMIT + 1e-9; lat += HORIZON_SEED_LAT_STEP) {
+    const currLat = Math.min(LINE_SAMPLE_LAT_LIMIT, round6(lat));
+    const curr = horizonPoint(planet, siderealDeg, currLat, type);
+
+    if (prev && curr) {
+      appendAdaptiveHorizonSegment(points, planet, siderealDeg, type, prev, curr);
+    } else if (!prev && curr) {
+      const boundary = refineHorizonBoundary(planet, prevLat, currLat, type, siderealDeg);
+      if (boundary) {
+        points.push(boundary);
+        appendAdaptiveHorizonSegment(points, planet, siderealDeg, type, boundary, curr);
+      } else {
+        points.push(curr);
+      }
+    } else if (prev && !curr) {
+      const boundary = refineHorizonBoundary(planet, currLat, prevLat, type, siderealDeg);
+      if (boundary) appendAdaptiveHorizonSegment(points, planet, siderealDeg, type, prev, boundary);
+    }
+
+    prevLat = currLat;
+    prev = curr;
+  }
+
+  return points;
+}
+
+export function buildPlanetLines(planet, siderealDeg, weight) {
   const raDeg = planet.ra * 15;
-  const mcLon = normalizeLongitude(raDeg - gmstDeg);
+  const mcLon = normalizeLongitude(raDeg - siderealDeg);
   const icLon = normalizeLongitude(mcLon + 180);
 
   // MC/IC: straight meridian lines. Two endpoints suffice; lineDistanceKm
   // uses a closed-form great-circle formula for these.
   const base = [
     { planet: planet.key, type: 'MC', weight, scoreType: 'visibility',
-      points: [[mcLon, -72], [mcLon, 72]] },
+      points: [[mcLon, WORLD_LAT_MIN], [mcLon, WORLD_LAT_MAX]] },
     { planet: planet.key, type: 'IC', weight: weight * 0.85, scoreType: 'home',
-      points: [[icLon, -72], [icLon, 72]] },
+      points: [[icLon, WORLD_LAT_MIN], [icLon, WORLD_LAT_MAX]] },
   ];
 
-  // AC/DC: rising/setting curves. Sample 1° latitude steps (145 points/line)
-  // and connect as a polyline. Skip latitudes where |cos H| > 1 (the planet
-  // is circumpolar or anti-circumpolar — never rises/sets at that latitude).
-  const ac = [];
-  const dc = [];
-  const tanDec = Math.tan(toRadians(planet.dec));
-  for (let lat = -72; lat <= 72; lat += 1) {
-    const cosH = -Math.tan(toRadians(lat)) * tanDec;
-    if (Math.abs(cosH) <= 1) {
-      const h = toDegrees(Math.acos(cosH));
-      const riseLon = normalizeLongitude(raDeg - h - gmstDeg);
-      const setLon = normalizeLongitude(raDeg + h - gmstDeg);
-      ac.push([riseLon, lat]);
-      dc.push([setLon, lat]);
-    }
-  }
+  // AC/DC: rising/setting curves. We seed at 1° latitude, refine the
+  // circumpolar/anti-circumpolar boundaries, then recursively subdivide
+  // segments until the SVG straight-line interpolation stays within
+  // HORIZON_MAX_INTERPOLATION_DEG of the exact horizon equation.
+  const ac = buildHorizonCurve(planet, siderealDeg, 'AC');
+  const dc = buildHorizonCurve(planet, siderealDeg, 'DC');
 
   return [
     ...base,
@@ -355,8 +485,8 @@ function matrixImmigrationDistanceAdjustment(natal, mode, location) {
   return clamp(Math.round(immigrationDistanceAdjustment(distanceKm) * 0.7), -8, 10);
 }
 
-export function scoreMatrixCell(natal, lines, mode, location) {
-  const contributions = lines
+function lineContributions(lines, location, source = 'natal') {
+  return lines
     .map((line) => {
       const distance = lineDistanceKm(location, line);
       const closeness = gaussianClosenessKm(distance);
@@ -367,30 +497,344 @@ export function scoreMatrixCell(natal, lines, mode, location) {
         type: line.type,
         distance,
         value: base * angularBonus,
+        source,
       };
     })
     .filter((item) => item.value > 1.2)
     .sort((a, b) => b.value - a.value);
+}
 
+function staticModeRawScore(natal, contributions, mode, location) {
   const venus = natal.positions.find((p) => p.key === 'Venus');
   const relationshipHouse = venus ? venus.house : 7;
   const modeAdjustment =
     mode === 'soulmate' && [5, 7, 9, 11].includes(relationshipHouse) ? 8
     : mode === 'immigration' && hasForeignSignal(natal) ? 9
     : 0;
-  const raw =
+  return (
     contributions.slice(0, 5).reduce((sum, item) => sum + item.value, 0) / 4.2
     + modeAdjustment
-    + matrixImmigrationDistanceAdjustment(natal, mode, location);
+    + matrixImmigrationDistanceAdjustment(natal, mode, location)
+  );
+}
+
+function angularSeparationDeg(a, b) {
+  const d = Math.abs(norm360(a) - norm360(b));
+  return d > 180 ? 360 - d : d;
+}
+
+function aspectClosenessDeg(separation, exact, orb) {
+  const delta = Math.abs(separation - exact);
+  if (delta > orb) return 0;
+  return 1 - delta / orb;
+}
+
+function relationshipTransitActivationScore(natal, transitPositions) {
+  const natalWeights = { Venus: 1.4, Moon: 1.0, Jupiter: 0.9, Mars: 0.45, Rahu: 0.35 };
+  const transitWeights = { Venus: 1.35, Jupiter: 1.05, Moon: 0.85, Mars: 0.4, Rahu: 0.3 };
+  const aspects = [
+    { angle: 0, weight: 1.0 },
+    { angle: 60, weight: 0.45 },
+    { angle: 120, weight: 0.8 },
+    { angle: 180, weight: 0.55 },
+  ];
+
+  let raw = 0;
+  for (const transit of transitPositions) {
+    const tw = transitWeights[transit.key] || 0;
+    if (!tw) continue;
+    for (const natalPlanet of natal.positions) {
+      const nw = natalWeights[natalPlanet.key] || 0;
+      if (!nw) continue;
+      const sep = angularSeparationDeg(transit.longitude, natalPlanet.longitude);
+      for (const aspect of aspects) {
+        const closeness = aspectClosenessDeg(sep, aspect.angle, transit.key === 'Moon' ? 4.5 : 6);
+        if (closeness > 0) raw += closeness * aspect.weight * tw * nw;
+      }
+    }
+  }
+
+  return clamp(Math.round(raw * 9), 0, 100);
+}
+
+function dateStringUTC(dateUTC) {
+  return dateUTC.toISOString().slice(0, 10);
+}
+
+function parseDateStringUTC(dateString) {
+  const [year, month, day] = String(dateString || '').split('-').map(Number);
+  const date = new Date(Date.UTC(year, month - 1, day, 12, 0, 0));
+  if (!Number.isFinite(date.getTime())) return null;
+  if (date.getUTCFullYear() !== year || date.getUTCMonth() !== month - 1 || date.getUTCDate() !== day) return null;
+  return date;
+}
+
+function daysInUTCMonth(year, monthIndex) {
+  return new Date(Date.UTC(year, monthIndex + 1, 0)).getUTCDate();
+}
+
+function addYearsClampedUTC(dateUTC, years) {
+  const year = dateUTC.getUTCFullYear() + years;
+  const month = dateUTC.getUTCMonth();
+  const day = Math.min(dateUTC.getUTCDate(), daysInUTCMonth(year, month));
+  return new Date(Date.UTC(year, month, day, 12, 0, 0));
+}
+
+function addDaysUTC(dateUTC, days) {
+  return new Date(Date.UTC(
+    dateUTC.getUTCFullYear(),
+    dateUTC.getUTCMonth(),
+    dateUTC.getUTCDate() + days,
+    12,
+    0,
+    0,
+  ));
+}
+
+function daysBetweenUTC(startUTC, endUTC) {
+  const start = Date.UTC(startUTC.getUTCFullYear(), startUTC.getUTCMonth(), startUTC.getUTCDate());
+  const end = Date.UTC(endUTC.getUTCFullYear(), endUTC.getUTCMonth(), endUTC.getUTCDate());
+  return Math.round((end - start) / 86400000);
+}
+
+function ageYearsAtDate(startUTC, dateUTC) {
+  return Math.round(daysBetweenUTC(startUTC, dateUTC) / 365.2425 * 100) / 100;
+}
+
+export function buildSoulmateTimingBounds(birthDateString) {
+  const start = parseDateStringUTC(birthDateString);
+  if (!start) throw new Error(`Invalid birth date for soulmate timing bounds: ${birthDateString}`);
+  const end = addYearsClampedUTC(start, 50);
+  return {
+    startDate: dateStringUTC(start),
+    endDate: dateStringUTC(end),
+    totalDays: daysBetweenUTC(start, end),
+  };
+}
+
+export function buildSoulmateTimingContext(natal, targetDateUTC) {
+  const target = targetDateUTC instanceof Date && Number.isFinite(targetDateUTC.getTime())
+    ? targetDateUTC
+    : new Date();
+  const targetNoonUTC = new Date(Date.UTC(target.getUTCFullYear(), target.getUTCMonth(), target.getUTCDate(), 12, 0, 0));
+  const targetDate = dateStringUTC(targetNoonUTC);
+  const transitNatal = buildAstroNatal({
+    ...natal.input,
+    date: targetDate,
+    time: '12:00',
+    tz: '+00:00',
+    unknownTime: false,
+  }, targetNoonUTC);
+  const transitGastDeg = Astronomy.SiderealTime(transitNatal.time) * 15;
+  const transitLines = transitNatal.positions
+    .filter((planet) => SOULMATE_TIMING_TRANSIT_WEIGHTS[planet.key] > 0)
+    .flatMap((planet) => buildPlanetLines(planet, transitGastDeg, SOULMATE_TIMING_TRANSIT_WEIGHTS[planet.key]));
+
+  return {
+    targetDate,
+    targetTimeUTC: '12:00',
+    blend: SOULMATE_TIMING_BLEND,
+    transitWeights: SOULMATE_TIMING_TRANSIT_WEIGHTS,
+    globalActivationScore: relationshipTransitActivationScore(natal, transitNatal.positions),
+    lines: transitLines,
+  };
+}
+
+function timingLocationSample(natal, lines, location, targetDateUTC, startDateUTC) {
+  const timingContext = buildSoulmateTimingContext(natal, targetDateUTC);
+  const scored = scoreMatrixCell(natal, lines, SOULMATE_TIMING_MODE, location, { timingContext });
+  return {
+    date: timingContext.targetDate,
+    ageYears: ageYearsAtDate(startDateUTC, targetDateUTC),
+    score: scored.value,
+    globalActivationScore: timingContext.globalActivationScore,
+    topContributors: scored.top,
+  };
+}
+
+function uniqueDateStrings(dates) {
+  const out = [];
+  const seen = new Set();
+  for (const date of dates) {
+    const key = dateStringUTC(date);
+    if (seen.has(key)) continue;
+    seen.add(key);
+    out.push(date);
+  }
+  return out.sort((a, b) => a.getTime() - b.getTime());
+}
+
+function selectSeparatedCandidates(samples, count, minSeparationDays) {
+  const selected = [];
+  const ordered = samples.slice().sort((a, b) => b.score - a.score);
+  for (const sample of ordered) {
+    if (selected.every((picked) => Math.abs(daysBetweenUTC(parseDateStringUTC(picked.date), parseDateStringUTC(sample.date))) >= minSeparationDays)) {
+      selected.push(sample);
+      if (selected.length >= count) break;
+    }
+  }
+  return selected;
+}
+
+function buildActivationWindows(samples, peakScore, fineStepDays, startDateUTC, endDateUTC) {
+  if (!samples.length) return [];
+  const threshold = Math.max(0, Math.round(peakScore - 4));
+  const sorted = samples
+    .filter((sample) => sample.score >= threshold)
+    .sort((a, b) => a.date.localeCompare(b.date));
+  const windows = [];
+  let group = [];
+
+  function flush() {
+    if (!group.length) return;
+    const peak = group.slice().sort((a, b) => b.score - a.score)[0];
+    const first = parseDateStringUTC(group[0].date);
+    const last = parseDateStringUTC(group[group.length - 1].date);
+    const start = addDaysUTC(first, -Math.ceil(fineStepDays / 2));
+    const end = addDaysUTC(last, Math.ceil(fineStepDays / 2));
+    const boundedStart = start < startDateUTC ? startDateUTC : start;
+    const boundedEnd = end > endDateUTC ? endDateUTC : end;
+    windows.push({
+      startDate: dateStringUTC(boundedStart),
+      endDate: dateStringUTC(boundedEnd),
+      peakDate: peak.date,
+      peakAgeYears: peak.ageYears,
+      peakScore: peak.score,
+      averageScore: Math.round(group.reduce((sum, item) => sum + item.score, 0) / group.length),
+      durationDays: Math.max(1, daysBetweenUTC(boundedStart, boundedEnd)),
+      topContributors: peak.topContributors,
+    });
+    group = [];
+  }
+
+  for (const sample of sorted) {
+    if (!group.length) {
+      group.push(sample);
+      continue;
+    }
+    const prev = parseDateStringUTC(group[group.length - 1].date);
+    const current = parseDateStringUTC(sample.date);
+    if (daysBetweenUTC(prev, current) <= fineStepDays + 1) {
+      group.push(sample);
+    } else {
+      flush();
+      group.push(sample);
+    }
+  }
+  flush();
+
+  return windows
+    .sort((a, b) => b.peakScore - a.peakScore || b.averageScore - a.averageScore)
+    .slice(0, 5);
+}
+
+export function buildSoulmateTimingTimeline(natal, lines, location, opts = {}) {
+  const startDateUTC = parseDateStringUTC(opts.startDate || natal.input?.date);
+  const endDateUTC = opts.endDate
+    ? parseDateStringUTC(opts.endDate)
+    : addYearsClampedUTC(startDateUTC, 50);
+  if (!startDateUTC || !endDateUTC || endDateUTC < startDateUTC) {
+    throw new Error('Invalid soulmate timing timeline bounds.');
+  }
+
+  const coarseStepDays = clamp(Math.round(opts.coarseStepDays ?? 21), 7, 60);
+  const fineStepDays = clamp(Math.round(opts.fineStepDays ?? 7), 1, 21);
+  const refineWindowDays = clamp(Math.round(opts.refineWindowDays ?? 45), 14, 120);
+  const candidateCount = clamp(Math.round(opts.candidateCount ?? 8), 1, 16);
+  const totalDays = daysBetweenUTC(startDateUTC, endDateUTC);
+  const cache = new Map();
+
+  function sampleAt(dateUTC) {
+    const bounded = dateUTC < startDateUTC ? startDateUTC : (dateUTC > endDateUTC ? endDateUTC : dateUTC);
+    const key = dateStringUTC(bounded);
+    if (!cache.has(key)) {
+      cache.set(key, timingLocationSample(natal, lines, location, bounded, startDateUTC));
+    }
+    return cache.get(key);
+  }
+
+  const coarseDates = [];
+  for (let offset = 0; offset <= totalDays; offset += coarseStepDays) {
+    coarseDates.push(addDaysUTC(startDateUTC, offset));
+  }
+  coarseDates.push(endDateUTC);
+  const coarseSamples = uniqueDateStrings(coarseDates).map(sampleAt);
+  const candidates = selectSeparatedCandidates(coarseSamples, candidateCount, refineWindowDays);
+  const fineDates = [];
+  for (const candidate of candidates) {
+    const center = parseDateStringUTC(candidate.date);
+    for (let offset = -refineWindowDays; offset <= refineWindowDays; offset += fineStepDays) {
+      fineDates.push(addDaysUTC(center, offset));
+    }
+  }
+  fineDates.push(...candidates.map((candidate) => parseDateStringUTC(candidate.date)));
+  const refinedSamples = uniqueDateStrings(fineDates).map(sampleAt);
+  const allSamples = Array.from(cache.values());
+  const peakSample = allSamples.slice().sort((a, b) => b.score - a.score)[0] || null;
+  const topSamples = selectSeparatedCandidates(allSamples, 12, fineStepDays * 2)
+    .map((sample) => ({
+      date: sample.date,
+      ageYears: sample.ageYears,
+      score: sample.score,
+      globalActivationScore: sample.globalActivationScore,
+      topContributors: sample.topContributors,
+    }));
+
+  return {
+    location: {
+      lat: round6(Number(location.lat)),
+      lon: round6(Number(location.lon)),
+      city: typeof location.city === 'string' ? location.city : null,
+      country: typeof location.country === 'string' ? location.country : null,
+    },
+    startDate: dateStringUTC(startDateUTC),
+    endDate: dateStringUTC(endDateUTC),
+    totalDays,
+    scan: {
+      coarseStepDays,
+      fineStepDays,
+      refineWindowDays,
+      coarseSamples: coarseSamples.length,
+      refinedSamples: refinedSamples.length,
+      totalUniqueSamples: allSamples.length,
+    },
+    peakScore: peakSample ? peakSample.score : 0,
+    peakDate: peakSample ? peakSample.date : null,
+    peakAgeYears: peakSample ? peakSample.ageYears : null,
+    windows: buildActivationWindows(refinedSamples, peakSample ? peakSample.score : 0, fineStepDays, startDateUTC, endDateUTC),
+    topSamples,
+  };
+}
+
+export function scoreMatrixCell(natal, lines, mode, location, opts = {}) {
+  const scoringMode = baseScoringMode(mode);
+  const contributions = lineContributions(lines, location, 'natal');
+  let raw = staticModeRawScore(natal, contributions, scoringMode, location);
+  let topContributions = contributions;
+
+  if (mode === SOULMATE_TIMING_MODE && opts.timingContext) {
+    const transitContributions = lineContributions(opts.timingContext.lines || [], location, 'transit');
+    const transitLineRaw = transitContributions.slice(0, 5).reduce((sum, item) => sum + item.value, 0) / 4.8;
+    raw =
+      raw * SOULMATE_TIMING_BLEND.natal
+      + transitLineRaw * SOULMATE_TIMING_BLEND.transitLines
+      + opts.timingContext.globalActivationScore * SOULMATE_TIMING_BLEND.transitAspects;
+    topContributions = contributions
+      .slice(0, 3)
+      .concat(transitContributions.slice(0, 3))
+      .sort((a, b) => b.value - a.value);
+  }
+
   const value = clamp(Math.round(raw), 0, 100);
 
   return {
     lat: location.lat,
     lon: location.lon,
     value,
-    top: contributions.slice(0, 3).map((item) => ({
+    top: topContributions.slice(0, 3).map((item) => ({
       planet: item.planet,
       type: item.type,
+      source: item.source,
       distance: Math.round(item.distance * 10) / 10,
       value: Math.round(item.value * 10) / 10,
     })),
@@ -399,15 +843,17 @@ export function scoreMatrixCell(natal, lines, mode, location) {
 
 // ── 4. MATRIX BUILDER ──────────────────────────────────────────────────────
 export function buildHeatMatrix(natal, lines, mode, opts = {}) {
-  const latMin = opts.latMin ?? DEFAULT_LAT_MIN;
-  const latMax = opts.latMax ?? DEFAULT_LAT_MAX;
+  const latMin = opts.latMin ?? WORLD_LAT_MIN;
+  const latMax = opts.latMax ?? WORLD_LAT_MAX;
+  const lonMin = opts.lonMin ?? WORLD_LON_MIN;
+  const lonMax = opts.lonMax ?? WORLD_LON_MAX;
   const latStep = opts.latStep ?? DEFAULT_STEP;
   const lonStep = opts.lonStep ?? DEFAULT_STEP;
 
-  const latitudes = [];
-  const longitudes = [];
-  for (let lat = latMin; lat <= latMax; lat += latStep) latitudes.push(lat);
-  for (let lon = -180; lon < 180; lon += lonStep) longitudes.push(lon);
+  const latitudes = coordinateCenters(latMin, latMax, latStep);
+  const longitudes = coordinateCenters(lonMin, lonMax, lonStep);
+  const xCoordinates = longitudes.map((lon) => round6(xOfLongitude(lon)));
+  const yCoordinates = latitudes.map((lat) => round6(yOfLatitude(lat)));
 
   let minValue = 100;
   let maxValue = 0;
@@ -418,29 +864,55 @@ export function buildHeatMatrix(natal, lines, mode, opts = {}) {
   // it's cheap to ship.
   const values = new Array(latitudes.length);
   const cellMeta = new Array(latitudes.length);
+  const cells = [];
   for (let i = 0; i < latitudes.length; i += 1) {
     const lat = latitudes[i];
     const row = new Array(longitudes.length);
     const metaRow = new Array(longitudes.length);
     for (let j = 0; j < longitudes.length; j += 1) {
-      const cell = scoreMatrixCell(natal, lines, mode, { lat, lon: longitudes[j] });
+      const cell = scoreMatrixCell(natal, lines, mode, { lat, lon: longitudes[j] }, opts);
       row[j] = cell.value;
       metaRow[j] = cell.top; // only the small top-3 array, lat/lon implied by index
       if (cell.value < minValue) minValue = cell.value;
       if (cell.value > maxValue) maxValue = cell.value;
+      cells.push({
+        row: i,
+        col: j,
+        x: xCoordinates[j],
+        y: yCoordinates[i],
+        lat,
+        lon: longitudes[j],
+        value: cell.value,
+      });
     }
     values[i] = row;
     cellMeta[i] = metaRow;
   }
 
   return {
-    formula: 'angular-distance-km-v2',
+    formula: 'angular-distance-km-v3-world-center-grid',
     sigmaKm: HEAT_MATRIX_SIGMA_KM,
     influenceKm: LINE_INFLUENCE_KM,
+    projection: {
+      type: 'equirectangular',
+      viewBox: [0, 0, MAP_VIEWBOX_WIDTH, MAP_VIEWBOX_HEIGHT],
+      lonRange: [WORLD_LON_MIN, WORLD_LON_MAX],
+      latRange: [WORLD_LAT_MIN, WORLD_LAT_MAX],
+      xFormula: '(lon + 180) / 360 * width',
+      yFormula: '(90 - lat) / 180 * height',
+    },
+    coordinateRole: 'cell-center',
+    latRange: [latMin, latMax],
+    lonRange: [lonMin, lonMax],
+    latStep,
+    lonStep,
     latitudes,
     longitudes,
+    xCoordinates,
+    yCoordinates,
     values,
     cellMeta,
+    cells,
     minValue,
     maxValue,
   };
@@ -455,19 +927,21 @@ export function astroCartography(natal, mode, opts = {}) {
   if (!cfg) throw new Error(`Unknown mode: ${mode}`);
   const weights = cfg.weights;
 
-  // GMST in degrees, via astronomy-engine. SiderealTime returns GAST in
-  // hours; we use the same value the reference does (×15 to degrees).
-  // GAST already includes nutation in RA — perfectly consistent with the
-  // EQ-of-date (RA, Dec) we computed in buildAstroNatal.
-  const gmstDeg = Astronomy.SiderealTime(natal.time) * 15;
+  // GAST in degrees, via astronomy-engine. Apparent sidereal time pairs
+  // with true-equator-of-date RA/Dec, which buildAstroNatal computes above.
+  const gastDeg = Astronomy.SiderealTime(natal.time) * 15;
 
   const lines = natal.positions
     .filter((planet) => weights[planet.key] > 0)
-    .flatMap((planet) => buildPlanetLines(planet, gmstDeg, weights[planet.key]));
+    .flatMap((planet) => buildPlanetLines(planet, gastDeg, weights[planet.key]));
+
+  const timingContext = mode === SOULMATE_TIMING_MODE
+    ? buildSoulmateTimingContext(natal, opts.targetDateUTC)
+    : null;
 
   const heatMatrix = opts.includeHeat === false
     ? null
-    : buildHeatMatrix(natal, lines, mode, opts);
+    : buildHeatMatrix(natal, lines, mode, { ...opts, timingContext });
 
   return {
     mode,
@@ -475,6 +949,7 @@ export function astroCartography(natal, mode, opts = {}) {
     modeWeights: weights,
     lines,
     heatMatrix,
+    timing: timingContext,
   };
 }
 
@@ -483,9 +958,16 @@ export const ASTROCARTO_CONSTANTS = Object.freeze({
   EARTH_RADIUS_KM,
   LINE_INFLUENCE_KM,
   HEAT_MATRIX_SIGMA_KM,
-  DEFAULT_LAT_MIN,
-  DEFAULT_LAT_MAX,
+  WORLD_LAT_MIN,
+  WORLD_LAT_MAX,
+  WORLD_LON_MIN,
+  WORLD_LON_MAX,
+  MAP_VIEWBOX_WIDTH,
+  MAP_VIEWBOX_HEIGHT,
   DEFAULT_STEP,
+  LINE_SAMPLE_LAT_LIMIT,
+  HORIZON_SEED_LAT_STEP,
+  HORIZON_MAX_INTERPOLATION_DEG,
   ASTROCARTO_PLANETS,
   ALL_BODIES: PLANET_NAMES,
 });

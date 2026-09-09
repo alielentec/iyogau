@@ -44,6 +44,18 @@
       blurb: "Apple co-founder; long-time Zen Buddhist practitioner; 1974 pilgrimage to Neem Karoli Baba's ashram in India"
     },
     {
+      id: 'ali',
+      name: 'Ali',
+      birthDate: '1985-06-09',
+      birthTime: '15:30',
+      placeLabel: 'Hamedan, Iran',
+      lat: 35.19694444444445,
+      lon: 48.69777777777777,
+      tz: '+03:30',
+      source: 'User-provided Google Sheet Bday tab: 9-Jun-85, 15:30:00, GMT+03:30, 48 E 41′ 52″, 35 N 11′ 49″',
+      blurb: 'User-provided comparison chart for validating the natal, relocation, immigration, and soulmate calculations'
+    },
+    {
       id: 'donald-trump',
       name: 'Donald Trump',
       birthDate: '1946-06-14',
