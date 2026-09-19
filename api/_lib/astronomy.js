@@ -1,9 +1,9 @@
 // Wraps astronomy-engine. Returns tropical (true-ecliptic-of-date) longitudes.
 // All longitudes in degrees, normalized to [0, 360). Latitudes in degrees.
 //
-// We compute the ascendant/MC ourselves from Greenwich Mean Sidereal Time +
-// geographic longitude + mean obliquity. astronomy-engine does not expose
-// asc/MC directly; the formulas below are standard spherical-astronomy.
+// We compute the ascendant/MC ourselves from Greenwich apparent sidereal
+// time + geographic longitude + true obliquity. astronomy-engine does not
+// expose asc/MC directly; the formulas below are standard spherical astronomy.
 
 import * as Astronomy from 'astronomy-engine';
 
@@ -46,8 +46,8 @@ const MEAN_NODE_SPEED_DEG_PER_DAY = -0.0529539;
 //
 // NOTE: this is the MEAN lunar node, not the true node. Swiss Ephemeris
 // exposes both via SE_MEAN_NODE and SE_TRUE_NODE; the mean node is the
-// standard choice for Lahiri-sidereal Vedic charts and is what most Vedic
-// engines (Jagannatha Hora, Parashara's Light, etc.) use by default.
+// standard choice for sidereal Vedic charts and is what most Vedic engines
+// (Jagannatha Hora, Parashara's Light, etc.) use by default.
 // Ported verbatim from ast/src/lib/astrology.js#lunarNodeTropical.
 export function lunarNodeTropical(dateUTC) {
   const jd = dateUTC.getTime() / 86400000 + 2440587.5;
@@ -112,9 +112,9 @@ export function computePlanetTropical(name, dateUTC) {
 // Time (GAST), which already includes nutation in right ascension via
 // the equation of the equinoxes. For internal consistency we therefore
 // use the TRUE obliquity (mean + nutation in obliquity Δε), available
-// from `e_tilt(time).tobl`. Mixing GAST with mean-obliquity (as the
-// original implementation did) is the standard IAU-2006/2000A mistake;
-// it produces angle errors of up to ±9.2″ depending on nutation phase.
+// from `e_tilt(time).tobl`. Mixing GAST with mean obliquity is internally
+// inconsistent and produces angle errors up to the nutation-in-obliquity
+// amplitude, about ±9.2″ depending on nutation phase.
 // Standard formulas:
 //   LST = GAST_deg + observer_lon_east
 //   tan(MC)  = sin(LST) / (cos(LST) * cos(eps))
