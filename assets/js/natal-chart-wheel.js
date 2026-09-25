@@ -239,6 +239,24 @@
   var LEADER_STROKE_WIDTH = 0.08;                // matches CSS .luna-leader stroke-width
   var STAGGER_STEP        = 3 * LEADER_STROKE_WIDTH; // 0.24 — 1 line + 2 background-gap thicknesses between adjacent staggered lines
   var GLYPH_STANDOFF      = 2.0;                 // viewBox units; leader GREEN segment stops this far ABOVE planetGlyphR so glyph artwork is not crossed
+  var ANGLE_MARKER_SAFE_DEG = 5.5;               // keep planet label stacks clear of AC/DC/MC/IC labels and axis strokes
+  var PLANET_LABEL_SAFE_DEG = 11.5;              // fallback angular separation used by tests/debug; real placement uses component boxes below
+  var PLANET_MARKER_SAFE_DEG = 6.8;              // minimum screen-angle spacing from AC/DC/MC/IC marker labels
+  var LABEL_MAX_ANGLE_SHIFT_DEG = 15;            // keep labels visually tied to the true longitude while preserving one fixed radius
+  var LABEL_ANGLE_OFFSETS = [0, -2.5, 2.5, -5, 5, -7.5, 7.5, -10, 10, -12.5, 12.5, -15, 15];
+  var LABEL_LANE_OFFSETS = [0];                  // user directive: every planet stack must remain on the same radii
+  var LABEL_AXIS_CLEARANCE = 2.3;                // viewBox units between label components and AC/DC/MC/IC axis strokes
+  var LABEL_COMPONENT_GAP = 0.42;
+  var LABEL_COLLISION_WEIGHT = 10000;
+  var LABEL_AXIS_WEIGHT = 2200;
+  var LABEL_ORDER_CLUSTER_GAP_DEG = 32;          // only tightly grouped labels need order repair to prevent crossing leaders
+
+  var LABEL_COMPONENTS = [
+    { key: 'glyph',  radius: L.planetGlyphR, size: 2.55 },
+    { key: 'degree', radius: L.degreeR,      size: 1.28 },
+    { key: 'sign',   radius: L.signGlyphInR, size: 1.45 },
+    { key: 'minute', radius: L.minuteR,      size: 1.28 }
+  ];
 
   /* -----------------------------------------------------------------
    * Trig helpers — verbatim from ast/src/components/ChartWheel.jsx.
@@ -281,6 +299,340 @@
       return normalizeDegrees(ascendant - longitude + 270);
     }
     return normalizeDegrees(longitude);
+  }
+
+  function longitudeFromChartAngle(angle, ascendant) {
+    if (Number.isFinite(ascendant)) {
+      return normalizeDegrees(ascendant + 270 - angle);
+    }
+    return normalizeDegrees(angle);
+  }
+
+  function signedAngleDelta(angle, reference) {
+    return ((angle - reference) % 360 + 540) % 360 - 180;
+  }
+
+  function markerAvoidanceDirection(angle) {
+    var rad = ((angle - 90) * Math.PI) / 180;
+    return Math.cos(rad) >= 0 ? 1 : -1;
+  }
+
+  function avoidAngleMarkerLabels(planets, ascendant, markers) {
+    if (!Array.isArray(markers) || !markers.length) return planets;
+    var markerAngles = markers.map(function (marker) {
+      return chartAngle(marker.longitude, ascendant);
+    });
+    return planets.map(function (planet) {
+      var currentAngle = chartAngle(
+        planet.labelLongitude != null ? planet.labelLongitude : planet.longitude,
+        ascendant
+      );
+      var adjustedAngle = currentAngle;
+      markerAngles.forEach(function (markerAngle) {
+        var delta = signedAngleDelta(adjustedAngle, markerAngle);
+        if (Math.abs(delta) < ANGLE_MARKER_SAFE_DEG) {
+          var dir = Math.abs(delta) < 0.01 ? markerAvoidanceDirection(markerAngle) : (delta < 0 ? -1 : 1);
+          adjustedAngle = normalizeDegrees(markerAngle + dir * ANGLE_MARKER_SAFE_DEG);
+        }
+      });
+      if (Math.abs(signedAngleDelta(adjustedAngle, currentAngle)) < 0.01) return planet;
+      return Object.assign({}, planet, {
+        labelLongitude: longitudeFromChartAngle(adjustedAngle, ascendant),
+        labelAngleAdjusted: true
+      });
+    });
+  }
+
+  function planetLabelAngle(planet, ascendant) {
+    return chartAngle(
+      planet.labelLongitude != null ? planet.labelLongitude : planet.longitude,
+      ascendant
+    );
+  }
+
+  function collisionDirectionForPair(a, b, ascendant) {
+    var exactDelta = signedAngleDelta(
+      chartAngle(a.planet.longitude, ascendant),
+      chartAngle(b.planet.longitude, ascendant)
+    );
+    if (Math.abs(exactDelta) > 0.01) return exactDelta < 0 ? -1 : 1;
+    return a.index < b.index ? -1 : 1;
+  }
+
+  function labelComponents(angle, laneOffset) {
+    var lane = Number.isFinite(laneOffset) ? laneOffset : 0;
+    return LABEL_COMPONENTS.map(function (component) {
+      var radius = component.radius + lane;
+      var p = polar(50, radius, angle);
+      return {
+        key: component.key,
+        radius: radius,
+        size: component.size,
+        x: p[0],
+        y: p[1]
+      };
+    });
+  }
+
+  function componentOverlapAmount(aComponents, bComponents) {
+    var overlap = 0;
+    aComponents.forEach(function (a) {
+      bComponents.forEach(function (b) {
+        var dx = a.x - b.x;
+        var dy = a.y - b.y;
+        var distance = Math.sqrt(dx * dx + dy * dy);
+        var required = a.size + b.size + LABEL_COMPONENT_GAP;
+        if (distance < required) overlap += required - distance;
+      });
+    });
+    return overlap;
+  }
+
+  function axisPenaltyForComponents(components, angle, markerAngles) {
+    if (!markerAngles.length) return 0;
+    var penalty = 0;
+    markerAngles.forEach(function (markerAngle) {
+      var delta = Math.abs(signedAngleDelta(angle, markerAngle)) * Math.PI / 180;
+      components.forEach(function (component) {
+        var perpendicular = Math.abs(component.radius * Math.sin(delta));
+        if (perpendicular < LABEL_AXIS_CLEARANCE) {
+          penalty += LABEL_AXIS_CLEARANCE - perpendicular;
+        }
+      });
+    });
+    return penalty;
+  }
+
+  function uniqueAnglesFromOffsets(baseAngle, preferredAngle) {
+    var seen = {};
+    var out = [];
+    function add(angle) {
+      var normalized = normalizeDegrees(angle);
+      var key = normalized.toFixed(3);
+      if (seen[key]) return;
+      seen[key] = true;
+      out.push(normalized);
+    }
+    add(baseAngle);
+    add(preferredAngle);
+    LABEL_ANGLE_OFFSETS.forEach(function (offset) {
+      add(baseAngle + offset);
+    });
+    LABEL_ANGLE_OFFSETS.forEach(function (offset) {
+      add(preferredAngle + offset);
+    });
+    return out;
+  }
+
+  function unwrapAngleNear(angle, reference) {
+    return reference + signedAngleDelta(angle, reference);
+  }
+
+  function orderedExactNodes(planets, ascendant) {
+    var nodes = planets.map(function (planet, index) {
+      return {
+        planet: planet,
+        index: index,
+        exactAngle: chartAngle(planet.longitude, ascendant)
+      };
+    }).sort(function (a, b) { return a.exactAngle - b.exactAngle; });
+    if (nodes.length < 2) return nodes.map(function (node) {
+      node.exactUnwrapped = node.exactAngle;
+      return node;
+    });
+
+    var largestGap = -1;
+    var largestGapIndex = 0;
+    for (var i = 0; i < nodes.length; i += 1) {
+      var current = nodes[i].exactAngle;
+      var next = nodes[(i + 1) % nodes.length].exactAngle + (i === nodes.length - 1 ? 360 : 0);
+      var gap = next - current;
+      if (gap > largestGap) {
+        largestGap = gap;
+        largestGapIndex = i;
+      }
+    }
+
+    var startIndex = (largestGapIndex + 1) % nodes.length;
+    var startAngle = nodes[startIndex].exactAngle;
+    var ordered = [];
+    for (var k = 0; k < nodes.length; k += 1) {
+      var node = nodes[(startIndex + k) % nodes.length];
+      node.exactUnwrapped = startAngle + normalizeDegrees(node.exactAngle - startAngle);
+      ordered.push(node);
+    }
+    return ordered;
+  }
+
+  function clusterOrderedNodes(nodes) {
+    if (!nodes.length) return [];
+    var clusters = [];
+    var current = [nodes[0]];
+    for (var i = 1; i < nodes.length; i += 1) {
+      if (nodes[i].exactUnwrapped - nodes[i - 1].exactUnwrapped <= LABEL_ORDER_CLUSTER_GAP_DEG) {
+        current.push(nodes[i]);
+      } else {
+        clusters.push(current);
+        current = [nodes[i]];
+      }
+    }
+    clusters.push(current);
+    return clusters;
+  }
+
+  function wouldKeepClusterWithinShift(cluster, sortedLabelAngles) {
+    for (var i = 0; i < cluster.length; i += 1) {
+      var displacement = Math.abs(sortedLabelAngles[i] - cluster[i].exactUnwrapped);
+      if (displacement > LABEL_MAX_ANGLE_SHIFT_DEG + 0.01) return false;
+    }
+    return true;
+  }
+
+  function preserveClusterLabelOrder(planets, ascendant) {
+    if (!Array.isArray(planets) || planets.length < 2) return planets;
+
+    var orderedNodes = orderedExactNodes(planets, ascendant);
+    var clusters = clusterOrderedNodes(orderedNodes);
+    var byOriginalIndex = planets.slice();
+
+    clusters.forEach(function (cluster) {
+      if (cluster.length < 2) return;
+      var sortedLabelAngles = cluster.map(function (node) {
+        return unwrapAngleNear(planetLabelAngle(node.planet, ascendant), node.exactUnwrapped);
+      }).sort(function (a, b) { return a - b; });
+
+      if (!wouldKeepClusterWithinShift(cluster, sortedLabelAngles)) return;
+
+      cluster.forEach(function (node, orderIndex) {
+        var orderedLabelAngle = sortedLabelAngles[orderIndex];
+        var displacement = Math.abs(orderedLabelAngle - node.exactUnwrapped);
+        var currentAngle = unwrapAngleNear(planetLabelAngle(node.planet, ascendant), node.exactUnwrapped);
+        if (Math.abs(currentAngle - orderedLabelAngle) < 0.01) return;
+        byOriginalIndex[node.index] = Object.assign({}, byOriginalIndex[node.index], {
+          labelLongitude: longitudeFromChartAngle(normalizeDegrees(orderedLabelAngle), ascendant),
+          labelAngleAdjusted: true,
+          labelDisplacement: displacement,
+          labelOrderAdjusted: true
+        });
+      });
+    });
+
+    return byOriginalIndex;
+  }
+
+  function chartRadialLineAngles(ascendant) {
+    var angles = [];
+    for (var deg = 0; deg < 360; deg += 30) {
+      angles.push(chartAngle(deg, ascendant));
+    }
+    return angles;
+  }
+
+  function labelCandidateList(planet, ascendant, clearLineAngles) {
+    var exactAngle = chartAngle(planet.longitude, ascendant);
+    var preferredAngle = planetLabelAngle(planet, ascendant);
+    var angles = uniqueAnglesFromOffsets(exactAngle, preferredAngle);
+    var candidates = [];
+    angles.forEach(function (angle) {
+      var displacement = Math.abs(signedAngleDelta(angle, exactAngle));
+      if (displacement > LABEL_MAX_ANGLE_SHIFT_DEG + 0.01) return;
+      LABEL_LANE_OFFSETS.forEach(function (laneOffset) {
+        var components = labelComponents(angle, laneOffset);
+        var axisPenalty = axisPenaltyForComponents(components, angle, clearLineAngles);
+        candidates.push({
+          angle: angle,
+          laneOffset: laneOffset,
+          components: components,
+          displacement: displacement,
+          axisPenalty: axisPenalty,
+          score: displacement * displacement * 8 +
+            Math.abs(laneOffset) * 1.3 +
+            Math.abs(signedAngleDelta(angle, preferredAngle)) * 0.25 +
+            axisPenalty * LABEL_AXIS_WEIGHT
+        });
+      });
+    });
+    return candidates.sort(function (a, b) { return a.score - b.score; });
+  }
+
+  function resolvePlanetLabelCollisions(planets, ascendant, markers) {
+    if (!Array.isArray(planets) || planets.length < 2) return planets;
+
+    var markerAngles = Array.isArray(markers)
+      ? markers.map(function (marker) { return chartAngle(marker.longitude, ascendant); })
+      : [];
+    var clearLineAngles = chartRadialLineAngles(ascendant).concat(markerAngles);
+    var nodes = planets.map(function (planet, index) {
+      var exactAngle = chartAngle(planet.longitude, ascendant);
+      var candidates = labelCandidateList(planet, ascendant, clearLineAngles);
+      var crowd = 0;
+      planets.forEach(function (other) {
+        if (other === planet) return;
+        if (angleDistance(planet.longitude, other.longitude) < 18) crowd += 1;
+      });
+      markerAngles.forEach(function (markerAngle) {
+        if (Math.abs(signedAngleDelta(exactAngle, markerAngle)) < 10) crowd += 1.5;
+      });
+      return {
+        planet: planet,
+        index: index,
+        exactAngle: exactAngle,
+        candidates: candidates,
+        crowd: crowd
+      };
+    });
+
+    var placed = [];
+    var byOriginalIndex = [];
+    nodes.slice().sort(function (a, b) {
+      return b.crowd - a.crowd || a.index - b.index;
+    }).forEach(function (node) {
+      var best = null;
+      node.candidates.forEach(function (candidate) {
+        var collisionPenalty = 0;
+        placed.forEach(function (other) {
+          collisionPenalty += componentOverlapAmount(candidate.components, other.candidate.components);
+        });
+        var score = candidate.score + collisionPenalty * LABEL_COLLISION_WEIGHT;
+        if (!best || score < best.score) {
+          best = { candidate: candidate, score: score, collisionPenalty: collisionPenalty };
+        }
+      });
+      if (!best) {
+        best = {
+          candidate: {
+            angle: node.exactAngle,
+            laneOffset: 0,
+            components: labelComponents(node.exactAngle, 0),
+            displacement: 0,
+            axisPenalty: 0
+          },
+          score: 0,
+          collisionPenalty: 0
+        };
+      }
+      placed.push({ node: node, candidate: best.candidate });
+      byOriginalIndex[node.index] = Object.assign({}, node.planet, {
+        labelLongitude: longitudeFromChartAngle(best.candidate.angle, ascendant),
+        labelLaneOffset: best.candidate.laneOffset,
+        labelAngleAdjusted: best.candidate.displacement > 0.01 || Math.abs(best.candidate.laneOffset) > 0.01,
+        labelDisplacement: best.candidate.displacement,
+        labelCollisionPenalty: best.collisionPenalty || 0,
+        labelAxisPenalty: best.candidate.axisPenalty || 0
+      });
+    });
+
+    var orderedPlanets = preserveClusterLabelOrder(byOriginalIndex, ascendant);
+
+    return orderedPlanets.map(function (planet) {
+      if (!planet) return planet;
+      var originalLabelAngle = chartAngle(planet.longitude, ascendant);
+      var currentAngle = planetLabelAngle(planet, ascendant);
+      var moved = Math.abs(signedAngleDelta(currentAngle, originalLabelAngle)) > 0.01 ||
+        Math.abs(planet.labelLaneOffset || 0) > 0.01;
+      if (!moved) return planet;
+      return planet;
+    });
   }
 
   /* -----------------------------------------------------------------
@@ -599,8 +951,15 @@
     }
 
     var planets = adaptPlanets(model.planets, locale);
-    var sorted = layoutPlanets(planets);
-    var aspects = buildAspects(planets).filter(function (a) { return a.type !== 'conjunction'; });
+    var sorted = resolvePlanetLabelCollisions(
+      avoidAngleMarkerLabels(layoutPlanets(planets), asc, angleMarkers),
+      asc,
+      angleMarkers
+    );
+    var showAspects = options.showAspects !== false;
+    var aspects = showAspects
+      ? buildAspects(planets).filter(function (a) { return a.type !== 'conjunction'; })
+      : [];
 
     // Merge our classes into whatever the markup already had.
     var classBase = (svgElement.getAttribute('class') || '')
@@ -749,13 +1108,11 @@
       var exactAngle = chartAngle(planet.longitude, asc);
       var color = PLANET_COLORS[planet.key] || 'var(--ink-muted)';
       var s = splitLongitude(planet.longitude);
-      // SINGLE PLANET RING (per user directive 2026-06-09 v3): every
-      // glyph sits at exactly L.planetGlyphR. There is no per-planet
-      // radial offset on the glyph itself — the radialSlot from 13aa292
-      // is reverted. Cluster separation lives on the LEADER ARC: each
-      // additional cluster member pulls its arc radius one stroke-width
-      // further inward (see clusterIndex below).
-      var glyphR = L.planetGlyphR;
+      // Collision-resolved labels stay close to the exact longitude,
+      // but every planet stack remains on the same fixed radii. Crowded
+      // labels are separated by angle only, not by per-planet radial lanes.
+      var laneOffset = Number.isFinite(planet.labelLaneOffset) ? planet.labelLaneOffset : 0;
+      var glyphR = L.planetGlyphR + laneOffset;
       var glyphId = PLANET_GLYPH_IDS[planet.key] || 'sun'; // safety fallback
       var glyphTransform = placeGlyph(angle, glyphR, L.planetGlyphScale);
 
@@ -771,7 +1128,10 @@
       // colour between them (visible gap, not abutting lines). Exact user
       // phrasing: "make 2* thickness instead of 1*thickness which means we
       // have 1 thickness background color between lines".
-      var arcRadius = R_MID_BASE - (planet.clusterIndex || 0) * STAGGER_STEP;
+      var arcRadius = Math.max(
+        glyphR + GLYPH_STANDOFF + 0.8,
+        R_MID_BASE - (planet.clusterIndex || 0) * STAGGER_STEP
+      );
 
       var pRedOuter = polar(c, R_OUT,        exactAngle);  // start of RED (exact-degree tick anchor)
       var pRedInner = polar(c, R_MID_BASE,   exactAngle);  // end of RED / start of connector
@@ -781,12 +1141,13 @@
       // a visible gap so the stroke does not crash through the glyph art.
       // User directive 2026-06-09: "current path interfere the planet make
       // it a bit shorter as distance given using red arrow".
-      var pGreenIn  = polar(c, L.planetGlyphR + GLYPH_STANDOFF, angle); // end of GREEN — stops above glyph
+      var pGreenIn  = polar(c, glyphR + GLYPH_STANDOFF, angle); // end of GREEN — stops above glyph
 
       // SVG arc params: short arc (large-arc-flag = 0); sweep direction
       // tracks the fan offset (signed, normalised to [-180, +180]).
       var deltaSigned = ((angle - exactAngle) % 360 + 540) % 360 - 180;
       var sweepFlag = (deltaSigned >= 0) ? 1 : 0;
+      var largeArcFlag = Math.abs(deltaSigned) > 180 ? 1 : 0;
 
       // Build the path. The "connector" L-segment collapses to a no-op
       // when arcRadius === R_MID_BASE (i.e. solo planet, clusterIndex = 0)
@@ -796,18 +1157,28 @@
         'M ' + pRedOuter[0] + ' ' + pRedOuter[1] +
         ' L ' + pRedInner[0] + ' ' + pRedInner[1] +
         ' L ' + pArcOuter[0] + ' ' + pArcOuter[1] +
-        ' A ' + arcRadius + ' ' + arcRadius + ' 0 0 ' + sweepFlag + ' ' +
+        ' A ' + arcRadius + ' ' + arcRadius + ' 0 ' + largeArcFlag + ' ' + sweepFlag + ' ' +
                 pArcInner[0] + ' ' + pArcInner[1] +
         ' L ' + pGreenIn[0] + ' ' + pGreenIn[1];
       var leaderClass = 'luna-leader' + (planet.oob ? ' luna-leader-oob' : '');
 
       // ---- Inner stack: degree, per-planet sign glyph, minute ----
-      var degP = polar(c, L.degreeR, angle);
-      var minP = polar(c, L.minuteR, angle);
+      var degP = polar(c, L.degreeR + laneOffset, angle);
+      var minP = polar(c, L.minuteR + laneOffset, angle);
       var signIdx = signIndexFor(planet.longitude);
       var signColor = ELEMENT_COLORS[SIGNS[signIdx].element];
 
-      var pg = el('g', null);
+      var pg = el('g', {
+        'data-planet-key': planet.key,
+        'data-label-angle': angle.toFixed(4),
+        'data-label-longitude': (planet.labelLongitude != null ? planet.labelLongitude : planet.longitude).toFixed(6),
+        'data-exact-longitude': planet.longitude.toFixed(6),
+        'data-label-lane-offset': laneOffset.toFixed(3),
+        'data-label-displacement': (planet.labelDisplacement || 0).toFixed(3),
+        'data-label-collision-penalty': (planet.labelCollisionPenalty || 0).toFixed(3),
+        'data-label-axis-penalty': (planet.labelAxisPenalty || 0).toFixed(3),
+        'data-label-order-adjusted': planet.labelOrderAdjusted ? '1' : '0'
+      });
       // Leader stroke is set inline to the planet's color so each radial
       // tick visually matches its glyph. The CSS .luna-leader rule
       // (no stroke declared) supplies width / opacity only. The OOB
@@ -835,7 +1206,7 @@
       var innerSignUse = el('use', {
         'data-glyph': 'sign-inner',
         href: '#luna-' + SIGN_GLYPH_IDS[signIdx],
-        transform: placeGlyph(angle, L.signGlyphInR, L.planetSignGlyphScale)
+        transform: placeGlyph(angle, L.signGlyphInR + laneOffset, L.planetSignGlyphScale)
       });
       pg.appendChild(tinted(signColor, innerSignUse));
 
@@ -897,6 +1268,22 @@
    * Export.
    * ----------------------------------------------------------------- */
 
-  global.NatalWheel = { render: render };
+  global.NatalWheel = {
+    render: render,
+    _debug: {
+      chartAngle: chartAngle,
+      signedAngleDelta: signedAngleDelta,
+      layoutPlanets: layoutPlanets,
+      avoidAngleMarkerLabels: avoidAngleMarkerLabels,
+      resolvePlanetLabelCollisions: resolvePlanetLabelCollisions,
+      preserveClusterLabelOrder: preserveClusterLabelOrder,
+      planetLabelAngle: planetLabelAngle,
+      labelComponents: labelComponents,
+      componentOverlapAmount: componentOverlapAmount,
+      PLANET_LABEL_SAFE_DEG: PLANET_LABEL_SAFE_DEG,
+      PLANET_MARKER_SAFE_DEG: PLANET_MARKER_SAFE_DEG,
+      LABEL_MAX_ANGLE_SHIFT_DEG: LABEL_MAX_ANGLE_SHIFT_DEG
+    }
+  };
 
 }(typeof window !== 'undefined' ? window : this));

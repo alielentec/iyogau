@@ -1,19 +1,20 @@
 // POST /api/calculate-chart
 //
-// Computes a Vedic (Lahiri sidereal, Whole-Sign) or tropical natal chart
-// using astronomy-engine. Stateless, in-memory rate-limited, no persistence.
+// Computes a Vedic (JHora-compatible true Chitrapaksha sidereal,
+// Whole-Sign) or tropical natal chart using astronomy-engine.
+// Stateless, in-memory rate-limited, no persistence.
 //
 // SECURITY: birth data (date/time/lat/lon/tz) is NEVER logged. Logs carry
 // only timestamp, anonymized IP (/24 for IPv4, /48 for IPv6), status code,
 // and duration. See ./_lib/ratelimit.js#anonymizeIp.
 
 import { computePlanetTropical, computeAscMC, PLANETS, norm360 } from './_lib/astronomy.js';
-import { lahiriAyanamsa, applyAyanamsa } from './_lib/ayanamsa.js';
+import { resolveAyanamsaValue, applyAyanamsa } from './_lib/ayanamsa.js';
 import { buildWholeSignHouses, decomposeLongitude, houseOf } from './_lib/houses.js';
 import { computeAspects } from './_lib/aspects.js';
 import { nakshatraOf } from './_lib/nakshatra.js';
 import { navamshaOf } from './_lib/navamsha.js';
-import { checkRateLimit, anonymizeIp } from './_lib/ratelimit.js';
+import { checkRateLimit, anonymizeIp, shouldBypassLocalRateLimit } from './_lib/ratelimit.js';
 import { validateInput, localToUTC, ValidationError } from './_lib/validate.js';
 
 const ENGINE_VERSION = '2.1.19';
@@ -205,27 +206,31 @@ export default async function handler(req, res) {
   // twice (cheap; the bucket is in-process Map) — once for the normal
   // limit and once with a synthetic 'unknown:tight' key that has its
   // own 1/min cap.
-  if (ip === 'unknown') {
-    const tight = checkRateLimit('unknown:tight');
-    if (!tight.allowed || tight.minuteRemaining < (tight.minuteLimit - 1)) {
-      // Either already over its own tight limit, or this is the second+
-      // request to the shared 'unknown' bucket within the minute.
-      res.setHeader('Retry-After', '60');
-      res.status(429).json({ error: 'Rate limit exceeded (anonymous client). Retry after 60s.' });
-      logLine({ t: new Date().toISOString(), ip: anonIp, status: 429, ms: Date.now() - startedAt, rl: 'unknown' });
+  if (shouldBypassLocalRateLimit(ip, reqOrigin, secFetchSite)) {
+    res.setHeader('X-RateLimit-Bypass', 'local-development');
+  } else {
+    if (ip === 'unknown') {
+      const tight = checkRateLimit('unknown:tight');
+      if (!tight.allowed || tight.minuteRemaining < (tight.minuteLimit - 1)) {
+        // Either already over its own tight limit, or this is the second+
+        // request to the shared 'unknown' bucket within the minute.
+        res.setHeader('Retry-After', '60');
+        res.status(429).json({ error: 'Rate limit exceeded (anonymous client). Retry after 60s.' });
+        logLine({ t: new Date().toISOString(), ip: anonIp, status: 429, ms: Date.now() - startedAt, rl: 'unknown' });
+        return;
+      }
+    }
+    const rl = checkRateLimit(ip);
+    res.setHeader('X-RateLimit-Limit-Minute', String(rl.minuteLimit));
+    res.setHeader('X-RateLimit-Remaining-Minute', String(rl.minuteRemaining));
+    res.setHeader('X-RateLimit-Limit-Day', String(rl.dayLimit));
+    res.setHeader('X-RateLimit-Remaining-Day', String(rl.dayRemaining));
+    if (!rl.allowed) {
+      res.setHeader('Retry-After', String(rl.retryAfter));
+      res.status(429).json({ error: `Rate limit exceeded (${rl.reason}). Retry after ${rl.retryAfter}s.` });
+      logLine({ t: new Date().toISOString(), ip: anonIp, status: 429, ms: Date.now() - startedAt, rl: rl.reason });
       return;
     }
-  }
-  const rl = checkRateLimit(ip);
-  res.setHeader('X-RateLimit-Limit-Minute', String(rl.minuteLimit));
-  res.setHeader('X-RateLimit-Remaining-Minute', String(rl.minuteRemaining));
-  res.setHeader('X-RateLimit-Limit-Day', String(rl.dayLimit));
-  res.setHeader('X-RateLimit-Remaining-Day', String(rl.dayRemaining));
-  if (!rl.allowed) {
-    res.setHeader('Retry-After', String(rl.retryAfter));
-    res.status(429).json({ error: `Rate limit exceeded (${rl.reason}). Retry after ${rl.retryAfter}s.` });
-    logLine({ t: new Date().toISOString(), ip: anonIp, status: 429, ms: Date.now() - startedAt, rl: rl.reason });
-    return;
   }
 
   // Read + parse body.
@@ -305,7 +310,7 @@ export default async function handler(req, res) {
   logLine({ t: new Date().toISOString(), ip: anonIp, status: 200, ms: Date.now() - startedAt });
 }
 
-function buildChart(input, dateUTC) {
+export function buildChart(input, dateUTC) {
   const warnings = [];
   if (input.unknownTime) warnings.push('approximate ascendant due to unknown birth time');
   if (dateUTC && dateUTC.__ambiguous) {
@@ -321,7 +326,7 @@ function buildChart(input, dateUTC) {
     warnings.push('pre-1883 date: most regions used Local Mean Time, not the modern IANA zone; computed offset may differ from the historic wall-clock by minutes');
   }
 
-  const ayanamsaValue = input.tradition === 'sidereal' ? lahiriAyanamsa(dateUTC) : 0;
+  const ayanamsaValue = input.tradition === 'sidereal' ? resolveAyanamsaValue(input.ayanamsa, dateUTC) : 0;
   const adjust = (lonDeg) => input.tradition === 'sidereal'
     ? applyAyanamsa(lonDeg, ayanamsaValue)
     : norm360(lonDeg);
@@ -406,7 +411,7 @@ function buildChart(input, dateUTC) {
       // Moon's MEAN ascending node (Meeus 1998 eq. 22.4) — they do not
       // include the ±~1.5° nutation oscillation of the TRUE node. This
       // matches Jagannatha Hora / Parashara's Light defaults and is the
-      // standard choice for Lahiri-sidereal Vedic charts, but consumers
+      // standard choice for these Vedic charts, but consumers
       // who specifically want the true node should not use these values.
       // See api/_lib/astronomy.js#lunarNodeTropical for the formula.
       nodeModel: 'mean',
